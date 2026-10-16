@@ -3,6 +3,7 @@ package io.github.mircodhd.mvplayer.input
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import io.github.mircodhd.mvplayer.debug.DebugLog
 import kotlin.math.abs
 
 /**
@@ -22,8 +23,20 @@ class GamepadInput(private val onChange: (buttons: Int) -> Unit) {
 
     fun handleKeyEvent(event: KeyEvent): Boolean {
         if (!isController(event.device)) return false
-        val button = buttonFor(event.keyCode) ?: return false
+        val button = buttonFor(event.keyCode)
+        if (button == null) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                DebugLog.i(TAG, "Unmapped controller key ${KeyEvent.keyCodeToString(event.keyCode)} " +
+                    "(scan ${event.scanCode}) from '${event.device?.name}'")
+            }
+            return false
+        }
         if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return true
+        if (event.repeatCount == 0) {
+            DebugLog.d(TAG, "${KeyEvent.keyCodeToString(event.keyCode)} " +
+                "${if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"} -> ${BUTTON_NAMES[button]} " +
+                "from '${event.device?.name}' (id ${event.deviceId})")
+        }
         val state = devices.getOrPut(event.deviceId) { DeviceState() }
         val bit = 1 shl button
         state.keys = if (event.action == KeyEvent.ACTION_DOWN) state.keys or bit else state.keys and bit.inv()
@@ -52,7 +65,12 @@ class GamepadInput(private val onChange: (buttons: Int) -> Unit) {
         if (leftTrigger > AXIS_THRESHOLD) bits = bits or (1 shl L2)
         if (rightTrigger > AXIS_THRESHOLD) bits = bits or (1 shl R2)
 
-        devices.getOrPut(event.deviceId) { DeviceState() }.axes = bits
+        val state = devices.getOrPut(event.deviceId) { DeviceState() }
+        if (state.axes != bits && DebugLog.verbose) {
+            DebugLog.v(TAG, "axes from '${device.name}': stick=%.2f,%.2f hat=%.0f,%.0f triggers=%.2f,%.2f -> %s".format(
+                stickX, stickY, hatX, hatY, leftTrigger, rightTrigger, describe(bits)))
+        }
+        state.axes = bits
         publish()
         return true
     }
@@ -72,9 +90,13 @@ class GamepadInput(private val onChange: (buttons: Int) -> Unit) {
         for (state in devices.values) combined = combined or state.keys or state.axes
         if (combined != lastSent) {
             lastSent = combined
+            DebugLog.d(TAG, "pad = ${describe(combined)}")
             onChange(combined)
         }
     }
+
+    private fun describe(bits: Int): String =
+        if (bits == 0) "none" else BUTTON_NAMES.indices.filter { bits and (1 shl it) != 0 }.joinToString("+") { BUTTON_NAMES[it] }
 
     private fun centered(event: MotionEvent, device: InputDevice, axis: Int): Float {
         val value = event.getAxisValue(axis)
@@ -112,6 +134,11 @@ class GamepadInput(private val onChange: (buttons: Int) -> Unit) {
     }
 
     private companion object {
+        const val TAG = "Input"
+        val BUTTON_NAMES = listOf(
+            "A", "B", "X", "Y", "L1", "R1", "L2", "R2", "SELECT", "START", "L3", "R3",
+            "UP", "DOWN", "LEFT", "RIGHT", "HOME",
+        )
         const val AXIS_THRESHOLD = 0.5f
         const val L2 = 6
         const val R2 = 7

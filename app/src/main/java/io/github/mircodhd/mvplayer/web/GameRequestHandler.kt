@@ -1,9 +1,10 @@
 package io.github.mircodhd.mvplayer.web
 
 import android.content.res.AssetManager
-import android.util.Log
+import android.os.SystemClock
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.game.GameInfo
 import io.github.mircodhd.mvplayer.game.MvDecrypter
 import io.github.mircodhd.mvplayer.patch.PatchSet
@@ -11,6 +12,8 @@ import java.io.ByteArrayInputStream
 import java.io.FileInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Serves a game folder under a virtual HTTPS origin. Every request from the WebView ends
@@ -28,16 +31,39 @@ class GameRequestHandler(
         const val HOST = "game.local"
         const val START_URL = "https://$HOST/index.html"
         private const val PATCH_PREFIX = "__mvplayer/"
-        private const val TAG = "GameRequest"
+        private const val TAG = "Request"
         private val NO_CACHE = mapOf("Cache-Control" to "no-store")
     }
 
     private val indexHtml: ByteArray by lazy { buildIndexHtml() }
 
+    private val requestCount = AtomicInteger()
+    private val notFoundCount = AtomicInteger()
+    private val decryptedCount = AtomicInteger()
+    private val bytesServed = AtomicLong()
+
+    /** Totals since the game started, logged by the activity on pause. */
+    fun stats() = "${requestCount.get()} requests, ${bytesServed.get() / 1024} KiB, " +
+        "${notFoundCount.get()} not found, ${decryptedCount.get()} decrypted twins"
+
     fun handle(request: WebResourceRequest): WebResourceResponse {
+        val start = SystemClock.elapsedRealtime()
+        val response = route(request)
+        requestCount.incrementAndGet()
+        val length = response.responseHeaders?.get("Content-Length")?.toLongOrNull() ?: 0L
+        bytesServed.addAndGet(length)
+        if (DebugLog.verbose) {
+            val range = request.requestHeaders.entries.firstOrNull { it.key.equals("Range", true) }?.let { " [${it.value}]" } ?: ""
+            DebugLog.v(TAG, "${request.method} ${request.url.path} -> ${response.statusCode} " +
+                "${response.mimeType} ${length}B$range in ${SystemClock.elapsedRealtime() - start} ms")
+        }
+        return response
+    }
+
+    private fun route(request: WebResourceRequest): WebResourceResponse {
         val url = request.url
         if (url.scheme != "https" || url.host != HOST) {
-            Log.w(TAG, "Blocked request to $url")
+            DebugLog.w(TAG, "Blocked request to $url")
             return error(403, "Forbidden")
         }
         if (request.method != "GET" && request.method != "HEAD") return error(405, "Method Not Allowed")
@@ -56,7 +82,7 @@ class GameRequestHandler(
     private fun servePatch(name: String): WebResourceResponse = try {
         WebResourceResponse("text/javascript", "UTF-8", 200, "OK", NO_CACHE, assets.open("patches/$name"))
     } catch (e: java.io.IOException) {
-        Log.e(TAG, "Missing patch $name", e)
+        DebugLog.e(TAG, "Missing patch $name", e)
         error(404, "Not Found")
     }
 
@@ -64,7 +90,8 @@ class GameRequestHandler(
         val file = info.index.resolve(path)
         if (file == null) {
             serveDecryptedTwin(path)?.let { return it }
-            Log.w(TAG, "Not found: $path")
+            notFoundCount.incrementAndGet()
+            DebugLog.w(TAG, "Not found: $path")
             return error(404, "Not Found")
         }
         val mime = MimeTypes.forPath(file.name)
@@ -96,7 +123,8 @@ class GameRequestHandler(
         val encryptedExt = MvDecrypter.ENCRYPTED_EXTENSIONS[ext] ?: return null
         val twin = info.index.resolve(path.dropLast(ext.length) + encryptedExt) ?: return null
         val bytes = MvDecrypter.decrypt(twin.readBytes(), key) ?: return null
-        Log.i(TAG, "Serving decrypted ${twin.name} for $path")
+        decryptedCount.incrementAndGet()
+        DebugLog.i(TAG, "Serving decrypted ${twin.name} for $path")
         val headers = mapOf("Cache-Control" to "no-store", "Content-Length" to bytes.size.toString())
         return WebResourceResponse(MimeTypes.forPath(path), null, 200, "OK", headers, ByteArrayInputStream(bytes))
     }
@@ -116,9 +144,10 @@ class GameRequestHandler(
         html = insertBefore(html, Regex("""<script[^>]*src\s*=\s*["']?js/plugins\.js""", RegexOption.IGNORE_CASE), pluginTags)
             ?: insertBefore(html, Regex("""<script[^>]*src\s*=\s*["']?js/main\.js""", RegexOption.IGNORE_CASE), pluginTags)
             ?: run {
-                Log.w(TAG, "index.html has no plugins.js/main.js script tag; appending patches")
+                DebugLog.w(TAG, "index.html has no plugins.js/main.js script tag; appending patches")
                 insertBefore(html, Regex("</body>", RegexOption.IGNORE_CASE), pluginTags) ?: (html + pluginTags)
             }
+        DebugLog.d(TAG, "Injected patches: before engine ${patches.beforeEngine}, before plugins ${patches.beforePlugins}")
         return html.toByteArray()
     }
 

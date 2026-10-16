@@ -1,6 +1,7 @@
 package io.github.mircodhd.mvplayer.game
 
-import android.util.Log
+import android.os.SystemClock
+import io.github.mircodhd.mvplayer.debug.DebugLog
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -25,11 +26,15 @@ data class GameInfo(
 )
 
 object GameInspector {
-    private const val TAG = "GameInspector"
+    private const val TAG = "Inspector"
     private const val BOM = "\uFEFF"
 
     /** Finds the folder that holds index.html and identifies the engine. */
-    fun detect(dir: File): EngineMatch {
+    fun detect(dir: File): EngineMatch = detectEngine(dir).also {
+        DebugLog.i(TAG, "Detected ${it.engine} in $dir (web root ${it.webRoot})")
+    }
+
+    private fun detectEngine(dir: File): EngineMatch {
         val webRoot = listOf(File(dir, "www"), dir).firstOrNull { File(it, "index.html").isFile }
         if (webRoot != null) {
             if (File(webRoot, "js/rpg_core.js").isFile) return EngineMatch(Engine.MV, webRoot)
@@ -46,7 +51,9 @@ object GameInspector {
 
     /** Full inspection of an MV game. Reads plugin files, so call it off the main thread. */
     fun inspectMv(webRoot: File): GameInfo {
+        val start = SystemClock.elapsedRealtime()
         val index = FileIndex.build(webRoot)
+        DebugLog.i(TAG, "Indexed ${index.size} files under $webRoot in ${SystemClock.elapsedRealtime() - start} ms")
         val plugins = readEnabledPlugins(webRoot)
         val usesGreenworks = plugins.any { name ->
             val file = index.resolve("js/plugins/$name.js") ?: return@any false
@@ -66,15 +73,17 @@ object GameInspector {
             encryptionKey = MvDecrypter.parseKey(system?.optString("encryptionKey")),
             index = index,
         ).also {
-            Log.i(TAG, "${it.title}: MV ${it.engineVersion}, ${plugins.size} plugins, " +
+            DebugLog.i(TAG, "${it.title}: MV ${it.engineVersion}, ${plugins.size} plugins, " +
                 "greenworks=${it.usesGreenworks}, audio=${it.audioExt}, video=${it.videoExt}, " +
-                "${index.size} files")
+                "encrypted=${it.encryptionKey != null}, inspected in ${SystemClock.elapsedRealtime() - start} ms")
+            DebugLog.i(TAG, "Enabled plugins: ${plugins.joinToString()}")
+            DebugLog.d(TAG, "File types: ${index.extensionCounts()}")
         }
     }
 
     private fun readSystem(webRoot: File): JSONObject? = runCatching {
         JSONObject(File(webRoot, "data/System.json").readText().removePrefix(BOM))
-    }.onFailure { Log.w(TAG, "Could not read data/System.json", it) }.getOrNull()
+    }.onFailure { DebugLog.w(TAG, "Could not read data/System.json", it) }.getOrNull()
 
     private fun readCoreVersion(webRoot: File): String? = runCatching {
         val head = File(webRoot, "js/rpg_core.js").bufferedReader().use { r ->
@@ -93,7 +102,7 @@ object GameInspector {
             .map { it.optString("name") }
             .filter { it.isNotBlank() }
     }.getOrElse {
-        Log.w(TAG, "Could not read js/plugins.js", it)
+        DebugLog.w(TAG, "Could not read js/plugins.js", it)
         emptyList()
     }
 

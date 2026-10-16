@@ -16,6 +16,12 @@ class FileIndex private constructor(
     /** [path] is relative to the web root, using '/' separators and no leading slash. */
     fun resolve(path: String): File? = exact[path] ?: lower[path.lowercase()]
 
+    /** e.g. "rpgmvp=2074, rpgmvo=433, json=184", most common first. */
+    fun extensionCounts(): String = lower.keys
+        .groupingBy { it.substringAfterLast('/').substringAfterLast('.', "(none)") }
+        .eachCount().entries.sortedByDescending { it.value }
+        .joinToString { "${it.key}=${it.value}" }
+
     fun anyUnder(prefix: String, predicate: (String) -> Boolean): Boolean =
         lower.keys.any { it.startsWith(prefix) && predicate(it) }
 

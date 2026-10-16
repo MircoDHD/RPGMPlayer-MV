@@ -16,6 +16,7 @@ import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.game.Engine
 import io.github.mircodhd.mvplayer.game.GameInspector
 import java.io.File
@@ -30,6 +31,7 @@ class MainActivity : ComponentActivity() {
     private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri == null) return@registerForActivityResult
         val dir = StoragePaths.treeUriToFile(this, uri)
+        DebugLog.i(TAG, "Picked $uri -> $dir")
         if (dir == null || !dir.isDirectory) showMessage(getString(R.string.main_folder_unresolvable)) else openGame(dir)
     }
 
@@ -55,6 +57,8 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         val hasAccess = Environment.isExternalStorageManager()
+        DebugLog.d(TAG, "onResume, all-files access=$hasAccess")
+        if (hasAccess) DebugLog.relocateIfPossible()
         grantAccess.visibility = if (hasAccess) View.GONE else View.VISIBLE
         chooseFolder.isEnabled = hasAccess
         if (!hasAccess) showMessage(getString(R.string.main_access_needed)) else hideMessage()
@@ -74,6 +78,7 @@ class MainActivity : ComponentActivity() {
             Engine.UNKNOWN -> R.string.engine_unknown
         }
         if (error != null) {
+            DebugLog.w(TAG, "Not starting ${match.engine} game in $dir")
             showMessage(getString(error))
             return
         }
@@ -100,6 +105,7 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val TAG = "Main"
         private const val KEY_LAST_GAME = "last_game_dir"
         private const val KEY_LAST_TITLE = "last_game_title"
 

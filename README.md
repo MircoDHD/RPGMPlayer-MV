@@ -26,8 +26,21 @@ scripts/setup-sdk.sh        # installs the SDK to ~/Android/Sdk, writes local.pr
 ./gradlew installDebug      # install on a connected device
 ```
 
-Debug builds allow remote debugging through `chrome://inspect`. Logs:
-`adb logcat -s GameConsole GameRequest GameInspector PlayerBridge GameActivity`.
+Debug builds allow remote debugging through `chrome://inspect`.
+
+## Logs
+
+Every session writes a log file to `Documents/MV Player/logs/` on the device (the last 15
+are kept; before all-files access is granted, to the app's external files folder). The
+same lines go to logcat: `adb logcat -s MvPlayer`.
+
+Logged: device, WebView and GPU details, game inspection and plugin list, lifecycle,
+input devices and controller buttons (including unmapped keys), audio outputs, media
+volume, thermal status, scene and map changes with load times, BGM/BGS/ME, plugin
+commands, saves, load errors, JS errors, and a stats snapshot every 10 s (FPS, slow
+frames, JS heap, image cache, audio state). Debug builds additionally log every served
+file, sound effects, raw axis values and video element events. The switches live in
+`DebugSettings` and are meant to get a settings screen later.
 
 ## Testing patches on the desktop
 

@@ -40,7 +40,7 @@
     };
 
     function logAudio(event) {
-        MvPlayer.log(event, JSON.stringify(MvPlayer.audioReport()));
+        MvPlayer.log('i', 'Audio', event, MvPlayer.audioReport());
     }
 
     var _WebAudio_createContext = WebAudio._createContext;

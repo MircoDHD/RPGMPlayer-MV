@@ -23,7 +23,7 @@ object PatchProfiles {
             id = "mv-base",
             applies = { true },
             beforeEngine = listOf("common/player.js"),
-            beforePlugins = listOf("mv/engine.js", "mv/storage.js", "mv/input.js", "mv/lifecycle.js"),
+            beforePlugins = listOf("mv/debug.js", "mv/engine.js", "mv/storage.js", "mv/input.js", "mv/lifecycle.js"),
         ),
         // Steam builds load greenworks through require(); give them a no-op module.
         PatchProfile(

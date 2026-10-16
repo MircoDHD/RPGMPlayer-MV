@@ -47,7 +47,7 @@
 
     window.require = function (name) {
         if (/greenworks/i.test(String(name))) {
-            MvPlayer.log('Providing greenworks stub for', name);
+            MvPlayer.log('i', 'Steam', 'Providing greenworks stub for', name);
             return module;
         }
         var error = new Error("Cannot find module '" + name + "'");
