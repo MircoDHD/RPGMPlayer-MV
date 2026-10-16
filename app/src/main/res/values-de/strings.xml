@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="main_intro">Spielt mit RPG Maker MV erstellte Spiele aus einem Ordner auf diesem Gerät. Wähle den Ordner, der Game.exe oder index.html enthält.</string>
+    <string name="main_grant_access">Dateizugriff erlauben</string>
+    <string name="main_access_needed">Dateizugriff wird benötigt, um Spielordner zu lesen und Spielstände daneben zu speichern.</string>
+    <string name="main_choose_folder">Spielordner wählen</string>
+    <string name="main_continue">Weiterspielen: %1$s</string>
+    <string name="main_folder_unresolvable">Dieser Ordner kann nicht direkt geöffnet werden. Wähle einen Ordner im internen Speicher oder auf einer SD-Karte.</string>
+
+    <string name="engine_mz_unsupported">RPG-Maker-MZ-Spiele werden noch nicht unterstützt.</string>
+    <string name="engine_rgss_unsupported">Das ist ein RPG-Maker-XP/VX/VX-Ace-Spiel. Probiere stattdessen mkxp-z (mkxp-z.github.io).</string>
+    <string name="engine_2k_unsupported">Das ist ein RPG-Maker-2000/2003-Spiel. Probiere stattdessen EasyRPG Player (easyrpg.org).</string>
+    <string name="engine_unknown">In diesem Ordner wurde kein RPG-Maker-MV-Spiel gefunden.</string>
+
+    <string name="game_loading">Lädt…</string>
+    <string name="game_quit_title">Spiel beenden?</string>
+    <string name="game_quit_message">Nicht gespeicherter Fortschritt geht verloren.</string>
+    <string name="game_quit_confirm">Beenden</string>
+    <string name="game_quit_cancel">Abbrechen</string>
+</resources>

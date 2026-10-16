@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MV Player</string>
+
+    <string name="main_intro">Plays games made with RPG Maker MV from a folder on this device. Choose the folder that contains Game.exe or index.html.</string>
+    <string name="main_grant_access">Grant file access</string>
+    <string name="main_access_needed">File access is required to read game folders and to write save files next to them.</string>
+    <string name="main_choose_folder">Choose game folder</string>
+    <string name="main_continue">Continue: %1$s</string>
+    <string name="main_folder_unresolvable">This folder cannot be opened directly. Choose a folder on internal storage or an SD card.</string>
+
+    <string name="engine_mz_unsupported">RPG Maker MZ games are not supported yet.</string>
+    <string name="engine_rgss_unsupported">This is an RPG Maker XP/VX/VX Ace game. Try mkxp-z (mkxp-z.github.io) instead.</string>
+    <string name="engine_2k_unsupported">This is an RPG Maker 2000/2003 game. Try EasyRPG Player (easyrpg.org) instead.</string>
+    <string name="engine_unknown">No RPG Maker MV game was found in this folder.</string>
+
+    <string name="game_loading">Loading…</string>
+    <string name="game_quit_title">Quit game?</string>
+    <string name="game_quit_message">Unsaved progress will be lost.</string>
+    <string name="game_quit_confirm">Quit</string>
+    <string name="game_quit_cancel">Cancel</string>
+</resources>

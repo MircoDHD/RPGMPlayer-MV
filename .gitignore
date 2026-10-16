@@ -72,4 +72,9 @@ Thumbs.db
 
 # --- Local tool config ---
 .mcp.json
-.claude/settings.local.json
+.claude/
+.kotlin/
+
+# --- Python ---
+__pycache__/
+*.pyc
