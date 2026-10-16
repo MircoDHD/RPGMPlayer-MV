@@ -179,6 +179,8 @@ class GameActivity : ComponentActivity() {
         webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.setPad($buttons)", null)
     }
 
+    // Lint flags androidx's restricted override of this framework method; overriding it is fine.
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean =
         gamepad.handleKeyEvent(event) || super.dispatchKeyEvent(event)
 

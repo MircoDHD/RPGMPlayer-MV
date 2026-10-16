@@ -9,7 +9,7 @@ set -euo pipefail
 SDK="${ANDROID_HOME:-$HOME/Android/Sdk}"
 CMDLINE_ZIP="commandlinetools-linux-16111833_latest.zip"
 CMDLINE_SHA1="e025545c62a8e64c7559119566a569fb1dec5f60"
-PACKAGES=("platform-tools" "platforms;android-36" "build-tools;36.1.0")
+PACKAGES=("platform-tools" "platforms;android-37.0" "build-tools;36.1.0")
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 sdkmanager="$SDK/cmdline-tools/latest/bin/sdkmanager"

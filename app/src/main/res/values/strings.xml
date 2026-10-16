@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MV Player</string>
+    <string name="app_name" translatable="false">MV Player</string>
 
     <string name="main_intro">Plays games made with RPG Maker MV from a folder on this device. Choose the folder that contains Game.exe or index.html.</string>
     <string name="main_grant_access">Grant file access</string>
