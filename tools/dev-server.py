@@ -27,7 +27,7 @@ ENCRYPTED_EXTENSIONS = {"png": "rpgmvp", "ogg": "rpgmvo", "m4a": "rpgmvm"}
 
 # Mirrors PatchProfiles.kt.
 BEFORE_ENGINE = ["common/player.js"]
-BEFORE_PLUGINS = ["mv/debug.js", "mv/engine.js", "mv/storage.js", "mv/input.js", "mv/lifecycle.js"]
+BEFORE_PLUGINS = ["mv/debug.js", "mv/engine.js", "mv/framerate.js", "mv/storage.js", "mv/input.js", "mv/lifecycle.js"]
 GREENWORKS_PATCHES = ["stubs/greenworks.js"]
 
 HOST_SHIM = """
@@ -105,6 +105,7 @@ def inspect(root: Path, exact, lower):
         "audioExt": ".m4a" if (not has_ogg and has_m4a) else ".ogg",
         "videoExt": ".mp4" if (not has_webm and has_mp4) else ".webm",
         "profiles": profiles,
+        "frameRateCap": 60,
         "debug": {"verbose": True, "statsIntervalSeconds": 10},
     }
     before_plugins = BEFORE_PLUGINS + (GREENWORKS_PATCHES if uses_greenworks else [])

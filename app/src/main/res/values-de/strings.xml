@@ -7,6 +7,7 @@
     <string name="main_continue">Weiterspielen: %1$s</string>
     <string name="main_folder_unresolvable">Dieser Ordner kann nicht direkt geöffnet werden. Wähle einen Ordner im internen Speicher oder auf einer SD-Karte.</string>
 
+    <string name="main_version">Version %1$s</string>
     <string name="main_share_logs">Logs teilen</string>
     <string name="main_share_logs_chooser">MV-Player-Logs teilen</string>
     <string name="main_no_logs">Noch keine Logs vorhanden.</string>

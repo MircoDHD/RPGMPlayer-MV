@@ -75,12 +75,11 @@ class GameRequestHandler(
         }
     }
 
-    private fun serveIndex() = WebResourceResponse(
-        "text/html", "UTF-8", 200, "OK", NO_CACHE, ByteArrayInputStream(indexHtml),
-    )
+    private fun serveIndex() = inMemory("text/html", indexHtml)
 
+    // Patches are small; reading them fully gives the response a Content-Length.
     private fun servePatch(name: String): WebResourceResponse = try {
-        WebResourceResponse("text/javascript", "UTF-8", 200, "OK", NO_CACHE, assets.open("patches/$name"))
+        inMemory("text/javascript", assets.open("patches/$name").use { it.readBytes() })
     } catch (e: java.io.IOException) {
         DebugLog.e(TAG, "Missing patch $name", e)
         error(404, "Not Found")
@@ -182,6 +181,10 @@ class GameRequestHandler(
         }
         return if (start in 0..end) start to end else null
     }
+
+    private fun inMemory(mime: String, bytes: ByteArray) = WebResourceResponse(
+        mime, "UTF-8", 200, "OK", NO_CACHE + ("Content-Length" to bytes.size.toString()), ByteArrayInputStream(bytes),
+    )
 
     private fun error(status: Int, reason: String) =
         WebResourceResponse("text/plain", "UTF-8", status, reason, NO_CACHE, ByteArrayInputStream(ByteArray(0)))

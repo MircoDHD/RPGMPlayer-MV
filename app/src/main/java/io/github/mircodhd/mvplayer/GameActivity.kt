@@ -149,12 +149,16 @@ class GameActivity : ComponentActivity() {
         val (profileIds, patches) = PatchProfiles.select(info)
         DebugLog.i(TAG, "Patch profiles: $profileIds")
         val debugSettings = DebugLog.settings
+        val playerSettings = PlayerSettings.load(this)
+        DebugLog.i(TAG, "Player settings: $playerSettings")
+        applyFrameRateCap(playerSettings.frameRateCap)
         val config = JSONObject()
             .put("title", info.title)
             .put("engineVersion", info.engineVersion ?: JSONObject.NULL)
             .put("audioExt", info.audioExt)
             .put("videoExt", info.videoExt)
             .put("profiles", JSONArray(profileIds))
+            .put("frameRateCap", playerSettings.frameRateCap)
             .put("debug", JSONObject()
                 .put("verbose", debugSettings.verbose)
                 .put("statsIntervalSeconds", debugSettings.statsIntervalSeconds))
@@ -352,6 +356,18 @@ class GameActivity : ComponentActivity() {
             .setPositiveButton(android.R.string.ok, null)
             .setOnDismissListener { finish() }
             .show()
+    }
+
+    /**
+     * Asks Android to drive the display at the cap (e.g. 60 instead of 120 Hz). This saves
+     * power in the panel too; framerate.js covers displays that ignore the request.
+     */
+    private fun applyFrameRateCap(cap: Int) {
+        if (cap <= 0) return
+        window.attributes = window.attributes.apply { preferredRefreshRate = cap.toFloat() }
+        container.postDelayed({
+            DebugLog.i("Frames", "Requested $cap Hz, display runs at ${"%.1f".format(display?.refreshRate ?: 0f)} Hz")
+        }, 1000)
     }
 
     private fun logMediaVolume() {

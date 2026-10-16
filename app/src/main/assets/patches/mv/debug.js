@@ -254,24 +254,42 @@
 
     var interval = (debug.statsIntervalSeconds || 0) * 1000;
     if (interval > 0) {
+        // displayHz: animation frame callbacks; fps: images actually rendered (lower with a
+        // frame rate cap); logicUps: game logic steps (60 in MV).
         var rafFrames = 0;
+        var renders = 0;
+        var logicSteps = 0;
         var slowFrames = 0;
         var maxGap = 0;
-        var lastRaf = 0;
-        var tick = function (now) {
-            if (lastRaf) {
-                var gap = now - lastRaf;
-                if (gap > maxGap) maxGap = gap;
-                if (gap > 34) slowFrames++; // more than two 60 Hz frames
-            }
-            lastRaf = now;
+        var lastRender = 0;
+        var tick = function () {
             rafFrames++;
             requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
 
+        wrap(Graphics, 'render', function (original) {
+            return function () {
+                var now = performance.now();
+                if (lastRender) {
+                    var gap = now - lastRender;
+                    if (gap > maxGap) maxGap = gap;
+                    if (gap > 34) slowFrames++; // longer than two 60 Hz frames
+                }
+                lastRender = now;
+                renders++;
+                return original.apply(this, arguments);
+            };
+        });
+
+        wrap(SceneManager, 'updateScene', function (original) {
+            return function () {
+                logicSteps++;
+                return original.apply(this, arguments);
+            };
+        });
+
         var lastTime = performance.now();
-        var lastGameFrames = Graphics.frameCount;
 
         var imageCacheStats = function () {
             var cache = ImageManager._imageCache;
@@ -289,8 +307,9 @@
             var now = performance.now();
             var seconds = (now - lastTime) / 1000;
             var stats = {
-                fps: +(rafFrames / seconds).toFixed(1),
-                gameFps: +((Graphics.frameCount - lastGameFrames) / seconds).toFixed(1),
+                fps: +(renders / seconds).toFixed(1),
+                displayHz: +(rafFrames / seconds).toFixed(1),
+                logicUps: +(logicSteps / seconds).toFixed(1),
                 slowFrames: slowFrames,
                 maxFrameMs: Math.round(maxGap),
                 scene: sceneName(SceneManager._scene),
@@ -309,10 +328,11 @@
             if (MvPlayer.audioReport) stats.audio = MvPlayer.audioReport();
             log('i', 'Stats', stats);
             rafFrames = 0;
+            renders = 0;
+            logicSteps = 0;
             slowFrames = 0;
             maxGap = 0;
             lastTime = now;
-            lastGameFrames = Graphics.frameCount;
         }, interval);
     }
 })();

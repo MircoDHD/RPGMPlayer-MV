@@ -55,6 +55,9 @@ class MainActivity : ComponentActivity() {
         continueGame = findViewById(R.id.continueGame)
         shareLogs = findViewById(R.id.shareLogs)
         logLocation = findViewById(R.id.logLocation)
+        @Suppress("DEPRECATION") // the flags overload needs API 33
+        val version = packageManager.getPackageInfo(packageName, 0).versionName
+        findViewById<TextView>(R.id.appVersion).text = getString(R.string.main_version, version)
 
         grantAccess.setOnClickListener { requestAllFilesAccess() }
         chooseFolder.setOnClickListener { pickFolder.launch(null) }
