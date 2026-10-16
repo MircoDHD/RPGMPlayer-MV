@@ -9,6 +9,11 @@
     <string name="main_continue">Continue: %1$s</string>
     <string name="main_folder_unresolvable">This folder cannot be opened directly. Choose a folder on internal storage or an SD card.</string>
 
+    <string name="main_share_logs">Share logs</string>
+    <string name="main_share_logs_chooser">Share MV Player logs</string>
+    <string name="main_no_logs">No logs yet.</string>
+    <string name="main_log_location">Logs are saved in %1$s</string>
+
     <string name="engine_mz_unsupported">RPG Maker MZ games are not supported yet.</string>
     <string name="engine_rgss_unsupported">This is an RPG Maker XP/VX/VX Ace game. Try mkxp-z (mkxp-z.github.io) instead.</string>
     <string name="engine_2k_unsupported">This is an RPG Maker 2000/2003 game. Try EasyRPG Player (easyrpg.org) instead.</string>

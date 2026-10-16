@@ -7,6 +7,11 @@
     <string name="main_continue">Weiterspielen: %1$s</string>
     <string name="main_folder_unresolvable">Dieser Ordner kann nicht direkt geöffnet werden. Wähle einen Ordner im internen Speicher oder auf einer SD-Karte.</string>
 
+    <string name="main_share_logs">Logs teilen</string>
+    <string name="main_share_logs_chooser">MV-Player-Logs teilen</string>
+    <string name="main_no_logs">Noch keine Logs vorhanden.</string>
+    <string name="main_log_location">Logs werden gespeichert in %1$s</string>
+
     <string name="engine_mz_unsupported">RPG-Maker-MZ-Spiele werden noch nicht unterstützt.</string>
     <string name="engine_rgss_unsupported">Das ist ein RPG-Maker-XP/VX/VX-Ace-Spiel. Probiere stattdessen mkxp-z (mkxp-z.github.io).</string>
     <string name="engine_2k_unsupported">Das ist ein RPG-Maker-2000/2003-Spiel. Probiere stattdessen EasyRPG Player (easyrpg.org).</string>

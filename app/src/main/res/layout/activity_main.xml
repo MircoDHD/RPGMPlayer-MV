@@ -52,5 +52,21 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="@string/main_choose_folder" />
+
+        <Button
+            android:id="@+id/shareLogs"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="@string/main_share_logs" />
+
+        <TextView
+            android:id="@+id/logLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:textAppearance="@android:style/TextAppearance.DeviceDefault.Small"
+            android:textColor="?android:attr/textColorSecondary" />
     </LinearLayout>
 </ScrollView>

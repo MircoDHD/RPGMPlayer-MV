@@ -32,7 +32,8 @@ Debug builds allow remote debugging through `chrome://inspect`.
 
 Every session writes a log file to `Documents/MV Player/logs/` on the device (the last 15
 are kept; before all-files access is granted, to the app's external files folder). The
-same lines go to logcat: `adb logcat -s MvPlayer`.
+same lines go to logcat: `adb logcat -s MvPlayer`. "Share logs" on the start screen packs
+all session logs into a zip and opens the Android share sheet.
 
 Logged: device, WebView and GPU details, game inspection and plugin list, lifecycle,
 input devices and controller buttons (including unmapped keys), audio outputs, media

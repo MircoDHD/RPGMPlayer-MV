@@ -96,6 +96,18 @@ object DebugLog {
         }
     }
 
+    /** Where new session logs go: Documents with all-files access, the app folder otherwise. */
+    fun logDirectory(): File? = appContext?.let(::preferredDir)
+
+    /** All session logs in both possible locations, oldest first. */
+    fun logFiles(): List<File> {
+        val context = appContext ?: return emptyList()
+        return listOf(publicDir(), privateDir(context))
+            .distinct()
+            .flatMap { dir -> dir.listFiles { f -> f.name.endsWith(".log") }?.toList().orEmpty() }
+            .sortedBy { it.name }
+    }
+
     /** Writes pending lines; blocks briefly so it can be used before a crash or pause. */
     fun flush() {
         runCatching { writerThread.submit { flushNow() }.get(500, TimeUnit.MILLISECONDS) }
@@ -106,11 +118,12 @@ object DebugLog {
     }
 
     private fun preferredDir(context: Context): File =
-        if (Environment.isExternalStorageManager()) {
-            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "MV Player/logs")
-        } else {
-            File(context.getExternalFilesDir(null) ?: context.filesDir, "logs")
-        }
+        if (Environment.isExternalStorageManager()) publicDir() else privateDir(context)
+
+    private fun publicDir() =
+        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "MV Player/logs")
+
+    private fun privateDir(context: Context) = File(context.getExternalFilesDir(null) ?: context.filesDir, "logs")
 
     private fun openFile(dir: File) {
         if (!dir.mkdirs() && !dir.isDirectory) {

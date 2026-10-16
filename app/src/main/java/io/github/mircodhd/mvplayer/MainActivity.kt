@@ -17,9 +17,11 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import io.github.mircodhd.mvplayer.debug.DebugLog
+import io.github.mircodhd.mvplayer.debug.LogExporter
 import io.github.mircodhd.mvplayer.game.Engine
 import io.github.mircodhd.mvplayer.game.GameInspector
 import java.io.File
+import java.util.concurrent.Executors
 
 /** Start screen: obtains file access and lets the user pick a game folder. */
 class MainActivity : ComponentActivity() {
@@ -27,6 +29,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var grantAccess: Button
     private lateinit var chooseFolder: Button
     private lateinit var continueGame: Button
+    private lateinit var shareLogs: Button
+    private lateinit var logLocation: TextView
+    private val executor = Executors.newSingleThreadExecutor()
 
     private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri == null) return@registerForActivityResult
@@ -48,10 +53,18 @@ class MainActivity : ComponentActivity() {
         grantAccess = findViewById(R.id.grantAccess)
         chooseFolder = findViewById(R.id.chooseFolder)
         continueGame = findViewById(R.id.continueGame)
+        shareLogs = findViewById(R.id.shareLogs)
+        logLocation = findViewById(R.id.logLocation)
 
         grantAccess.setOnClickListener { requestAllFilesAccess() }
         chooseFolder.setOnClickListener { pickFolder.launch(null) }
         continueGame.setOnClickListener { lastGame(this)?.let(::openGame) }
+        shareLogs.setOnClickListener { exportLogs() }
+    }
+
+    override fun onDestroy() {
+        executor.shutdown()
+        super.onDestroy()
     }
 
     override fun onResume() {
@@ -66,7 +79,28 @@ class MainActivity : ComponentActivity() {
         val last = lastGame(this)
         continueGame.visibility = if (hasAccess && last != null) View.VISIBLE else View.GONE
         if (last != null) continueGame.text = getString(R.string.main_continue, lastTitle(this) ?: last.name)
+
+        val logDir = DebugLog.logDirectory()
+        logLocation.text = logDir?.let { getString(R.string.main_log_location, displayPath(it)) }.orEmpty()
     }
+
+    private fun exportLogs() {
+        shareLogs.isEnabled = false
+        val title = getString(R.string.main_share_logs_chooser)
+        executor.execute {
+            val intent = runCatching { LogExporter.createShareIntent(this, title) }
+                .onFailure { DebugLog.e(TAG, "Log export failed", it) }
+                .getOrNull()
+            runOnUiThread {
+                shareLogs.isEnabled = true
+                if (intent != null) startActivity(intent) else showMessage(getString(R.string.main_no_logs))
+            }
+        }
+    }
+
+    /** "/storage/emulated/0/Documents/..." -> "Documents/..." */
+    private fun displayPath(dir: File): String =
+        dir.absolutePath.removePrefix(Environment.getExternalStorageDirectory().absolutePath).trimStart('/')
 
     private fun openGame(dir: File) {
         val match = GameInspector.detect(dir)
