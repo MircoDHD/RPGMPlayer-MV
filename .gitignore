@@ -1,0 +1,75 @@
+# --- Safety net: never commit game files or assets ---
+# Game folders live outside this repo; these patterns catch accidental copies.
+www/
+**/www/
+Game.exe
+*.exe
+*.dll
+*.pak
+*.dat
+*.bin
+locales/
+swiftshader/
+
+# RPG Maker MV/MZ data and assets
+*.rpgmvp
+*.rpgmvo
+*.rpgmvm
+*.png_
+*.ogg_
+*.m4a_
+*.rpgsave
+*.rmmzsave
+rpg_core.js
+rpg_managers.js
+rpg_objects.js
+rpg_scenes.js
+rpg_sprites.js
+rpg_windows.js
+rmmz_*.js
+plugins.js
+*.ogg
+*.m4a
+*.webm
+*.mp4
+*.ttf
+*.otf
+*.woff
+*.woff2
+games/
+test-games/
+
+# Analysis output that may contain game content
+analysis/raw/
+
+# --- Android / Gradle ---
+.gradle/
+build/
+**/build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.keystore
+*.jks
+keystore.properties
+
+# --- IDEs / editors ---
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+
+# --- OS ---
+.DS_Store
+__MACOSX/
+Thumbs.db
+
+# --- Local tool config ---
+.mcp.json
+.claude/settings.local.json
