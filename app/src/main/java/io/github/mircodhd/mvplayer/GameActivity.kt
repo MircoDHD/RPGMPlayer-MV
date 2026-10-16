@@ -3,11 +3,13 @@ package io.github.mircodhd.mvplayer
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.pm.ApplicationInfo
+import android.content.res.Configuration
 import android.graphics.Color
 import android.hardware.input.InputManager
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -44,6 +46,7 @@ class GameActivity : ComponentActivity() {
     companion object {
         const val EXTRA_GAME_DIR = "game_dir"
         private const val TAG = "GameActivity"
+        private const val LIFECYCLE_TAG = "GameLifecycle"
         private const val SELECT_START = (1 shl 8) or (1 shl 9)
     }
 
@@ -57,13 +60,21 @@ class GameActivity : ComponentActivity() {
     private val isDebuggable get() = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
 
     private val deviceListener = object : InputManager.InputDeviceListener {
-        override fun onInputDeviceAdded(deviceId: Int) = Unit
+        override fun onInputDeviceAdded(deviceId: Int) {
+            Log.i(LIFECYCLE_TAG, "input device added: ${describeDevice(deviceId)}")
+        }
+
         override fun onInputDeviceChanged(deviceId: Int) = Unit
-        override fun onInputDeviceRemoved(deviceId: Int) = gamepad.onDeviceRemoved(deviceId)
+
+        override fun onInputDeviceRemoved(deviceId: Int) {
+            Log.i(LIFECYCLE_TAG, "input device removed: $deviceId")
+            gamepad.onDeviceRemoved(deviceId)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.i(LIFECYCLE_TAG, "onCreate (recreated=${savedInstanceState != null})")
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         hideSystemBars()
@@ -189,6 +200,7 @@ class GameActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        Log.i(LIFECYCLE_TAG, "onPause")
         gamepad.reset()
         webView?.run {
             evaluateJavascript("window.MvPlayer&&MvPlayer.onPause()", null)
@@ -199,6 +211,7 @@ class GameActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        Log.i(LIFECYCLE_TAG, "onResume")
         hideSystemBars()
         webView?.run {
             resumeTimers()
@@ -207,12 +220,29 @@ class GameActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        Log.i(LIFECYCLE_TAG, "onStart")
+    }
+
+    override fun onStop() {
+        Log.i(LIFECYCLE_TAG, "onStop")
+        super.onStop()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        Log.i(LIFECYCLE_TAG, "onConfigurationChanged: $newConfig")
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        Log.i(LIFECYCLE_TAG, "window focus $hasFocus")
         if (hasFocus) hideSystemBars() else gamepad.reset()
     }
 
     override fun onDestroy() {
+        Log.i(LIFECYCLE_TAG, "onDestroy (finishing=$isFinishing)")
         getSystemService(InputManager::class.java).unregisterInputDeviceListener(deviceListener)
         executor.shutdownNow()
         quitDialog?.dismiss()
@@ -242,6 +272,11 @@ class GameActivity : ComponentActivity() {
             .setPositiveButton(android.R.string.ok, null)
             .setOnDismissListener { finish() }
             .show()
+    }
+
+    private fun describeDevice(deviceId: Int): String {
+        val device = InputDevice.getDevice(deviceId) ?: return "$deviceId (gone)"
+        return "$deviceId '${device.name}' sources=0x${device.sources.toString(16)}"
     }
 
     private fun hideSystemBars() {
