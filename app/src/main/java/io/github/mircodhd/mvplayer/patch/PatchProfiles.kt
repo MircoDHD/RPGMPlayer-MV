@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MircoDHD
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package io.github.mircodhd.mvplayer.patch
 
 import io.github.mircodhd.mvplayer.game.GameInfo

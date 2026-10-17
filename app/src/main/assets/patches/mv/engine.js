@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MircoDHD
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /*
  * MV Player: engine behaviour on Android. Runs after rpg_*.js, before plugins.
  * Patch version: 1

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 MircoDHD
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Desktop test server that mimics the Android app's request handling.
 
 Serves an MV game folder like GameRequestHandler does (case-insensitive lookup,

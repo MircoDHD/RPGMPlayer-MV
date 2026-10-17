@@ -1,129 +1,70 @@
+// SPDX-FileCopyrightText: 2026 MircoDHD
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package io.github.mircodhd.mvplayer
 
-import android.content.Context
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
-import android.os.Environment
 import android.provider.Settings
-import android.view.View
-import android.widget.Button
-import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.edit
+import androidx.activity.viewModels
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
 import io.github.mircodhd.mvplayer.debug.DebugLog
-import io.github.mircodhd.mvplayer.debug.LogExporter
-import io.github.mircodhd.mvplayer.game.Engine
-import io.github.mircodhd.mvplayer.game.GameInspector
-import java.io.File
-import java.util.concurrent.Executors
+import io.github.mircodhd.mvplayer.library.GameEntry
+import io.github.mircodhd.mvplayer.ui.Format
+import io.github.mircodhd.mvplayer.ui.GameInfoSheet
+import io.github.mircodhd.mvplayer.ui.LibraryScreen
+import io.github.mircodhd.mvplayer.ui.LibraryViewModel
+import io.github.mircodhd.mvplayer.ui.SettingsScreen
+import io.github.mircodhd.mvplayer.ui.theme.MvPlayerTheme
 
-/** Start screen: obtains file access and lets the user pick a game folder. */
+/** Start screen: the game library and the settings. */
 class MainActivity : ComponentActivity() {
-    private lateinit var message: TextView
-    private lateinit var grantAccess: Button
-    private lateinit var chooseFolder: Button
-    private lateinit var continueGame: Button
-    private lateinit var shareLogs: Button
-    private lateinit var logLocation: TextView
-    private val executor = Executors.newSingleThreadExecutor()
-
-    private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        if (uri == null) return@registerForActivityResult
-        val dir = StoragePaths.treeUriToFile(this, uri)
-        DebugLog.i(TAG, "Picked $uri -> $dir")
-        if (dir == null || !dir.isDirectory) showMessage(getString(R.string.main_folder_unresolvable)) else openGame(dir)
-    }
+    private val viewModel: LibraryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root)) { view, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-            view.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
-            insets
-        }
-        message = findViewById(R.id.message)
-        grantAccess = findViewById(R.id.grantAccess)
-        chooseFolder = findViewById(R.id.chooseFolder)
-        continueGame = findViewById(R.id.continueGame)
-        shareLogs = findViewById(R.id.shareLogs)
-        logLocation = findViewById(R.id.logLocation)
         @Suppress("DEPRECATION") // the flags overload needs API 33
-        val version = packageManager.getPackageInfo(packageName, 0).versionName
-        findViewById<TextView>(R.id.appVersion).text = getString(R.string.main_version, version)
-
-        grantAccess.setOnClickListener { requestAllFilesAccess() }
-        chooseFolder.setOnClickListener { pickFolder.launch(null) }
-        continueGame.setOnClickListener { lastGame(this)?.let(::openGame) }
-        shareLogs.setOnClickListener { exportLogs() }
-    }
-
-    override fun onDestroy() {
-        executor.shutdown()
-        super.onDestroy()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val hasAccess = Environment.isExternalStorageManager()
-        DebugLog.d(TAG, "onResume, all-files access=$hasAccess")
-        if (hasAccess) DebugLog.relocateIfPossible()
-        grantAccess.visibility = if (hasAccess) View.GONE else View.VISIBLE
-        chooseFolder.isEnabled = hasAccess
-        if (!hasAccess) showMessage(getString(R.string.main_access_needed)) else hideMessage()
-
-        val last = lastGame(this)
-        continueGame.visibility = if (hasAccess && last != null) View.VISIBLE else View.GONE
-        if (last != null) continueGame.text = getString(R.string.main_continue, lastTitle(this) ?: last.name)
-
-        val logDir = DebugLog.logDirectory()
-        logLocation.text = logDir?.let { getString(R.string.main_log_location, displayPath(it)) }.orEmpty()
-    }
-
-    private fun exportLogs() {
-        shareLogs.isEnabled = false
-        val title = getString(R.string.main_share_logs_chooser)
-        executor.execute {
-            val intent = runCatching { LogExporter.createShareIntent(this, title) }
-                .onFailure { DebugLog.e(TAG, "Log export failed", it) }
-                .getOrNull()
-            runOnUiThread {
-                shareLogs.isEnabled = true
-                if (intent != null) startActivity(intent) else showMessage(getString(R.string.main_no_logs))
+        val versionName = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+        setContent {
+            MvPlayerTheme {
+                PlayerHome(
+                    viewModel = viewModel,
+                    versionName = versionName,
+                    onPlay = ::launchGame,
+                    onRequestAccess = ::requestAllFilesAccess,
+                    onOpenUrl = ::openUrl,
+                    onStartIntent = ::startActivity,
+                )
             }
         }
     }
 
-    /** "/storage/emulated/0/Documents/..." -> "Documents/..." */
-    private fun displayPath(dir: File): String =
-        dir.absolutePath.removePrefix(Environment.getExternalStorageDirectory().absolutePath).trimStart('/')
+    override fun onResume() {
+        super.onResume()
+        viewModel.onResume()
+    }
 
-    private fun openGame(dir: File) {
-        val match = GameInspector.detect(dir)
-        val error = when (match.engine) {
-            Engine.MV -> null
-            Engine.MZ -> R.string.engine_mz_unsupported
-            Engine.RGSS -> R.string.engine_rgss_unsupported
-            Engine.RPG2K -> R.string.engine_2k_unsupported
-            Engine.UNKNOWN -> R.string.engine_unknown
-        }
-        if (error != null) {
-            DebugLog.w(TAG, "Not starting ${match.engine} game in $dir")
-            showMessage(getString(error))
-            return
-        }
-        prefs(this).edit {
-            putString(KEY_LAST_GAME, dir.absolutePath)
-            remove(KEY_LAST_TITLE) // GameActivity stores the real title once it has read it
-        }
-        startActivity(Intent(this, GameActivity::class.java).putExtra(GameActivity.EXTRA_GAME_DIR, dir.absolutePath))
+    private fun launchGame(game: GameEntry) {
+        DebugLog.i(TAG, "Launching '${game.title}' from ${game.path}")
+        startActivity(Intent(this, GameActivity::class.java).putExtra(GameActivity.EXTRA_GAME_DIR, game.path))
     }
 
     private fun requestAllFilesAccess() {
@@ -132,27 +73,104 @@ class MainActivity : ComponentActivity() {
             .onFailure { startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) }
     }
 
-    private fun showMessage(text: String) {
-        message.text = text
-        message.visibility = View.VISIBLE
+    private fun openUrl(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+        } catch (e: ActivityNotFoundException) {
+            viewModel.showMessage(getString(R.string.set_no_browser))
+        }
     }
 
-    private fun hideMessage() {
-        message.visibility = View.GONE
+    private companion object {
+        const val TAG = "Main"
+    }
+}
+
+private enum class Screen { Library, Settings }
+
+@Composable
+private fun PlayerHome(
+    viewModel: LibraryViewModel,
+    versionName: String,
+    onPlay: (GameEntry) -> Unit,
+    onRequestAccess: () -> Unit,
+    onOpenUrl: (String) -> Unit,
+    onStartIntent: (Intent) -> Unit,
+) {
+    val context = LocalContext.current
+    var screen by rememberSaveable { mutableStateOf(Screen.Library) }
+    var infoGameId by rememberSaveable { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val message = viewModel.message
+    LaunchedEffect(message) {
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            viewModel.messageShown()
+        }
     }
 
-    companion object {
-        private const val TAG = "Main"
-        private const val KEY_LAST_GAME = "last_game_dir"
-        private const val KEY_LAST_TITLE = "last_game_title"
+    val folderUnresolvable = stringResource(R.string.lib_folder_unresolvable)
+    val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val dir = StoragePaths.treeUriToFile(context, uri)
+        DebugLog.i("Main", "Picked $uri -> $dir")
+        if (dir == null || !dir.isDirectory) {
+            viewModel.showMessage(folderUnresolvable)
+        } else {
+            viewModel.addGame(dir)
+        }
+    }
 
-        private fun prefs(context: Context) = context.getSharedPreferences("player", MODE_PRIVATE)
+    when (screen) {
+        Screen.Library -> LibraryScreen(
+            games = viewModel.games,
+            covers = viewModel.covers,
+            missing = viewModel.missing,
+            hasAccess = viewModel.hasAccess,
+            adding = viewModel.adding,
+            snackbarHostState = snackbarHostState,
+            onAddGame = { pickFolder.launch(null) },
+            onPlay = onPlay,
+            onInfo = { game ->
+                infoGameId = game.id
+                viewModel.refresh(game.id)
+            },
+            onOpenSettings = { screen = Screen.Settings },
+            onRequestAccess = onRequestAccess,
+        )
+        Screen.Settings -> {
+            BackHandler { screen = Screen.Library }
+            SettingsScreen(
+                versionName = versionName,
+                frameRateCapEnabled = viewModel.playerSettings.frameRateCap > 0,
+                logToFile = viewModel.logToFile,
+                logLocation = if (viewModel.logToFile) DebugLog.logDirectory()?.let { Format.path(it.path) } else null,
+                snackbarHostState = snackbarHostState,
+                onBack = { screen = Screen.Library },
+                onFrameRateCapChange = viewModel::setFrameRateCapEnabled,
+                onLogToFileChange = viewModel::setLogToFileEnabled,
+                onShareLogs = { viewModel.exportLogs(onStartIntent) },
+                onOpenUrl = onOpenUrl,
+            )
+        }
+    }
 
-        fun lastGame(context: Context): File? =
-            prefs(context).getString(KEY_LAST_GAME, null)?.let(::File)?.takeIf { it.isDirectory }
-
-        private fun lastTitle(context: Context): String? = prefs(context).getString(KEY_LAST_TITLE, null)
-
-        fun rememberTitle(context: Context, title: String) = prefs(context).edit { putString(KEY_LAST_TITLE, title) }
+    val infoGame = infoGameId?.let { id -> viewModel.games.firstOrNull { it.id == id } }
+    if (infoGame != null && screen == Screen.Library) {
+        GameInfoSheet(
+            game = infoGame,
+            cover = viewModel.covers[infoGame.id],
+            folderMissing = infoGame.id in viewModel.missing,
+            onDismiss = { infoGameId = null },
+            onPlay = {
+                infoGameId = null
+                onPlay(infoGame)
+            },
+            onRemove = {
+                infoGameId = null
+                viewModel.removeGame(infoGame.id)
+            },
+        )
     }
 }

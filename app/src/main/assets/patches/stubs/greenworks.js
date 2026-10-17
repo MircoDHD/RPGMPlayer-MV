@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MircoDHD
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /*
  * MV Player: no-op Steam (greenworks) module. Runs after rpg_*.js, before plugins.
  * Patch version: 1

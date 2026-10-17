@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MircoDHD
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package io.github.mircodhd.mvplayer
 
 import android.annotation.SuppressLint
@@ -39,6 +42,7 @@ import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.game.GameInfo
 import io.github.mircodhd.mvplayer.game.GameInspector
 import io.github.mircodhd.mvplayer.input.GamepadInput
+import io.github.mircodhd.mvplayer.library.GameLibrary
 import io.github.mircodhd.mvplayer.patch.PatchProfiles
 import io.github.mircodhd.mvplayer.web.GameRequestHandler
 import org.json.JSONArray
@@ -63,6 +67,9 @@ class GameActivity : ComponentActivity() {
     private val executor = Executors.newSingleThreadExecutor()
     private val gamepad = GamepadInput(::onGamepadChanged)
     private val createdAt = SystemClock.elapsedRealtime()
+    private var gameDir: File? = null
+    /** Start of the current foreground stretch, for the library's play time. */
+    private var resumedAt = 0L
 
     private val audioManager by lazy { getSystemService(AudioManager::class.java) }
     private val powerManager by lazy { getSystemService(PowerManager::class.java) }
@@ -130,6 +137,7 @@ class GameActivity : ComponentActivity() {
             finish()
             return
         }
+        gameDir = dir
         DebugLog.i(TAG, "Opening game in $dir")
         executor.execute {
             val result = runCatching {
@@ -145,7 +153,6 @@ class GameActivity : ComponentActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun startGame(info: GameInfo) {
-        MainActivity.rememberTitle(this, info.title)
         val (profileIds, patches) = PatchProfiles.select(info)
         DebugLog.i(TAG, "Patch profiles: $profileIds")
         val debugSettings = DebugLog.settings
@@ -276,6 +283,7 @@ class GameActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         DebugLog.i(LIFECYCLE, "onPause")
+        recordPlayTime()
         requestHandler?.let { DebugLog.i("Request", "Totals: ${it.stats()}") }
         gamepad.reset()
         webView?.run {
@@ -289,6 +297,7 @@ class GameActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         DebugLog.i(LIFECYCLE, "onResume")
+        resumedAt = SystemClock.elapsedRealtime()
         hideSystemBars()
         webView?.run {
             resumeTimers()
@@ -368,6 +377,15 @@ class GameActivity : ComponentActivity() {
         container.postDelayed({
             DebugLog.i("Frames", "Requested $cap Hz, display runs at ${"%.1f".format(display?.refreshRate ?: 0f)} Hz")
         }, 1000)
+    }
+
+    private fun recordPlayTime() {
+        val dir = gameDir ?: return
+        if (resumedAt == 0L) return
+        val played = SystemClock.elapsedRealtime() - resumedAt
+        resumedAt = 0L
+        GameLibrary.get(this).recordPlay(dir.absolutePath, played)
+        DebugLog.d(TAG, "Recorded ${played / 1000} s of play time")
     }
 
     private fun logMediaVolume() {

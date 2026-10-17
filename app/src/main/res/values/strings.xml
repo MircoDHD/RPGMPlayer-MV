@@ -2,24 +2,84 @@
 <resources>
     <string name="app_name" translatable="false">MV Player</string>
 
-    <string name="main_intro">Plays games made with RPG Maker MV from a folder on this device. Choose the folder that contains Game.exe or index.html.</string>
-    <string name="main_grant_access">Grant file access</string>
-    <string name="main_access_needed">File access is required to read game folders and to write save files next to them.</string>
-    <string name="main_choose_folder">Choose game folder</string>
-    <string name="main_continue">Continue: %1$s</string>
-    <string name="main_folder_unresolvable">This folder cannot be opened directly. Choose a folder on internal storage or an SD card.</string>
+    <!-- Library -->
+    <string name="lib_add_game">Add game</string>
+    <string name="lib_info">Game info</string>
+    <string name="lib_play">Play</string>
+    <string name="lib_playtime">Played %1$s</string>
+    <string name="lib_never_played">Not played yet</string>
+    <string name="lib_last_played">Last played %1$s</string>
+    <string name="lib_folder_missing">Folder not found</string>
+    <string name="lib_access_title">File access needed</string>
+    <string name="lib_access_text">MV Player reads games directly from their folders and saves next to them, just like on PC. Android asks for all-files access for that.</string>
+    <string name="lib_access_button">Grant access</string>
+    <string name="lib_empty_title">No games yet</string>
+    <string name="lib_empty_text">Tap “Add game” and choose the folder that contains Game.exe or index.html of an RPG Maker MV game.</string>
+    <string name="lib_folder_unresolvable">This folder cannot be opened directly. Choose a folder on internal storage or an SD card.</string>
+    <string name="lib_already_added">“%1$s” is already in your library.</string>
+    <string name="lib_add_failed">The game could not be added. Details are in the log.</string>
 
-    <string name="main_version">Version %1$s</string>
-    <string name="main_share_logs">Share logs</string>
-    <string name="main_share_logs_chooser">Share MV Player logs</string>
-    <string name="main_no_logs">No logs yet.</string>
-    <string name="main_log_location">Logs are saved in %1$s</string>
+    <string name="fmt_playtime_under_minute">less than a minute</string>
+    <string name="fmt_playtime_minutes">%1$d min</string>
+    <string name="fmt_playtime_hours">%1$d h %2$d min</string>
 
+    <!-- Game info -->
+    <string name="info_remove">Remove</string>
+    <string name="info_remove_title">Remove “%1$s”?</string>
+    <string name="info_remove_text">The game is removed from the library. Its folder, game files and save files stay untouched.</string>
+    <string name="info_section_play">Play</string>
+    <string name="info_playtime">Play time</string>
+    <string name="info_last_played">Last played</string>
+    <string name="info_added">Added</string>
+    <string name="info_never">Never</string>
+    <string name="info_section_technical">Technical details</string>
+    <string name="info_reading">Reading game files…</string>
+    <string name="info_unknown">unknown</string>
+    <string name="info_yes">Yes</string>
+    <string name="info_no">No</string>
+    <string name="info_engine">Engine</string>
+    <string name="info_pixi">PIXI version</string>
+    <string name="info_plugins">Plugins</string>
+    <string name="info_plugins_value">%1$d active of %2$d</string>
+    <string name="info_size">Size</string>
+    <string name="info_files">Game files</string>
+    <string name="info_encrypted">Encrypted assets</string>
+    <string name="info_steam_stub">Steam stub</string>
+    <string name="info_profiles">Patch profiles</string>
+    <string name="info_folder">Folder</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <!-- Settings -->
+    <string name="set_title">Settings</string>
+    <string name="set_back">Back</string>
+    <string name="set_section_game">Games</string>
+    <string name="set_frame_cap">Limit to 60 fps</string>
+    <string name="set_frame_cap_summary">MV games run their logic at 60 steps per second. Rendering faster only costs battery and makes the in-game play time run too fast on 90/120 Hz screens.</string>
+    <string name="set_section_privacy">Privacy &amp; diagnostics</string>
+    <string name="set_diagnostics">Save diagnostic logs</string>
+    <string name="set_diagnostics_summary">Writes session logs to this device only, to help find bugs. MV Player never sends any data; it has no internet access.</string>
+    <string name="set_share_logs">Share logs</string>
+    <string name="set_log_location">Saved in %1$s</string>
+    <string name="set_share_logs_chooser">Share MV Player logs</string>
+    <string name="set_no_logs">No logs yet.</string>
+    <string name="set_section_about">About</string>
+    <string name="set_version">Version</string>
+    <string name="set_developer">Developer</string>
+    <string name="set_developer_summary">MircoDHD on GitHub</string>
+    <string name="set_license">License</string>
+    <string name="set_license_summary">Free software under the GNU General Public License v3.0 or later</string>
+    <string name="set_third_party">Third-party software</string>
+    <string name="set_third_party_summary">AndroidX and Jetpack Compose (Apache License 2.0)</string>
+    <string name="set_trademark">RPG Maker is a trademark of its respective owners. MV Player is an independent project and not affiliated with or endorsed by them. Games are not included.</string>
+    <string name="set_no_browser">No app found to open the link.</string>
+
+    <!-- Engine detection -->
     <string name="engine_mz_unsupported">RPG Maker MZ games are not supported yet.</string>
     <string name="engine_rgss_unsupported">This is an RPG Maker XP/VX/VX Ace game. Try mkxp-z (mkxp-z.github.io) instead.</string>
     <string name="engine_2k_unsupported">This is an RPG Maker 2000/2003 game. Try EasyRPG Player (easyrpg.org) instead.</string>
     <string name="engine_unknown">No RPG Maker MV game was found in this folder.</string>
 
+    <!-- Game screen -->
     <string name="game_loading">Loading…</string>
     <string name="game_quit_title">Quit game?</string>
     <string name="game_quit_message">Unsaved progress will be lost.</string>

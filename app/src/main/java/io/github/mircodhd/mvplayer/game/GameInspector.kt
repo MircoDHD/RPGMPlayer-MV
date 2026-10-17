@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MircoDHD
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package io.github.mircodhd.mvplayer.game
 
 import android.os.SystemClock
@@ -17,6 +20,11 @@ data class GameInfo(
     val title: String,
     val engineVersion: String?,
     val enabledPlugins: List<String>,
+    /** Entries in js/plugins.js, enabled or not (separator lines included, as in the editor). */
+    val totalPlugins: Int,
+    val pixiVersion: String?,
+    /** Title screen images from System.json, relative to the web root without extension. */
+    val titleImages: List<String>,
     val usesGreenworks: Boolean,
     val audioExt: String,
     val videoExt: String,
@@ -54,7 +62,7 @@ object GameInspector {
         val start = SystemClock.elapsedRealtime()
         val index = FileIndex.build(webRoot)
         DebugLog.i(TAG, "Indexed ${index.size} files under $webRoot in ${SystemClock.elapsedRealtime() - start} ms")
-        val plugins = readEnabledPlugins(webRoot)
+        val (plugins, totalPlugins) = readPlugins(webRoot)
         val usesGreenworks = plugins.any { name ->
             val file = index.resolve("js/plugins/$name.js") ?: return@any false
             val text = runCatching { file.readText() }.getOrDefault("")
@@ -67,13 +75,18 @@ object GameInspector {
                 ?: webRoot.absoluteFile.parentFile?.name ?: webRoot.name,
             engineVersion = readCoreVersion(webRoot),
             enabledPlugins = plugins,
+            totalPlugins = totalPlugins,
+            pixiVersion = readPixiVersion(index),
+            titleImages = listOf("img/titles1/" to "title1Name", "img/titles2/" to "title2Name")
+                .mapNotNull { (folder, key) -> system?.optString(key)?.takeIf { it.isNotBlank() }?.let { folder + it } },
             usesGreenworks = usesGreenworks,
             audioExt = pickAudioExt(index),
             videoExt = pickVideoExt(index),
             encryptionKey = MvDecrypter.parseKey(system?.optString("encryptionKey")),
             index = index,
         ).also {
-            DebugLog.i(TAG, "${it.title}: MV ${it.engineVersion}, ${plugins.size} plugins, " +
+            DebugLog.i(TAG, "${it.title}: MV ${it.engineVersion}, PIXI ${it.pixiVersion}, " +
+                "${plugins.size}/$totalPlugins plugins, " +
                 "greenworks=${it.usesGreenworks}, audio=${it.audioExt}, video=${it.videoExt}, " +
                 "encrypted=${it.encryptionKey != null}, inspected in ${SystemClock.elapsedRealtime() - start} ms")
             DebugLog.i(TAG, "Enabled plugins: ${plugins.joinToString()}")
@@ -93,18 +106,28 @@ object GameInspector {
             ?: Regex("""rpg_core\.js v([\d.]+)""").find(head)?.groupValues?.get(1)
     }.getOrNull()
 
-    private fun readEnabledPlugins(webRoot: File): List<String> = runCatching {
+    /** Enabled plugin names and the total number of entries. */
+    private fun readPlugins(webRoot: File): Pair<List<String>, Int> = runCatching {
         val text = File(webRoot, "js/plugins.js").readText()
         val array = JSONArray(text.substring(text.indexOf('['), text.lastIndexOf(']') + 1))
-        (0 until array.length())
+        val enabled = (0 until array.length())
             .map { array.getJSONObject(it) }
             .filter { it.optBoolean("status") }
             .map { it.optString("name") }
             .filter { it.isNotBlank() }
+        enabled to array.length()
     }.getOrElse {
         DebugLog.w(TAG, "Could not read js/plugins.js", it)
-        emptyList()
+        emptyList<String>() to 0
     }
+
+    /** From the banner ("pixi.js - v4.5.4"), else from the VERSION constant further down. */
+    private fun readPixiVersion(index: FileIndex): String? = runCatching {
+        val file = index.resolve("js/libs/pixi.js") ?: return null
+        val head = file.bufferedReader().use { r -> CharArray(1024).let { String(it, 0, r.read(it).coerceAtLeast(0)) } }
+        Regex("""pixi\.js - v([\d.]+)""").find(head)?.groupValues?.get(1)
+            ?: Regex("""VERSION\s*=\s*(?:exports\.VERSION\s*=\s*)?['"]([\d.]+)['"]""").find(file.readText())?.groupValues?.get(1)
+    }.getOrNull()
 
     // Utils.isMobileDevice() makes MV ask for .m4a/.mp4; serve whatever the game actually ships.
     private fun pickAudioExt(index: FileIndex): String {

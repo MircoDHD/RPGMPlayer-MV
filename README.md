@@ -5,6 +5,13 @@ game folder on the device. Early development; see `CLAUDE.md` for the plan.
 
 No game files are included. You need your own copy of a game.
 
+## Using it
+
+Add a game with "Add game" and pick the folder that contains `Game.exe` or `index.html`.
+The library shows each game with its title screen image, folder, play time and a play
+button; the info button lists technical details (MV and PIXI version, plugins, size).
+Settings hold the 60 fps limit, the diagnostic log opt-out, log sharing and app info.
+
 ## How it works
 
 - The game folder is served to a WebView under `https://game.local/` from a
@@ -54,3 +61,13 @@ tools/dev-server.py "/path/to/game" --port 8765
 
 Controller input can be simulated in the browser console, e.g. `MvPlayer.setPad(1)`
 (A pressed) and `MvPlayer.setPad(0)`.
+
+## License
+
+MV Player is free software: you can redistribute it and/or modify it under the terms of
+the GNU General Public License as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE).
+
+It uses AndroidX and Jetpack Compose (Apache License 2.0). RPG Maker is a trademark of
+its respective owners; this project is not affiliated with them. No game files are
+included.

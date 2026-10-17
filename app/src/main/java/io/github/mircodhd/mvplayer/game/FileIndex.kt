@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MircoDHD
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package io.github.mircodhd.mvplayer.game
 
 import java.io.File
@@ -21,6 +24,9 @@ class FileIndex private constructor(
         .groupingBy { it.substringAfterLast('/').substringAfterLast('.', "(none)") }
         .eachCount().entries.sortedByDescending { it.value }
         .joinToString { "${it.key}=${it.value}" }
+
+    /** Real (case-preserved) paths whose lowercase form starts with [prefix], sorted. */
+    fun pathsUnder(prefix: String): List<String> = exact.keys.filter { it.lowercase().startsWith(prefix) }.sorted()
 
     fun anyUnder(prefix: String, predicate: (String) -> Boolean): Boolean =
         lower.keys.any { it.startsWith(prefix) && predicate(it) }

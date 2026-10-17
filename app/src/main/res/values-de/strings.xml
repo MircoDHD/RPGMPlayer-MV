@@ -1,23 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="main_intro">Spielt mit RPG Maker MV erstellte Spiele aus einem Ordner auf diesem Gerät. Wähle den Ordner, der Game.exe oder index.html enthält.</string>
-    <string name="main_grant_access">Dateizugriff erlauben</string>
-    <string name="main_access_needed">Dateizugriff wird benötigt, um Spielordner zu lesen und Spielstände daneben zu speichern.</string>
-    <string name="main_choose_folder">Spielordner wählen</string>
-    <string name="main_continue">Weiterspielen: %1$s</string>
-    <string name="main_folder_unresolvable">Dieser Ordner kann nicht direkt geöffnet werden. Wähle einen Ordner im internen Speicher oder auf einer SD-Karte.</string>
+    <!-- Library -->
+    <string name="lib_add_game">Spiel hinzufügen</string>
+    <string name="lib_info">Spielinfo</string>
+    <string name="lib_play">Spielen</string>
+    <string name="lib_playtime">Gespielt: %1$s</string>
+    <string name="lib_never_played">Noch nicht gespielt</string>
+    <string name="lib_last_played">Zuletzt gespielt %1$s</string>
+    <string name="lib_folder_missing">Ordner nicht gefunden</string>
+    <string name="lib_access_title">Dateizugriff erforderlich</string>
+    <string name="lib_access_text">MV Player liest Spiele direkt aus ihren Ordnern und speichert daneben, genau wie am PC. Dafür verlangt Android den Zugriff auf alle Dateien.</string>
+    <string name="lib_access_button">Zugriff erlauben</string>
+    <string name="lib_empty_title">Noch keine Spiele</string>
+    <string name="lib_empty_text">Tippe auf „Spiel hinzufügen“ und wähle den Ordner, der die Game.exe oder index.html eines RPG-Maker-MV-Spiels enthält.</string>
+    <string name="lib_folder_unresolvable">Dieser Ordner kann nicht direkt geöffnet werden. Wähle einen Ordner im internen Speicher oder auf einer SD-Karte.</string>
+    <string name="lib_already_added">„%1$s“ ist bereits in deiner Bibliothek.</string>
+    <string name="lib_add_failed">Das Spiel konnte nicht hinzugefügt werden. Details stehen im Log.</string>
 
-    <string name="main_version">Version %1$s</string>
-    <string name="main_share_logs">Logs teilen</string>
-    <string name="main_share_logs_chooser">MV-Player-Logs teilen</string>
-    <string name="main_no_logs">Noch keine Logs vorhanden.</string>
-    <string name="main_log_location">Logs werden gespeichert in %1$s</string>
+    <string name="fmt_playtime_under_minute">weniger als eine Minute</string>
+    <string name="fmt_playtime_minutes">%1$d min</string>
+    <string name="fmt_playtime_hours">%1$d h %2$d min</string>
 
+    <!-- Game info -->
+    <string name="info_remove">Entfernen</string>
+    <string name="info_remove_title">„%1$s“ entfernen?</string>
+    <string name="info_remove_text">Das Spiel wird aus der Bibliothek entfernt. Ordner, Spieldateien und Spielstände bleiben unverändert.</string>
+    <string name="info_section_play">Spielen</string>
+    <string name="info_playtime">Spielzeit</string>
+    <string name="info_last_played">Zuletzt gespielt</string>
+    <string name="info_added">Hinzugefügt</string>
+    <string name="info_never">Nie</string>
+    <string name="info_section_technical">Technische Details</string>
+    <string name="info_reading">Spieldateien werden gelesen…</string>
+    <string name="info_unknown">unbekannt</string>
+    <string name="info_yes">Ja</string>
+    <string name="info_no">Nein</string>
+    <string name="info_engine">Engine</string>
+    <string name="info_pixi">PIXI-Version</string>
+    <string name="info_plugins">Plugins</string>
+    <string name="info_plugins_value">%1$d aktiv von %2$d</string>
+    <string name="info_size">Größe</string>
+    <string name="info_files">Spieldateien</string>
+    <string name="info_encrypted">Verschlüsselte Dateien</string>
+    <string name="info_steam_stub">Steam-Ersatz</string>
+    <string name="info_profiles">Patch-Profile</string>
+    <string name="info_folder">Ordner</string>
+    <string name="dialog_cancel">Abbrechen</string>
+
+    <!-- Settings -->
+    <string name="set_title">Einstellungen</string>
+    <string name="set_back">Zurück</string>
+    <string name="set_section_game">Spiele</string>
+    <string name="set_frame_cap">Auf 60 fps begrenzen</string>
+    <string name="set_frame_cap_summary">MV-Spiele berechnen ihre Logik mit 60 Schritten pro Sekunde. Schnelleres Zeichnen kostet nur Akku und lässt die Spielzeit auf 90/120-Hz-Displays zu schnell laufen.</string>
+    <string name="set_section_privacy">Datenschutz &amp; Diagnose</string>
+    <string name="set_diagnostics">Diagnose-Logs speichern</string>
+    <string name="set_diagnostics_summary">Schreibt Sitzungsprotokolle nur auf dieses Gerät, um Fehler zu finden. MV Player sendet niemals Daten; die App hat keinen Internetzugriff.</string>
+    <string name="set_share_logs">Logs teilen</string>
+    <string name="set_log_location">Gespeichert in %1$s</string>
+    <string name="set_share_logs_chooser">MV-Player-Logs teilen</string>
+    <string name="set_no_logs">Noch keine Logs vorhanden.</string>
+    <string name="set_section_about">Info</string>
+    <string name="set_version">Version</string>
+    <string name="set_developer">Entwickler</string>
+    <string name="set_developer_summary">MircoDHD auf GitHub</string>
+    <string name="set_license">Lizenz</string>
+    <string name="set_license_summary">Freie Software unter der GNU General Public License v3.0 oder später</string>
+    <string name="set_third_party">Software von Drittanbietern</string>
+    <string name="set_third_party_summary">AndroidX und Jetpack Compose (Apache License 2.0)</string>
+    <string name="set_trademark">RPG Maker ist eine Marke der jeweiligen Inhaber. MV Player ist ein unabhängiges Projekt und steht in keiner Verbindung zu ihnen. Spiele sind nicht enthalten.</string>
+    <string name="set_no_browser">Keine App zum Öffnen des Links gefunden.</string>
+
+    <!-- Engine detection -->
     <string name="engine_mz_unsupported">RPG-Maker-MZ-Spiele werden noch nicht unterstützt.</string>
     <string name="engine_rgss_unsupported">Das ist ein RPG-Maker-XP/VX/VX-Ace-Spiel. Probiere stattdessen mkxp-z (mkxp-z.github.io).</string>
     <string name="engine_2k_unsupported">Das ist ein RPG-Maker-2000/2003-Spiel. Probiere stattdessen EasyRPG Player (easyrpg.org).</string>
     <string name="engine_unknown">In diesem Ordner wurde kein RPG-Maker-MV-Spiel gefunden.</string>
 
+    <!-- Game screen -->
     <string name="game_loading">Lädt…</string>
     <string name="game_quit_title">Spiel beenden?</string>
     <string name="game_quit_message">Nicht gespeicherter Fortschritt geht verloren.</string>

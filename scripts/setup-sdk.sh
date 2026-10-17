@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 MircoDHD
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Installs the Android SDK command-line tools and the SDK packages this project
 # needs, then writes local.properties. Run it yourself: the SDK licenses are
 # shown interactively and must be accepted by you.

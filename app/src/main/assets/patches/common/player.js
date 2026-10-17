@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MircoDHD
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /*
  * MV Player: shared namespace and logging. Runs before any game script.
  * window.MvPlayerConfig is written by the host into index.html.

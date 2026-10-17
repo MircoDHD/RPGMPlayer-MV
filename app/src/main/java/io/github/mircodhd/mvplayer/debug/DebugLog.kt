@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MircoDHD
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package io.github.mircodhd.mvplayer.debug
 
 import android.content.Context
@@ -69,11 +72,30 @@ object DebugLog {
     fun init(context: Context) {
         appContext = context.applicationContext
         settings = DebugSettings.load(context)
-        if (settings.logToFile) {
-            writerThread.execute { openFile(preferredDir(context)) }
-            writerThread.scheduleWithFixedDelay({ flushNow() }, FLUSH_INTERVAL_MS, FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS)
-        }
+        if (settings.logToFile) writerThread.execute { openFile(preferredDir(context)) }
+        writerThread.scheduleWithFixedDelay({ flushNow() }, FLUSH_INTERVAL_MS, FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS)
         writerThread.scheduleWithFixedDelay({ sweepRepeats() }, REPEAT_SWEEP_MS, REPEAT_SWEEP_MS, TimeUnit.MILLISECONDS)
+    }
+
+    /** The diagnostics opt-out: turns session log files on or off and remembers the choice. */
+    fun setLogToFile(enabled: Boolean) {
+        val context = appContext ?: return
+        if (settings.logToFile == enabled) return
+        val updated = settings.copy(logToFile = enabled)
+        DebugSettings.save(context, updated)
+        if (enabled) {
+            settings = updated
+            writerThread.execute { openFile(preferredDir(context)) }
+            i("Log", "Log files enabled by the user")
+        } else {
+            i("Log", "Log files disabled by the user")
+            settings = updated
+            writerThread.execute {
+                flushNow()
+                closeWriter()
+                currentFile = null
+            }
+        }
     }
 
     /** Moves the session file to Documents once all-files access has been granted. */
