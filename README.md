@@ -66,7 +66,7 @@ Early development. Tested on a OnePlus 15 (Android 16) with a Razer Kishi V3 Pro
 1. **Download the APK** of the latest version from the
    [Releases page](../../releases) and install it.
    Your file manager or browser asks once for permission to install apps from that source.
-2. **Copy the game folder** to the device and extract it to the desired location.
+2. **Copy the game folder** to the device and extract it to the desired location. 
    `Internal storage/Games/<Game name>/`. The `www` folder is what matters; `Game.exe` and
    the DLLs are not needed.
 3. **Start the app**, tap **Add game** and choose the game folder (the one containing
@@ -110,7 +110,7 @@ More technical detail: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) and
 - **No internet access:** the app has no internet permission and sends nothing anywhere.
   No ads, no tracking, no telemetry.
 - **No storage permission:** the app can only open the game folders you pick yourself.
-- **Diagnostic logs** to help find bugs, session logs are written to
+- **Diagnostic logs:** to help find bugs, session logs are written to
   `Documents/RPGM Player/logs/` (the last 15 sessions are kept).
 - **What is logged:** device and WebView details, game info, app lifecycle, controller
   input, audio state, scene changes, errors and performance statistics.
