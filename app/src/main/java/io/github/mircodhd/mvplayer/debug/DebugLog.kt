@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
 /**
  * App-wide logger. Every line goes to logcat (tag "MvPlayer", filter with
  * `adb logcat -s MvPlayer`) and, if enabled, to a session file that can be shared without
- * adb: Documents/MV Player/logs/ when all-files access is granted, otherwise the app's
+ * adb: Documents/RPGM Player/logs/ when all-files access is granted, otherwise the app's
  * external files directory. File writes happen on a background thread.
  *
  * Identical messages that repeat quickly (e.g. a plugin command issued every frame) are
@@ -184,7 +184,7 @@ object DebugLog {
     /** All session logs in both possible locations, oldest first. */
     fun logFiles(): List<File> {
         val context = appContext ?: return emptyList()
-        return listOf(publicDir(), privateDir(context))
+        return listOf(publicDir(), legacyPublicDir(), privateDir(context))
             .distinct()
             .flatMap { dir -> dir.listFiles { f -> f.name.endsWith(".log") }?.toList().orEmpty() }
             .sortedBy { it.name }
@@ -203,6 +203,10 @@ object DebugLog {
         if (Environment.isExternalStorageManager()) publicDir() else privateDir(context)
 
     private fun publicDir() =
+        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "RPGM Player/logs")
+
+    /** Folder used before the app was renamed (0.1.2–0.3.0); its logs are still exported. */
+    private fun legacyPublicDir() =
         File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "MV Player/logs")
 
     private fun privateDir(context: Context) = File(context.getExternalFilesDir(null) ?: context.filesDir, "logs")

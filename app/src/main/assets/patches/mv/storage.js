@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /*
- * MV Player: save files through the host bridge. Runs after rpg_*.js, before plugins.
+ * RPGM Player: save files through the host bridge. Runs after rpg_*.js, before plugins.
  * Patch version: 1
  *
  * MV only writes real files under NW.js (via require('fs')). Here StorageManager runs in

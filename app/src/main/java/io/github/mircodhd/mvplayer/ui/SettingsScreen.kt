@@ -123,7 +123,15 @@ fun SettingsScreen(
             }
 
             item { SectionHeader(stringResource(R.string.set_section_about)) }
-            item { ValueRow(stringResource(R.string.set_version), null, onClick = null, icon = Icons.Filled.Info, summary = versionName) }
+            item {
+                ValueRow(
+                    title = stringResource(R.string.app_name),
+                    value = null,
+                    onClick = null,
+                    icon = Icons.Filled.Info,
+                    summary = stringResource(R.string.set_version_value, versionName),
+                )
+            }
             item {
                 ValueRow(
                     icon = Icons.Filled.Person,

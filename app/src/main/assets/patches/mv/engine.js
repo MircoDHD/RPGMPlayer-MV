@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /*
- * MV Player: engine behaviour on Android. Runs after rpg_*.js, before plugins.
+ * RPGM Player: engine behaviour on Android. Runs after rpg_*.js, before plugins.
  * Patch version: 1
  *
  * Utils.isMobileDevice() stays true on purpose (stretch-to-fit, mute while hidden), but

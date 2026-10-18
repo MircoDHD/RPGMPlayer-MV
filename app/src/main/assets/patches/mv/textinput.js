@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /*
- * MV Player: native text input for name entry. Runs after rpg_*.js, before plugins.
+ * RPGM Player: native text input for name entry. Runs after rpg_*.js, before plugins.
  * Patch version: 1
  *
  * When MV's name input scene (Scene_Name, event command "Name Input Processing") starts,

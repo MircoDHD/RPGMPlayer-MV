@@ -1,81 +1,160 @@
-# MV Player (working title)
+# RobustPlainGameMaker Player - MyVersion
 
-An ad-free, tracking-free Android player for games made with RPG Maker MV, run from a
-game folder on the device. Early development; see `CLAUDE.md` for the plan.
+**RPGM Player** for short: an ad-free, tracking-free Android player for games made with
+**RPG Maker MV**. It runs the PC (Windows/NW.js) version of a game straight from a folder
+on your phone, with controller support, on-screen controls and PC-compatible saves.
 
-No game files are included. You need your own copy of a game.
+> [!WARNING]
+> **Use at your own risk.** This is a hobby project, provided as is, without any
+> warranty (see the [license](LICENSE)). Back up your save files before trying it.
+>
+> **Vibe-coded.** The app is developed with heavy help from an AI coding assistant
+> (Claude) and tested on one phone. Expect rough edges.
+>
+> **Made for me first.** I build it to play my own games on my own device. Everyone is
+> welcome to use it, report issues or contribute, but there is no support promise.
 
-## Using it
+No games are included. You need your own copy of a game.
 
-Add a game with "Add game" and pick the folder that contains `Game.exe` or `index.html`.
-The library shows each game with its title screen image, folder, play time and a play
-button; the info button lists technical details (MV and PIXI version, plugins, size).
-Settings hold controller remapping, the on-screen controls (presets, layout editor,
-opacity, size, haptics, left-handed), the 60 fps limit, the diagnostic log opt-out, log
-sharing and app info. Each game can override these defaults ("Settings" in its info
-sheet). In a game, Select + Start, the back gesture or the ☰ touch button opens the quick
-menu (resume, on-screen controls, layout, frame rate, game settings, quit). Name entry
-scenes open the Android keyboard.
+---
+
+## Features
+
+- **Library** of your games with title screen image, folder, play time and a play button;
+  an info sheet per game shows the RPG Maker MV and PIXI version, plugins, size and more.
+- **Plays the PC version unchanged**: the game folder is read in place, case-insensitive
+  file lookup (games made on Windows), encrypted assets supported.
+- **PC-compatible saves**: written to the game's own `www/save/` folder in the same format,
+  so you can copy saves between PC and phone.
+- **Hardware controllers**, natively supported and **remappable** (globally or per game).
+- **On-screen gamepad** with five generic presets, a layout editor, opacity, size, haptics
+  and a left-handed mode; shown automatically when no controller is connected.
+- **Quick menu** in game (Select + Start, back gesture or ☰ button): pause, controls,
+  layout, frame rate, game settings, quit.
+- **Android keyboard** for name entry scenes.
+- **60 fps limit** by default: MV counts drawn frames as play time, so on 90/120 Hz
+  screens the in-game play time would otherwise run too fast.
+- **Per-game settings** that override the global defaults.
+- **Private**: no internet permission, no ads, no tracking, no telemetry. Diagnostic logs
+  stay on the device and can be switched off.
+- Material 3 design with dynamic colours, English and German.
+
+## Status
+
+Early development (version 0.3.x). Tested on a OnePlus 15 (Android 16) with a Razer Kishi
+V3 Pro.
+
+| Game | Status |
+|---|---|
+| Fear & Hunger | Playable: title, new game, saving/loading, combat, audio, controller |
+| Fear & Hunger 2: Termina | Starts and reaches the title screen; not fully tested yet |
+| Other RPG Maker MV games | Should work in many cases; untested |
+| RPG Maker MZ | Not supported yet |
+| RPG Maker XP / VX / VX Ace / 2000 / 2003 | Not supported (use mkxp-z or EasyRPG Player) |
+
+## Requirements
+
+- An Android phone or tablet with **Android 11 or newer** and a GPU with WebGL
+  (practically every device from the last years), plus an up-to-date Android System
+  WebView (updates automatically on most devices).
+- The **PC version of an RPG Maker MV game** (the folder that contains `Game.exe` and a
+  `www` folder, or `index.html` directly). Encrypted games are fine.
+- Free storage for the game folder (often several hundred MB to a few GB).
+- Optional: a Bluetooth or USB game controller.
+
+## Installation
+
+There are no published releases yet; for now the APK is built from source (see
+[Building](#building)). Once releases exist, the APK will be attached to them.
+
+1. **Install the APK** on your device. Your file manager or browser asks once for
+   permission to install apps from that source.
+2. **Copy the game folder** to the device, for example with USB file transfer to
+   `Internal storage/Games/<Game name>/`. The `www` folder is what matters; `Game.exe` and
+   the DLLs are not needed.
+3. **Start the app** and tap **Grant access**. Android asks for "All files access"; the
+   app needs it to read the game folder and to write saves next to it.
+4. Tap **Add game** and choose the game folder (the one containing `www` or `index.html`).
+5. Tap the **play button**. Use a controller or the on-screen controls; Select + Start or
+   the back gesture opens the quick menu.
+
+Saves from the PC version can be copied into `www/save/` of the game folder on the
+phone, and the other way round.
+
+## Roadmap
+
+| Phase | Version | Content | Status |
+|---|---|---|---|
+| MVP | 0.1 | Player, local file serving, compatibility patches, PC saves, controller | Done |
+| Library | 0.2 | Material 3 library, info sheet, settings, play time | Done |
+| A: Input | 0.3 | Controller remapping, on-screen gamepad + editor, quick menu, keyboard | Done |
+| B: Display & performance | 0.4 | Renderer choice, 30/60/unlimited fps, scaling and image filters (CRT, scanlines, LCD, sharpening, colour-blind modes, …), modular performance HUD | Planned |
+| C: Compatibility | 0.5 | Patch profiles v2 and user patches, robust file names and JSON, error handling options, font override | Planned |
+| D: Saves & convenience | 0.6 | Resume points (app-side quick saves to stop anywhere), save backups and export, continue button | Planned |
+| Release | – | GitHub releases, CI builds, F-Droid / IzzyOnDroid | Planned |
+| Later | – | RPG Maker MZ support, optional Linux launcher | Ideas |
+
+Details: [docs/feature-plan.md](docs/feature-plan.md). Changes per version:
+[CHANGELOG.md](CHANGELOG.md).
 
 ## How it works
 
-- The game folder is served to a WebView under `https://game.local/` from a
-  case-insensitive file index; the app has no INTERNET permission.
-- Small JS patches (`app/src/main/assets/patches/`) are injected into `index.html`,
-  grouped into profiles (`PatchProfiles.kt`).
-- Saves are written to the game's `www/save/` folder in the PC format, so they can be
-  copied between PC and Android.
-- Controllers are read natively, mapped to MV actions (remappable) and passed to the
-  engine together with the touch overlay's input.
+- The game folder is served to an Android WebView under the virtual address
+  `https://game.local/`; every request is answered locally from an index of the folder.
+- Small JavaScript patches are injected into the game's `index.html` to adapt RPG Maker
+  MV to Android (audio/video formats, WebGL, saves, input, pausing). They live in
+  `app/src/main/assets/patches/` and are grouped into profiles.
+- Controllers and the on-screen gamepad are read natively and fed into the engine's own
+  input system.
+
+More technical detail: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) and
+[docs/analysis.md](docs/analysis.md).
 
 ## Building
 
-Requirements: JDK 17+ and the Android SDK.
+Requirements: Linux (or macOS/Windows with adjustments), JDK 17 or newer.
 
 ```bash
-scripts/setup-sdk.sh        # installs the SDK to ~/Android/Sdk, writes local.properties
-./gradlew testDebugUnitTest assembleDebug lintDebug   # tests, APK, lint
-./gradlew installDebug      # install on a connected device
+scripts/setup-sdk.sh                                  # Android SDK to ~/Android/Sdk, writes local.properties
+./gradlew testDebugUnitTest assembleDebug lintDebug   # unit tests, debug APK, lint
+./gradlew installDebug                                # install on a connected device
 ```
 
-Touch-gamepad presets live in `app/src/main/assets/gamepad/presets/` (JSON, positions in
-units of the screen height); the unit tests validate them.
+The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Debug builds
+allow remote debugging of the game through `chrome://inspect`.
 
-Debug builds allow remote debugging through `chrome://inspect`.
+Touch-gamepad presets are JSON files in `app/src/main/assets/gamepad/presets/`
+(positions in units of the screen height); the unit tests check that they are valid and
+stay on screen.
 
-## Logs
+## Logs and privacy
 
-Every session writes a log file to `Documents/MV Player/logs/` on the device (the last 15
-are kept; before all-files access is granted, to the app's external files folder). The
-same lines go to logcat: `adb logcat -s MvPlayer`. "Share logs" on the start screen packs
-all session logs into a zip and opens the Android share sheet.
-
-Logged: device, WebView and GPU details, game inspection and plugin list, lifecycle,
-input devices and controller buttons (including unmapped keys), audio outputs, media
-volume, thermal status, scene and map changes with load times, BGM/BGS/ME, plugin
-commands, saves, load errors, JS errors, and a stats snapshot every 10 s (FPS, slow
-frames, JS heap, image cache, audio state). Debug builds additionally log every served
-file, sound effects, raw axis values and video element events. The switches live in
-`DebugSettings` and are meant to get a settings screen later.
+The app has no internet permission and sends nothing anywhere. To help find bugs it can
+write session logs on the device (`Documents/RPGM Player/logs/`, last 15 sessions):
+device and WebView details, game info, lifecycle, controller input, audio state, scene
+changes, errors and performance statistics. Switch this off under
+**Settings → Privacy & diagnostics**; **Share logs** packs them into a zip if you want to
+send them to someone. Logcat: `adb logcat -s MvPlayer`.
 
 ## Testing patches on the desktop
 
-`tools/dev-server.py` mimics the app's request handling and save bridge, so patches can
-be tried in a desktop browser. The game folder is only read; saves go to a temp folder.
+`tools/dev-server.py` mimics the app's request handling and save bridge, so patches can be
+tried in a desktop browser. The game folder is only read; saves go to a temp folder.
 
 ```bash
 tools/dev-server.py "/path/to/game" --port 8765
 ```
 
 Controller input can be simulated in the browser console, e.g. `MvPlayer.setPad(1)`
-(A pressed) and `MvPlayer.setPad(0)`.
+(confirm pressed) and `MvPlayer.setPad(0)`.
 
 ## License
 
-MV Player is free software: you can redistribute it and/or modify it under the terms of
-the GNU General Public License as published by the Free Software Foundation, either
-version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE).
+RobustPlainGameMaker Player - MyVersion is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY.
+See [LICENSE](LICENSE). Third-party components: [THIRD_PARTY.md](THIRD_PARTY.md).
 
-It uses AndroidX and Jetpack Compose (Apache License 2.0). RPG Maker is a trademark of
-its respective owners; this project is not affiliated with them. No game files are
-included.
+RPG Maker is a trademark of its respective owners. This project is independent and not
+affiliated with or endorsed by them. No game files are included.

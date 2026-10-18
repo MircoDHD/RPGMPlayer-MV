@@ -14,8 +14,8 @@ android {
         applicationId = "io.github.mircodhd.mvplayer"
         minSdk = 30
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.3.0"
+        versionCode = 8
+        versionName = "0.3.1"
     }
 
     buildTypes {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /*
- * MV Player: frame rate cap. Runs after rpg_*.js, before plugins.
+ * RPGM Player: frame rate cap. Runs after rpg_*.js, before plugins.
  * Patch version: 2
  *
  * MV runs its game logic at a fixed 60 steps per second, but renders once per display

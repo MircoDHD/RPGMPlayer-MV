@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /*
- * MV Player: no-op Steam (greenworks) module. Runs after rpg_*.js, before plugins.
+ * RPGM Player: no-op Steam (greenworks) module. Runs after rpg_*.js, before plugins.
  * Patch version: 1
  *
  * Steam plugins such as Archeia_Steamworks call require('./js/libs/greenworks') at load

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /*
- * MV Player: pause and resume with the Android activity. Runs after rpg_*.js, before plugins.
+ * RPGM Player: pause and resume with the Android activity. Runs after rpg_*.js, before plugins.
  * Patch version: 3
  *
  * The host calls MvPlayer.onPause()/onResume() for the activity and

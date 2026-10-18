@@ -1,6 +1,6 @@
 # Third-party components
 
-MV Player is licensed under GPL-3.0-or-later. Every third-party library, plugin or shader
+RobustPlainGameMaker Player - MyVersion ("RPGM Player") is licensed under GPL-3.0-or-later. Every third-party library, plugin or shader
 used by the app is listed here with its license, which must be compatible with
 GPL-3.0-or-later (see `CLAUDE.md` → Conventions). Ported code keeps its original
 copyright and license header and is marked as modified.

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /*
- * MV Player: diagnostics. Runs after rpg_*.js, before plugins.
+ * RPGM Player: diagnostics. Runs after rpg_*.js, before plugins.
  * Patch version: 2
  *
  * Logs engine events through MvPlayer.log into the host's session log. Hooks wrap the

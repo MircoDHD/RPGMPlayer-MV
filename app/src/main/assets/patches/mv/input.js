@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /*
- * MV Player: controller input from the host. Runs after rpg_*.js, before plugins.
+ * RPGM Player: controller input from the host. Runs after rpg_*.js, before plugins.
  * Patch version: 1
  *
  * The host captures controllers natively and calls MvPlayer.setPad(bitmask) with the

@@ -9,7 +9,7 @@
     <string name="lib_last_played">Zuletzt gespielt %1$s</string>
     <string name="lib_folder_missing">Ordner nicht gefunden</string>
     <string name="lib_access_title">Dateizugriff erforderlich</string>
-    <string name="lib_access_text">MV Player liest Spiele direkt aus ihren Ordnern und speichert daneben, genau wie am PC. Dafür verlangt Android den Zugriff auf alle Dateien.</string>
+    <string name="lib_access_text">RPGM Player liest Spiele direkt aus ihren Ordnern und speichert daneben, genau wie am PC. Dafür verlangt Android den Zugriff auf alle Dateien.</string>
     <string name="lib_access_button">Zugriff erlauben</string>
     <string name="lib_empty_title">Noch keine Spiele</string>
     <string name="lib_empty_text">Tippe auf „Spiel hinzufügen“ und wähle den Ordner, der die Game.exe oder index.html eines RPG-Maker-MV-Spiels enthält.</string>
@@ -55,20 +55,20 @@
     <string name="set_frame_cap_summary">MV-Spiele berechnen ihre Logik mit 60 Schritten pro Sekunde. Schnelleres Zeichnen kostet nur Akku und lässt die Spielzeit auf 90/120-Hz-Displays zu schnell laufen.</string>
     <string name="set_section_privacy">Datenschutz &amp; Diagnose</string>
     <string name="set_diagnostics">Diagnose-Logs speichern</string>
-    <string name="set_diagnostics_summary">Schreibt Sitzungsprotokolle nur auf dieses Gerät, um Fehler zu finden. MV Player sendet niemals Daten; die App hat keinen Internetzugriff.</string>
+    <string name="set_diagnostics_summary">Schreibt Sitzungsprotokolle nur auf dieses Gerät, um Fehler zu finden. RPGM Player sendet niemals Daten; die App hat keinen Internetzugriff.</string>
     <string name="set_share_logs">Logs teilen</string>
     <string name="set_log_location">Gespeichert in %1$s</string>
-    <string name="set_share_logs_chooser">MV-Player-Logs teilen</string>
+    <string name="set_share_logs_chooser">RPGM-Player-Logs teilen</string>
     <string name="set_no_logs">Noch keine Logs vorhanden.</string>
     <string name="set_section_about">Info</string>
-    <string name="set_version">Version</string>
+    <string name="set_version_value">Version %1$s</string>
     <string name="set_developer">Entwickler</string>
     <string name="set_developer_summary">MircoDHD auf GitHub</string>
     <string name="set_license">Lizenz</string>
     <string name="set_license_summary">Freie Software unter der GNU General Public License v3.0 oder später</string>
     <string name="set_third_party">Software von Drittanbietern</string>
     <string name="set_third_party_summary">AndroidX und Jetpack Compose (Apache License 2.0)</string>
-    <string name="set_trademark">RPG Maker ist eine Marke der jeweiligen Inhaber. MV Player ist ein unabhängiges Projekt und steht in keiner Verbindung zu ihnen. Spiele sind nicht enthalten.</string>
+    <string name="set_trademark">RPG Maker ist eine Marke der jeweiligen Inhaber. RPGM Player ist ein unabhängiges Projekt und steht in keiner Verbindung zu ihnen. Spiele sind nicht enthalten.</string>
     <string name="set_no_browser">Keine App zum Öffnen des Links gefunden.</string>
 
     <!-- Shared settings UI -->
