@@ -41,22 +41,19 @@ No games are included. You need your own copy of a game.
 
 ## Status
 
-Early development (version 0.3.x). Tested on a OnePlus 15 (Android 16) with a Razer Kishi
-V3 Pro.
+Early development. Tested on a OnePlus 15 (Android 16) with a Razer Kishi V3 Pro.
 
 | Game | Status |
 |---|---|
-| Fear & Hunger | Playable: title, new game, saving/loading, combat, audio, controller |
-| Fear & Hunger 2: Termina | Starts and reaches the title screen; not fully tested yet |
-| Other RPG Maker MV games | Should work in many cases; untested |
+| Fear & Hunger | ✅ Playable |
+| Fear & Hunger 2: Termina | Starts (not tested further yet) |
+| Other RPG Maker MV games | Should work, not tested |
 | RPG Maker MZ | Not supported yet |
 | RPG Maker XP / VX / VX Ace / 2000 / 2003 | Not supported (use mkxp-z or EasyRPG Player) |
 
 ## Requirements
 
-- An Android phone or tablet with **Android 11 or newer** and a GPU with WebGL
-  (practically every device from the last years), plus an up-to-date Android System
-  WebView (updates automatically on most devices).
+- Android 11 or newer with an up-to-date Android System WebView.
 - The **PC version of an RPG Maker MV game** (the folder that contains `Game.exe` and a
   `www` folder, or `index.html` directly). Encrypted games are fine.
 - Free storage for the game folder (often several hundred MB to a few GB).
@@ -64,11 +61,10 @@ V3 Pro.
 
 ## Installation
 
-There are no published releases yet; for now the APK is built from source (see
-[Building](#building)). Once releases exist, the APK will be attached to them.
-
-1. **Install the APK** on your device. Your file manager or browser asks once for
-   permission to install apps from that source.
+1. **Download the APK** of the latest version from the
+   [Releases page](../../releases) (`RPGM-Player-<version>-release.apk`) and install it.
+   Your file manager or browser asks once for permission to install apps from that source.
+   Older versions stay available there.
 2. **Copy the game folder** to the device, for example with USB file transfer to
    `Internal storage/Games/<Game name>/`. The `www` folder is what matters; `Game.exe` and
    the DLLs are not needed.
@@ -85,17 +81,16 @@ phone, and the other way round.
 
 | Phase | Version | Content | Status |
 |---|---|---|---|
-| MVP | 0.1 | Player, local file serving, compatibility patches, PC saves, controller | Done |
+| Basic player | 0.1 | Player, local file serving, compatibility patches, PC saves, controller | Done |
 | Library | 0.2 | Material 3 library, info sheet, settings, play time | Done |
-| A: Input | 0.3 | Controller remapping, on-screen gamepad + editor, quick menu, keyboard | Done |
-| B: Display & performance | 0.4 | Renderer choice, 30/60/unlimited fps, scaling and image filters (CRT, scanlines, LCD, sharpening, colour-blind modes, …), modular performance HUD | Planned |
-| C: Compatibility | 0.5 | Patch profiles v2 and user patches, robust file names and JSON, error handling options, font override | Planned |
-| D: Saves & convenience | 0.6 | Resume points (app-side quick saves to stop anywhere), save backups and export, continue button | Planned |
-| Release | – | GitHub releases, CI builds, F-Droid / IzzyOnDroid | Planned |
+| Input | 0.3 | Controller remapping, on-screen gamepad + editor, quick menu, keyboard | Done |
+| Display & performance | 0.4 | Renderer choice, 30/60/unlimited fps, scaling and image filters (CRT, scanlines, LCD, sharpening, colour-blind modes, …), modular performance HUD | Planned |
+| Compatibility | 0.5 | Patch profiles and user patches, robust file names and JSON, error handling options, font override | Planned |
+| Saves & convenience | 0.6 | Resume points (app-side quick saves to stop anywhere), save backups and export, continue button | Planned |
+| Release | – | CI builds, F-Droid / IzzyOnDroid | Planned |
 | Later | – | RPG Maker MZ support, optional Linux launcher | Ideas |
 
-Details: [docs/feature-plan.md](docs/feature-plan.md). Changes per version:
-[CHANGELOG.md](CHANGELOG.md).
+Changes per version: [CHANGELOG.md](CHANGELOG.md) and the [Releases page](../../releases).
 
 ## How it works
 
@@ -110,43 +105,17 @@ Details: [docs/feature-plan.md](docs/feature-plan.md). Changes per version:
 More technical detail: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) and
 [docs/analysis.md](docs/analysis.md).
 
-## Building
-
-Requirements: Linux (or macOS/Windows with adjustments), JDK 17 or newer.
-
-```bash
-scripts/setup-sdk.sh                                  # Android SDK to ~/Android/Sdk, writes local.properties
-./gradlew testDebugUnitTest assembleDebug lintDebug   # unit tests, debug APK, lint
-./gradlew installDebug                                # install on a connected device
-```
-
-The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Debug builds
-allow remote debugging of the game through `chrome://inspect`.
-
-Touch-gamepad presets are JSON files in `app/src/main/assets/gamepad/presets/`
-(positions in units of the screen height); the unit tests check that they are valid and
-stay on screen.
-
 ## Logs and privacy
 
-The app has no internet permission and sends nothing anywhere. To help find bugs it can
-write session logs on the device (`Documents/RPGM Player/logs/`, last 15 sessions):
-device and WebView details, game info, lifecycle, controller input, audio state, scene
-changes, errors and performance statistics. Switch this off under
-**Settings → Privacy & diagnostics**; **Share logs** packs them into a zip if you want to
-send them to someone. Logcat: `adb logcat -s MvPlayer`.
-
-## Testing patches on the desktop
-
-`tools/dev-server.py` mimics the app's request handling and save bridge, so patches can be
-tried in a desktop browser. The game folder is only read; saves go to a temp folder.
-
-```bash
-tools/dev-server.py "/path/to/game" --port 8765
-```
-
-Controller input can be simulated in the browser console, e.g. `MvPlayer.setPad(1)`
-(confirm pressed) and `MvPlayer.setPad(0)`.
+- **No internet access:** the app has no internet permission and sends nothing anywhere.
+  No ads, no tracking, no telemetry.
+- **Diagnostic logs stay on the device:** to help find bugs, session logs are written to
+  `Documents/RPGM Player/logs/` (the last 15 sessions are kept).
+- **What is logged:** device and WebView details, game info, app lifecycle, controller
+  input, audio state, scene changes, errors and performance statistics.
+- **Opt out:** switch logging off under **Settings → Privacy & diagnostics**.
+- **Sharing is up to you:** **Share logs** packs the logs into a zip, e.g. to attach to a
+  bug report.
 
 ## License
 

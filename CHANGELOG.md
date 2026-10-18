@@ -13,6 +13,11 @@ fixes. Dates are build dates.
   `Documents/MV Player/logs/` folder are still included when sharing logs.
 - The "About" section shows the full app name with the version.
 - New README with overview, requirements, installation, roadmap and disclaimer.
+- APK files are named `RPGM-Player-<version>-<debug|release>.apk` instead of
+  `app-<type>.apk`.
+### Added
+- Signed, minified release build (R8). From this version on, every release is published
+  on the GitHub Releases page with its changelog, so older versions stay downloadable.
 
 ## 0.3.0 – 2026-10-18 (Phase A: input)
 ### Added
