@@ -1,8 +1,7 @@
 # Feature plan: input, display, compatibility, saves (0.3 – 0.6)
 
-Status: approved 2026-10-18. **Phase A implemented in 0.3.0** (see PROJECT_STATUS.md); B–D pending.
-Base: version 0.2.0 (commit 3ed41ce). Architecture references point to
-`docs/PROJECT_STATUS.md` §5. Clean-room and license rules: `CLAUDE.md` → Conventions.
+Status: approved 2026-10-18. **Phase A implemented in 0.3.0**; B–D pending.
+Base: version 0.2.0 (commit 3ed41ce). Architecture: `docs/analysis.md`, part 2. Clean-room and license rules: `CLAUDE.md` → Conventions.
 
 Size estimates are rough lines of new/changed code (Kotlin + JS + GLSL), excluding tests.
 

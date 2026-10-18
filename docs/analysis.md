@@ -1,7 +1,11 @@
-# Analysis of the test games
+# Technical notes
 
-Roadmap step 1. Both games are Windows builds (NW.js). Findings drive the
-patch profiles in `app/src/main/assets/patches/`.
+Part 1 analyses the two games the player was first built against (Fear & Hunger and
+Fear & Hunger 2: Termina, both Windows builds on NW.js); the findings drive the
+patch profiles in `app/src/main/assets/patches/`. Part 2 describes how the player works
+and the pitfalls found while building it.
+
+# Part 1: test games
 
 ## Overview
 
@@ -67,3 +71,153 @@ deliberately unencrypted (Decrypter ignore list / loaded directly by Graphics).
 - Input: Termina disables touch (`YEP_TouchInputDisabler`), Fear & Hunger disables the
   mouse (`DisableMouse`). A touch overlay must therefore emit key/gamepad input.
 - `DK_Name_Input` (keyboard name entry) needs the soft keyboard later.
+
+# Part 2: how the player works
+
+```
+MainActivity (Compose)          GameActivity (fullscreen WebView, landscape)
+  LibraryViewModel                 GameInspector -> FileIndex, GameInfo
+  GameLibrary (library.json)       PatchProfiles -> PatchSet
+  GameScanner (details, cover)     GameRequestHandler (shouldInterceptRequest)
+  Settings screens                 PlayerBridge (@JavascriptInterface "MvPlayerHost")
+                                   InputRouter, VirtualGamepad, GameOverlay (Compose)
+PlayerApp: DebugLog init, crash handler      assets/patches/*.js injected into index.html
+```
+
+## Storage
+
+- No storage permission. Each game folder is picked with `ACTION_OPEN_DOCUMENT_TREE` and
+  kept with `takePersistableUriPermission` (read and write; released when the game is
+  removed). The library stores the tree URI per game.
+- `storage/GameNode` abstracts files: `DocumentNode` (Storage Access Framework,
+  `DocumentsContract` queries) on the device, `FileNode` (`java.io.File`) in unit tests.
+  Files are opened as real file descriptors, so seeking for range requests stays cheap.
+- Listing a folder is one provider query, so the file index lists folders level by level
+  with several queries in parallel (about 0.8 s instead of 1.5 s for 2830 files on an
+  emulator; plain `java.io.File` needed about 0.15 s).
+- Session logs go to `Documents/RPGM Player/logs/` with plain file APIs: since Android 11
+  an app may create and manage its own files there without a permission.
+
+## Serving a game (`web/GameRequestHandler.kt`)
+
+- The game runs under the virtual origin `https://game.local/`; every WebView request goes
+  through `shouldInterceptRequest`. Other hosts get 403. The app has no INTERNET
+  permission; WebView metrics and Safe Browsing are disabled in the manifest.
+- `game/FileIndex.kt` indexes the web root once: exact path lookup with a lowercase
+  fallback (games made on Windows reference files with the wrong case). Skips
+  `__MACOSX`, `.DS_Store` and `._*`.
+- Encrypted assets are served as-is; MV's own JavaScript decrypts them. Single-range
+  `Range` requests are answered with 206 (needed for `<video>`).
+- `index.html` is rewritten: `window.MvPlayerConfig = {...}` and the "before engine"
+  patches go before the first `<script>`, the "before plugins" patches before the
+  `js/plugins.js` tag. Patches are served from `/__mvplayer/<path>`.
+- Decrypted twin fallback: if `x.png/.ogg/.m4a` is requested but only the encrypted
+  `x.rpgmvp/.rpgmvo/.rpgmvm` exists, the host decrypts it (`game/MvDecrypter.kt`: check
+  the 16-byte `RPGMV` header, drop it, XOR the first 16 bytes with the System.json key).
+
+## Game detection (`game/GameInspector.kt`)
+
+- Web root: `<folder>/www` or `<folder>` itself, whichever contains `index.html`.
+- Engine: `js/rpg_core.js` = MV, `js/rmmz_core.js` = MZ (not supported yet),
+  `RPG_RT.ldb/lmt` = 2000/2003 (EasyRPG), `Game.ini` plus an RGSS archive or `Data` =
+  XP/VX/VX Ace (mkxp-z).
+- Read once per start: title, MV version (`Utils.RPGMAKER_VERSION`), PIXI version,
+  plugins, whether a plugin uses greenworks, audio/video extension actually shipped,
+  encryption key, title screen images (used as library cover).
+
+## Patch layer (`patch/PatchProfiles.kt`, `assets/patches/`)
+
+Profiles: `mv-base` (always) and `greenworks-stub` (if a plugin uses greenworks). Order
+matters.
+
+| File | Position | Purpose |
+|---|---|---|
+| `common/player.js` | before engine | `window.MvPlayer` namespace, logging through the bridge, global error hooks |
+| `mv/debug.js` | before plugins | diagnostics: scenes and load times, errors, audio, video, map transfers, plugin commands, saves, decryption time, periodic stats |
+| `mv/engine.js` | before plugins | audio/video extension from config; WebGL instead of the mobile canvas default; video unlocked; `window.close` exits the game |
+| `mv/framerate.js` | before plugins | frame rate cap (see below) |
+| `mv/storage.js` | before plugins | `StorageManager` local mode through the save bridge |
+| `mv/input.js` | before plugins | `Input._pollGamepads` fed by `MvPlayer.setPad(bitmask)` (standard gamepad layout) |
+| `mv/lifecycle.js` | before plugins, after framerate.js | pause/resume with reasons (app paused, menu open): stops updates, suspends audio, pauses video, restores master gain |
+| `mv/textinput.js` | before plugins | Android keyboard for `Scene_Name` |
+| `stubs/greenworks.js` | before plugins | global `require()` that only returns a no-op greenworks |
+
+`Utils.isMobileDevice()` is deliberately not faked; only the decisions it drives are
+overridden (see part 1).
+
+## Saves (`bridge/PlayerBridge.kt`)
+
+- JavaScript interface `MvPlayerHost`: `saveRead/saveWrite/saveExists/saveRemove(name)`,
+  `log`, `exitGame`, `requestTextInput`. Calls are synchronous like MV's own API.
+- Saves go to `<game>/www/save/` with the PC names and format (`fileN.rpgsave`,
+  `global.rpgsave`, `config.rpgsave`, LZString base64), so they can be copied between PC
+  and phone. The save folder is listed once per start and cached.
+- Writes go to `<name>.tmp` first, then the old file is replaced by renaming, so a crash
+  never destroys a save. Documents providers may rename new files (" (1)", extensions);
+  `DocumentNode` checks the exact name. A name whitelist prevents path traversal.
+
+## Input and on-screen controls
+
+- The activity intercepts controller `KeyEvent`s and `MotionEvent`s before the WebView and
+  maps them to physical control ids (`k<keycode>`, `a:<axis>:<±>`). `ControllerMapping`
+  maps controls (and chords) to actions; `InputRouter` merges hardware and touch input
+  and sends the standard-gamepad bitmask to `MvPlayer.setPad`. App actions (quick menu)
+  are handled natively. `navigator.getGamepads()` is not used (unreliable in WebView).
+- Some controllers report the d-pad as hat axes instead of key events; both are handled.
+- On-screen layouts are JSON (`assets/gamepad/presets/*.json`, custom ones in the app's
+  files). Positions and sizes are in units of the safe-area height relative to an
+  anchor, so layouts keep their proportions on any aspect ratio; left-handed mode mirrors
+  them. Each control handles its own pointers, so touches elsewhere still reach the game.
+  Labels are sized from the control's box so they stay centred at any size.
+
+## Settings
+
+- `GlobalSettings` (`settings.json`) and per-game `GameSettings`
+  (`game-settings/<id>.json`, every field nullable = follow the global value), resolved
+  into `EffectiveSettings`. In the UI the option equal to the global value carries a
+  "Default" tag; choosing it removes the override.
+- Export/import writes global settings, custom layouts and per-game settings to one JSON
+  file; games are matched by folder location or title, because library ids and folder
+  grants do not survive a reinstall.
+
+## Frame rate and play time
+
+- MV runs its game logic at 60 steps per second but renders once per display refresh and
+  counts rendered frames as play time (`Graphics.frameCount`, also stored in saves). On a
+  120 Hz display the play time ran twice as fast (16 min 31 s shown after 8 min 20 s).
+- The player asks Android for 60 Hz (`preferredRefreshRate`) and `mv/framerate.js` gates
+  `requestAnimationFrame` to a 60 fps cadence (quarter-interval tolerance). This also
+  halves the GPU work.
+
+## Lifecycle pitfalls
+
+- Pausing calls `webView.onPause()` and `pauseTimers()`. `pauseTimers()` is
+  **process-wide**: if a game activity is finished while paused, the next WebView in the
+  same process starts with frozen timers and the game hangs after loading its scripts.
+  The activity therefore resumes timers when it creates the WebView and before
+  destroying it.
+- Audio could stay muted after the app was in the background: MV fades the master volume
+  on `visibilitychange`; `lifecycle.js` disables that fade and restores the gain.
+- Connecting a controller must not recreate the activity (broad `configChanges`).
+
+## Diagnostics (`debug/`)
+
+- Every line goes to logcat (tag `MvPlayer`) and, if enabled, to a session file. Identical
+  lines repeating quickly are collapsed (first 5 per minute, then one summary line).
+- Session header: app version, device model, Android version, WebView version, RAM,
+  display; "Share logs" zips the session files through a `FileProvider`.
+- JavaScript logs arrive as category `JS/<Category>`, console output as `Console`.
+- Harmless noise in the test games: `CanvasTextAlign 'undefined'` (drawText without
+  alignment) and a TerraxLighting plugin command issued every frame.
+
+## Development tools
+
+- `tools/dev-server.py "<game folder>" --port 8765 [--save-dir DIR]` mimics the app on the
+  desktop (same injection, case-insensitive lookup, decrypted twins, bridge shim with
+  synchronous saves), so patches can be tried in a desktop browser. Simulate controller
+  input in the console with `MvPlayer.setPad(1)` / `MvPlayer.setPad(0)`. Keep its patch
+  list and config in sync with `PatchProfiles.kt` and `GameActivity`.
+- Browsers throttle `requestAnimationFrame` in hidden tabs; pump the loop manually
+  (`setInterval(() => SceneManager.updateMain(), 16)`) when testing in the background.
+- In the app's JavaScript, `chrome://inspect` works for debug builds (WebView remote
+  debugging).

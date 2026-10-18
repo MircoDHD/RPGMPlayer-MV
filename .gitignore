@@ -78,3 +78,8 @@ Thumbs.db
 # --- Python ---
 __pycache__/
 *.pyc
+
+# Local handover notes with personal details; never commit.
+docs/PROJECT_STATUS.md
+# AI working instructions with personal details; never commit.
+CLAUDE.md

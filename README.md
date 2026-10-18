@@ -102,8 +102,7 @@ Changes per version: [CHANGELOG.md](CHANGELOG.md) and the [Releases page](../../
 - Controllers and the on-screen gamepad are read natively and fed into the engine's own
   input system.
 
-More technical detail: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) and
-[docs/analysis.md](docs/analysis.md).
+More technical detail: [docs/analysis.md](docs/analysis.md).
 
 ## Logs and privacy
 
