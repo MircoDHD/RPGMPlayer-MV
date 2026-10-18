@@ -18,8 +18,14 @@ import java.io.IOException
  */
 class PlayerBridge(
     private val saveDir: File,
-    private val onExit: () -> Unit,
+    private val host: Host,
 ) {
+    /** Calls into the activity; invoked on the JavaBridge thread. */
+    interface Host {
+        fun exitGame()
+        fun requestTextInput(current: String, maxLength: Int)
+    }
+
     companion object {
         const val JS_NAME = "MvPlayerHost"
         private const val TAG = "Save"
@@ -88,7 +94,14 @@ class PlayerBridge(
     @JavascriptInterface
     fun exitGame() {
         DebugLog.i("Lifecycle", "Game requested exit")
-        onExit()
+        host.exitGame()
+    }
+
+    /** Opens the native text field (soft keyboard) for name input scenes. */
+    @JavascriptInterface
+    fun requestTextInput(current: String?, maxLength: Int) {
+        DebugLog.i("TextInput", "Game requested text input (max $maxLength)")
+        host.requestTextInput(current.orEmpty(), maxLength.coerceIn(1, 64))
     }
 
     // Parameters are nullable because JavaScript can pass null for any of them.

@@ -3,7 +3,7 @@
 
 /*
  * MV Player: diagnostics. Runs after rpg_*.js, before plugins.
- * Patch version: 1
+ * Patch version: 2
  *
  * Logs engine events through MvPlayer.log into the host's session log. Hooks wrap the
  * vanilla functions, so plugins that alias them later still pass through here. Events
@@ -34,12 +34,49 @@
         return audio.name + ' (vol ' + audio.volume + ', pitch ' + audio.pitch + ', pan ' + audio.pan + ')';
     }
 
+    // --- Decryption timing (to decide whether native decryption is worth it) ----------
+
+    function newCounter() {
+        return { files: 0, ms: 0, bytes: 0 };
+    }
+    var decryptInterval = newCounter();
+    var decryptScene = newCounter();
+
+    function countDecrypt(ms, bytes, isNewFile) {
+        [decryptInterval, decryptScene].forEach(function (c) {
+            if (isNewFile) c.files++;
+            c.ms += ms;
+            c.bytes += bytes;
+        });
+    }
+
+    function describeCounter(c) {
+        return c.files + ' files, ' + (c.bytes / 1048576).toFixed(1) + ' MB, ' + c.ms.toFixed(1) + ' ms';
+    }
+
+    if (typeof Decrypter !== 'undefined') {
+        ['decryptArrayBuffer', 'createBlobUrl'].forEach(function (name) {
+            if (typeof Decrypter[name] !== 'function') return;
+            wrap(Decrypter, name, function (original) {
+                return function (buffer) {
+                    var start = performance.now();
+                    var result = original.apply(this, arguments);
+                    // Files and bytes are counted on the decrypt step; time on both steps.
+                    var isDecrypt = name === 'decryptArrayBuffer';
+                    countDecrypt(performance.now() - start, isDecrypt && buffer ? buffer.byteLength : 0, isDecrypt);
+                    return result;
+                };
+            });
+        });
+    }
+
     // --- Scenes -------------------------------------------------------------------------
 
     var sceneRequestedAt = 0;
     wrap(SceneManager, 'goto', function (original) {
         return function (sceneClass) {
             sceneRequestedAt = performance.now();
+            decryptScene = newCounter();
             log('i', 'Scene', 'goto ' + (sceneClass ? sceneClass.name : 'null'));
             return original.apply(this, arguments);
         };
@@ -48,7 +85,8 @@
     wrap(SceneManager, 'onSceneStart', function (original) {
         return function () {
             var took = sceneRequestedAt ? Math.round(performance.now() - sceneRequestedAt) + ' ms after goto' : '';
-            log('i', 'Scene', 'started ' + sceneName(this._scene) + ' ' + took);
+            log('i', 'Scene', 'started ' + sceneName(this._scene) + ' ' + took +
+                (decryptScene.files ? ', JS decryption: ' + describeCounter(decryptScene) : ''));
             return original.apply(this, arguments);
         };
     });
@@ -319,7 +357,8 @@
                 map: typeof $gameMap !== 'undefined' && $gameMap ? $gameMap.mapId() : null,
                 playtime: typeof $gameSystem !== 'undefined' && $gameSystem ? $gameSystem.playtimeText() : null,
                 images: imageCacheStats(),
-                visibility: document.visibilityState
+                visibility: document.visibilityState,
+                decryption: describeCounter(decryptInterval)
             };
             if (performance.memory) {
                 stats.heapMb = {
@@ -333,6 +372,7 @@
             rafFrames = 0;
             renders = 0;
             logicSteps = 0;
+            decryptInterval = newCounter();
             slowFrames = 0;
             maxGap = 0;
             lastTime = now;

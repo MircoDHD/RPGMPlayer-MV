@@ -30,6 +30,7 @@
 
     // Same edge detection as vanilla Input._updateGamepadState, fed from the host's state.
     Input._pollGamepads = function () {
+        if (!this._gamepadStates) return; // not initialised yet
         var buttons = current | latched;
         latched = 0;
         var lastState = this._gamepadStates[0] || [];

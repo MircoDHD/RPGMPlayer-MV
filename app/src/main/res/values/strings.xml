@@ -19,7 +19,7 @@
     <string name="lib_already_added">“%1$s” is already in your library.</string>
     <string name="lib_add_failed">The game could not be added. Details are in the log.</string>
 
-    <string name="fmt_playtime_under_minute">less than a minute</string>
+    <string name="fmt_playtime_under_minute">under 1 min</string>
     <string name="fmt_playtime_minutes">%1$d min</string>
     <string name="fmt_playtime_hours">%1$d h %2$d min</string>
 
@@ -72,6 +72,99 @@
     <string name="set_third_party_summary">AndroidX and Jetpack Compose (Apache License 2.0)</string>
     <string name="set_trademark">RPG Maker is a trademark of its respective owners. MV Player is an independent project and not affiliated with or endorsed by them. Games are not included.</string>
     <string name="set_no_browser">No app found to open the link.</string>
+
+    <!-- Shared settings UI -->
+    <string name="badge_experimental">Experimental</string>
+    <string name="badge_changes_gameplay">Changes how the game plays</string>
+    <string name="set_use_default">Use default</string>
+    <string name="set_use_default_value">Use default (%1$s)</string>
+    <string name="set_default_value">Default: %1$s</string>
+    <string name="dialog_ok">OK</string>
+    <string name="value_default">Default</string>
+    <string name="value_on">On</string>
+    <string name="value_off">Off</string>
+    <string name="set_section_input">Input</string>
+    <string name="set_section_display">Display</string>
+
+    <!-- Controller mapping -->
+    <string name="controller_title">Controller</string>
+    <string name="controller_title_game">Controller · %1$s</string>
+    <string name="controller_summary">Assign controller buttons to game actions</string>
+    <string name="controller_reset">Reset to default</string>
+    <string name="controller_unassigned">No button assigned</string>
+    <string name="controller_remove">Remove</string>
+    <string name="controller_add">Assign a button</string>
+    <string name="controller_conflict">Also used for: %1$s</string>
+    <string name="controller_none_connected">No controller connected</string>
+    <string name="controller_connected">Connected: %1$s</string>
+    <string name="controller_hint">Tap a button chip to remove it, or + to assign another one. Several buttons per action are allowed.</string>
+    <string name="controller_follows_default">This game uses the default mapping. Changing it creates a mapping for this game only.</string>
+    <string name="controller_press_title">Press a button</string>
+    <string name="controller_press_text">Press the controller button for “%1$s”.</string>
+    <string name="controller_mapping_custom">Custom mapping for this game</string>
+    <string name="action_ok">Confirm (OK)</string>
+    <string name="action_cancel">Cancel / back</string>
+    <string name="action_shift">Dash (Shift)</string>
+    <string name="action_menu">Menu</string>
+    <string name="action_pageup">Previous page (L)</string>
+    <string name="action_pagedown">Next page (R)</string>
+    <string name="action_up">Up</string>
+    <string name="action_down">Down</string>
+    <string name="action_left">Left</string>
+    <string name="action_right">Right</string>
+    <string name="action_quickmenu">Quick menu (app)</string>
+
+    <!-- On-screen controls -->
+    <string name="overlay_title">On-screen controls</string>
+    <string name="overlay_summary">Touch gamepad, presets and layout editor</string>
+    <string name="overlay_mode">Show on-screen controls</string>
+    <string name="overlay_mode_auto">Auto</string>
+    <string name="overlay_mode_always">Always</string>
+    <string name="overlay_mode_never">Never</string>
+    <string name="overlay_mode_summary">Auto shows the controls while no hardware controller is connected.</string>
+    <string name="overlay_layout">Layout</string>
+    <string name="overlay_customize">Customize layout</string>
+    <string name="overlay_appearance">Appearance</string>
+    <string name="overlay_opacity">Opacity</string>
+    <string name="overlay_size">Size</string>
+    <string name="overlay_haptics">Haptic feedback</string>
+    <string name="overlay_haptics_summary">Short vibration when a control is pressed</string>
+    <string name="overlay_mirror">Left-handed</string>
+    <string name="overlay_mirror_summary">Swaps the left and right side of the layout</string>
+    <string name="overlay_delete_layout">Delete layout</string>
+    <string name="preset_handheld">Classic Handheld</string>
+    <string name="preset_console16">16-bit Console</string>
+    <string name="preset_arcade6">6-Button Arcade</string>
+    <string name="preset_dualanalog">Modern Dual-Analog</string>
+    <string name="preset_minimal">Minimal</string>
+    <string name="layout_custom_name">Custom (based on %1$s)</string>
+    <string name="editor_hint">Tap a control to select it, drag to move it</string>
+    <string name="editor_hidden">Hidden</string>
+    <string name="editor_reset">Reset</string>
+    <string name="editor_save">Save</string>
+    <string name="editor_save_title">Save layout</string>
+    <string name="editor_save_text">Use this layout only for this game, or as the default for all games?</string>
+    <string name="editor_save_game">This game</string>
+    <string name="editor_save_global">All games</string>
+
+    <!-- Game settings -->
+    <string name="game_settings_title">Settings · %1$s</string>
+    <string name="game_settings_reset_all">Reset all</string>
+    <string name="info_game_settings">Settings</string>
+    <string name="frame_rate_title">Frame rate</string>
+    <string name="frame_rate_summary">Limit to 60 fps keeps play time correct and saves battery.</string>
+    <string name="frame_rate_fps">%1$d fps</string>
+    <string name="frame_rate_unlimited">Unlimited (display rate)</string>
+    <string name="frame_rate_unlimited_warning">MV counts drawn frames as play time: without a limit the in-game play time runs too fast on 90/120 Hz screens and the device uses more power.</string>
+
+    <!-- In-game -->
+    <string name="quick_paused">Game paused</string>
+    <string name="quick_resume">Resume</string>
+    <string name="quick_show_controls">On-screen controls</string>
+    <string name="quick_game_settings">Game settings</string>
+    <string name="quick_quit">Quit game</string>
+    <string name="text_input_title">Enter a name</string>
+    <string name="text_input_use_grid">Use game keyboard</string>
 
     <!-- Engine detection -->
     <string name="engine_mz_unsupported">RPG Maker MZ games are not supported yet.</string>

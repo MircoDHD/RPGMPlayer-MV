@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "id": "console16",
+  "nameKey": "preset_console16",
+  "controls": [
+    {
+      "id": "dpad",
+      "type": "dpad",
+      "anchor": "bottom_start",
+      "x": 0.27,
+      "y": 0.3,
+      "size": 0.38
+    },
+    {
+      "id": "a",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.12,
+      "y": 0.3,
+      "size": 0.14,
+      "label": "A",
+      "action": "ok"
+    },
+    {
+      "id": "b",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.27,
+      "y": 0.16,
+      "size": 0.14,
+      "label": "B",
+      "action": "cancel"
+    },
+    {
+      "id": "x",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.27,
+      "y": 0.44,
+      "size": 0.14,
+      "label": "X",
+      "action": "menu"
+    },
+    {
+      "id": "y",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.42,
+      "y": 0.3,
+      "size": 0.14,
+      "label": "Y",
+      "action": "shift"
+    },
+    {
+      "id": "l",
+      "type": "shoulder",
+      "anchor": "top_start",
+      "x": 0.2,
+      "y": 0.1,
+      "size": 0.26,
+      "label": "L",
+      "action": "pageup"
+    },
+    {
+      "id": "r",
+      "type": "shoulder",
+      "anchor": "top_end",
+      "x": 0.2,
+      "y": 0.1,
+      "size": 0.26,
+      "label": "R",
+      "action": "pagedown"
+    },
+    {
+      "id": "select",
+      "type": "pill",
+      "anchor": "bottom_center",
+      "x": -0.13,
+      "y": 0.07,
+      "size": 0.16,
+      "label": "SELECT",
+      "action": "shift"
+    },
+    {
+      "id": "start",
+      "type": "pill",
+      "anchor": "bottom_center",
+      "x": 0.13,
+      "y": 0.07,
+      "size": 0.16,
+      "label": "START",
+      "action": "menu"
+    },
+    {
+      "id": "quickmenu",
+      "type": "pill",
+      "anchor": "top_center",
+      "x": 0,
+      "y": 0.07,
+      "size": 0.16,
+      
+      "action": "quickmenu"
+    }
+  ]
+}

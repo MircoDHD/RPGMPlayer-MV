@@ -29,6 +29,7 @@ object PatchProfiles {
             // lifecycle.js must come after framerate.js: it wraps the capped requestUpdate.
             beforePlugins = listOf(
                 "mv/debug.js", "mv/engine.js", "mv/framerate.js", "mv/storage.js", "mv/input.js", "mv/lifecycle.js",
+                "mv/textinput.js",
             ),
         ),
         // Steam builds load greenworks through require(); give them a no-op module.

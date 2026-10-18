@@ -3,15 +3,18 @@
 
 /*
  * MV Player: pause and resume with the Android activity. Runs after rpg_*.js, before plugins.
- * Patch version: 2
+ * Patch version: 3
  *
- * The host calls MvPlayer.onPause()/onResume(). While paused the main loop stops
- * rescheduling itself, the AudioContext is suspended and a playing movie is paused.
+ * The host calls MvPlayer.onPause()/onResume() for the activity and
+ * MvPlayer.pause('menu')/resume('menu') while a menu covers the game. The game runs only
+ * when no reason is left. While paused the main loop stops rescheduling itself, the
+ * AudioContext is suspended and a playing movie is paused.
  */
 (function () {
     'use strict';
 
     var paused = false;
+    var reasons = {};
     var updatePending = false;
     var videoWasPlaying = false;
 
@@ -92,8 +95,7 @@
         }
     };
 
-    MvPlayer.onPause = function () {
-        if (paused) return;
+    function pauseGame() {
         paused = true;
         var context = audioContext();
         if (context && context.state === 'running') {
@@ -104,11 +106,10 @@
         if (videoWasPlaying) {
             video.pause();
         }
-        logAudio('pause');
-    };
+        logAudio('pause ' + Object.keys(reasons).join('+'));
+    }
 
-    MvPlayer.onResume = function () {
-        if (!paused) return;
+    function resumeGame() {
         paused = false;
         var context = audioContext();
         if (context && context.state === 'running') {
@@ -120,7 +121,7 @@
             Graphics._video.play();
         }
         videoWasPlaying = false;
-        // Do not let the fixed-step loop catch up on the time spent in the background.
+        // Do not let the fixed-step loop catch up on the time spent paused.
         // Vanilla MV and frame-timing plugins like TDDP_FluidTimestep both use performance.now().
         SceneManager._currentTime = performance.now();
         SceneManager._accumulator = 0;
@@ -129,5 +130,24 @@
             SceneManager.requestUpdate();
         }
         logAudio('resume');
+    }
+
+    /** reason: 'activity' (app in background) or 'menu' (overlay menu open). */
+    MvPlayer.pause = function (reason) {
+        reasons[reason] = true;
+        if (!paused) pauseGame();
+    };
+
+    MvPlayer.resume = function (reason) {
+        delete reasons[reason];
+        if (paused && Object.keys(reasons).length === 0) resumeGame();
+    };
+
+    MvPlayer.onPause = function () {
+        MvPlayer.pause('activity');
+    };
+
+    MvPlayer.onResume = function () {
+        MvPlayer.resume('activity');
     };
 })();

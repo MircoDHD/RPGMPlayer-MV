@@ -1,6 +1,6 @@
 # Feature plan: input, display, compatibility, saves (0.3 – 0.6)
 
-Status: **proposal, waiting for approval.** No code has been written for this block.
+Status: approved 2026-10-18. **Phase A implemented in 0.3.0** (see PROJECT_STATUS.md); B–D pending.
 Base: version 0.2.0 (commit 3ed41ce). Architecture references point to
 `docs/PROJECT_STATUS.md` §5. Clean-room and license rules: `CLAUDE.md` → Conventions.
 
@@ -372,19 +372,38 @@ override and calls `Graphics.loadFont`. Per-game setting with preview text.
 
 ## Phase D — Saves and convenience (0.6.0)
 
-### D1. Save manager
-**Hooks:** `PlayerBridge.saveWrite` (backup before overwrite), new `saves/SaveManager.kt`,
-`saves/SaveManagerScreen.kt` (from GameInfoSheet and quick menu).
-- Slot list from `global.rpgsave` (decoded natively: LZString port in Kotlin, unit
-  tested): title, timestamp, play time, character names; file size and modified time.
-- Rolling backups before each overwrite: `<game>/www/save/.mvplayer-backups/<file>.<timestamp>`
-  (configurable count, default 5; in the save folder so they travel with the game; the
-  PC version ignores unknown files).
-- Restore (with confirmation and an automatic backup of the current file), export all
-  saves as zip (PC-compatible names), import from zip (validated: only known save names).
-- Warning text: restoring backups can bypass a game's intended difficulty (relevant for
-  F&H permadeath-style saves); it is the user's choice.
-**Size:** ~800.
+### D1. Save manager and resume points (revised 2026-10-18)
+Decision (Mirco): everything the save manager creates lives in **app storage**, not in
+the game folder, so it survives deleting and re-installing the game files.
+
+**a) Resume points (own save system, independent of the game)**
+- Purpose: when playing on the go, the player can stop at any moment without losing much
+  progress, instead of walking to a save point. It is offered as a help next to the
+  game's own saves; it does not replace or alter the in-game save system.
+- Created **manually** (quick menu → "Create resume point", optional controller shortcut)
+  and optionally automatically when the app goes to the background (setting, default off).
+- Content: the same data MV writes for a save (`DataManager.makeSaveContents()` via
+  `JsonEx`, LZString) plus a thumbnail (`Bitmap.snap`) and metadata (map, play time,
+  timestamp), stored in `filesDir/resume/<gameId>/`. Loading uses MV's own
+  `DataManager.extractSaveContents` + `Scene_Map` transfer, the same path as loading a
+  normal save, so no engine internals are bypassed.
+- Kept separate from the game's save slots (never written to `www/save/`), N most recent
+  kept (configurable, default 3). UI: list with thumbnails in the save manager, "Resume"
+  on the library card (see D2).
+- Clearly labelled: resume points let you continue from anywhere; games designed around
+  limited saving (e.g. Fear & Hunger) are easier with them. Off unless the player uses it.
+
+**b) Backups of the game's own saves**
+- Before each overwrite through `PlayerBridge.saveWrite`, the old file is copied to
+  `filesDir/save-backups/<gameId>/<file>.<timestamp>` (rolling, configurable count,
+  default 5).
+- Save manager screen (GameInfoSheet and quick menu): slots from `global.rpgsave`
+  (decoded natively; LZString port in Kotlin, unit-tested) with timestamp, play time,
+  character names; restore with confirmation (current file backed up first); export all
+  saves as zip (PC-compatible names); import from zip (only known save names accepted).
+- Warning text: restoring backups can bypass a game's intended difficulty; it is the
+  user's choice.
+**Size:** ~1100.
 
 ### D2. Continue button
 **Hooks:** `GameEntry`/library card ("Continue" secondary pill next to play),
@@ -410,7 +429,7 @@ Fast-forward, debug panel, mod overlay folder, haptics on screen shake.
 | 0.3.0 | Phase A: settings model, overlay host, input refactor, A1–A4, decryption timing instrumentation |
 | 0.4.0 | Phase B: renderer, frame rates, post-processing + benchmark, HUD, B5 decision |
 | 0.5.0 | Phase C: profiles v2 + user patches, path/JSON robustness, error options, font override |
-| 0.6.0 | Phase D: save manager, continue button |
+| 0.6.0 | Phase D: save manager with resume points and backups (app storage), continue button |
 | 0.x.y | Bug-fix deliveries in between (patch digit) |
 
 Each delivery: unit tests + build + lint green, dev-server smoke test (F&H, Termina),
@@ -426,5 +445,5 @@ self review, APK, a short German test checklist, commit + push.
   each filter preset + benchmark log, HUD presets and its own cost.
 - **C:** a third MV game (if provided) with case/mojibake/JSON issues, user patch sample,
   error options with a deliberately broken patch, font override.
-- **D:** backups on overwrite, restore, zip export → load on PC, continue button in F&H
-  and Termina.
+- **D:** resume point while walking in F&H → quit app → resume; backups on overwrite,
+  restore, zip export → load on PC, continue button in F&H and Termina.

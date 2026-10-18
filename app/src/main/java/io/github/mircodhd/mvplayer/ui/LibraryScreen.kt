@@ -205,11 +205,15 @@ private fun GameCapsule(
                         )
                     }
                 } else {
-                    Text(
-                        text = stringResource(R.string.lib_playtime, Format.playTime(context, game.playTimeMs)),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    if (game.playTimeMs > 0) {
+                        Text(
+                            text = stringResource(R.string.lib_playtime, Format.playTime(context, game.playTimeMs)),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     Text(
                         text = Format.lastPlayed(context, game.lastPlayedAt),
                         style = MaterialTheme.typography.labelMedium,

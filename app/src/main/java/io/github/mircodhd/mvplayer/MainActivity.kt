@@ -26,12 +26,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import io.github.mircodhd.mvplayer.debug.DebugLog
+import io.github.mircodhd.mvplayer.input.ControllerMapping
 import io.github.mircodhd.mvplayer.library.GameEntry
+import io.github.mircodhd.mvplayer.overlay.GamepadLayout
 import io.github.mircodhd.mvplayer.ui.Format
 import io.github.mircodhd.mvplayer.ui.GameInfoSheet
 import io.github.mircodhd.mvplayer.ui.LibraryScreen
 import io.github.mircodhd.mvplayer.ui.LibraryViewModel
 import io.github.mircodhd.mvplayer.ui.SettingsScreen
+import io.github.mircodhd.mvplayer.ui.settings.ControllerScreen
+import io.github.mircodhd.mvplayer.ui.settings.GameSettingsScreen
+import io.github.mircodhd.mvplayer.ui.settings.OverlaySettingsScreen
 import io.github.mircodhd.mvplayer.ui.theme.MvPlayerTheme
 
 /** Start screen: the game library and the settings. */
@@ -52,6 +57,7 @@ class MainActivity : ComponentActivity() {
                     onRequestAccess = ::requestAllFilesAccess,
                     onOpenUrl = ::openUrl,
                     onStartIntent = ::startActivity,
+                    onCustomizeLayout = ::customizeLayout,
                 )
             }
         }
@@ -64,7 +70,19 @@ class MainActivity : ComponentActivity() {
 
     private fun launchGame(game: GameEntry) {
         DebugLog.i(TAG, "Launching '${game.title}' from ${game.path}")
-        startActivity(Intent(this, GameActivity::class.java).putExtra(GameActivity.EXTRA_GAME_DIR, game.path))
+        startActivity(
+            Intent(this, GameActivity::class.java)
+                .putExtra(GameActivity.EXTRA_GAME_DIR, game.path)
+                .putExtra(GameActivity.EXTRA_GAME_ID, game.id),
+        )
+    }
+
+    private fun customizeLayout(layout: GamepadLayout, gameId: String?) {
+        startActivity(
+            Intent(this, LayoutEditorActivity::class.java)
+                .putExtra(LayoutEditorActivity.EXTRA_LAYOUT_ID, layout.id)
+                .putExtra(LayoutEditorActivity.EXTRA_GAME_ID, gameId),
+        )
     }
 
     private fun requestAllFilesAccess() {
@@ -86,7 +104,21 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { Library, Settings }
+/** Navigation routes; "game/<id>" and "game-controller/<id>" carry a library id. */
+private object Routes {
+    const val LIBRARY = "library"
+    const val SETTINGS = "settings"
+    const val CONTROLLER = "controller"
+    const val OVERLAY = "overlay"
+    const val GAME = "game/"
+    const val GAME_CONTROLLER = "game-controller/"
+
+    fun parent(route: String): String = when {
+        route.startsWith(GAME_CONTROLLER) -> GAME + route.removePrefix(GAME_CONTROLLER)
+        route == CONTROLLER || route == OVERLAY -> SETTINGS
+        else -> LIBRARY
+    }
+}
 
 @Composable
 private fun PlayerHome(
@@ -96,11 +128,13 @@ private fun PlayerHome(
     onRequestAccess: () -> Unit,
     onOpenUrl: (String) -> Unit,
     onStartIntent: (Intent) -> Unit,
+    onCustomizeLayout: (GamepadLayout, String?) -> Unit,
 ) {
     val context = LocalContext.current
-    var screen by rememberSaveable { mutableStateOf(Screen.Library) }
+    var route by rememberSaveable { mutableStateOf(Routes.LIBRARY) }
     var infoGameId by rememberSaveable { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val back = { route = Routes.parent(route) }
 
     val message = viewModel.message
     LaunchedEffect(message) {
@@ -122,8 +156,73 @@ private fun PlayerHome(
         }
     }
 
-    when (screen) {
-        Screen.Library -> LibraryScreen(
+    if (route != Routes.LIBRARY) BackHandler(onBack = back)
+
+    when {
+        route == Routes.SETTINGS -> SettingsScreen(
+            versionName = versionName,
+            global = viewModel.global,
+            logToFile = viewModel.logToFile,
+            logLocation = if (viewModel.logToFile) DebugLog.logDirectory()?.let { Format.path(it.path) } else null,
+            snackbarHostState = snackbarHostState,
+            onBack = back,
+            onOpenController = { route = Routes.CONTROLLER },
+            onOpenOverlay = { route = Routes.OVERLAY },
+            onFrameRateCapChange = viewModel::setFrameRateCapEnabled,
+            onLogToFileChange = viewModel::setLogToFileEnabled,
+            onShareLogs = { viewModel.exportLogs(onStartIntent) },
+            onOpenUrl = onOpenUrl,
+        )
+        route == Routes.CONTROLLER -> ControllerScreen(
+            title = stringResource(R.string.controller_title),
+            mapping = viewModel.global.mapping,
+            followsDefault = false,
+            perGame = false,
+            onChange = { viewModel.updateGlobal(viewModel.global.copy(mapping = it)) },
+            onReset = { viewModel.updateGlobal(viewModel.global.copy(mapping = ControllerMapping.DEFAULT)) },
+            onBack = back,
+        )
+        route == Routes.OVERLAY -> OverlaySettingsScreen(
+            settings = viewModel.global.overlay,
+            layouts = viewModel.layouts,
+            onChange = { viewModel.updateGlobal(viewModel.global.copy(overlay = it)) },
+            onCustomize = { onCustomizeLayout(it, null) },
+            onDeleteLayout = viewModel::deleteLayout,
+            onBack = back,
+        )
+        route.startsWith(Routes.GAME_CONTROLLER) -> {
+            val id = route.removePrefix(Routes.GAME_CONTROLLER)
+            val game = viewModel.games.firstOrNull { it.id == id }
+            val settings = viewModel.gameSettings(id)
+            ControllerScreen(
+                title = stringResource(R.string.controller_title_game, game?.title.orEmpty()),
+                mapping = settings.mapping ?: viewModel.global.mapping,
+                followsDefault = settings.mapping == null,
+                perGame = true,
+                onChange = { viewModel.setGameSettings(id, viewModel.gameSettings(id).copy(mapping = it)) },
+                onReset = { viewModel.setGameSettings(id, viewModel.gameSettings(id).copy(mapping = null)) },
+                onBack = back,
+            )
+        }
+        route.startsWith(Routes.GAME) -> {
+            val id = route.removePrefix(Routes.GAME)
+            val game = viewModel.games.firstOrNull { it.id == id }
+            if (game == null) {
+                LaunchedEffect(id) { route = Routes.LIBRARY }
+            } else {
+                GameSettingsScreen(
+                    gameTitle = game.title,
+                    global = viewModel.global,
+                    game = viewModel.gameSettings(id),
+                    layouts = viewModel.layouts,
+                    onChange = { viewModel.setGameSettings(id, it) },
+                    onOpenController = { route = Routes.GAME_CONTROLLER + id },
+                    onCustomizeLayout = { onCustomizeLayout(it, id) },
+                    onBack = back,
+                )
+            }
+        }
+        else -> LibraryScreen(
             games = viewModel.games,
             covers = viewModel.covers,
             missing = viewModel.missing,
@@ -136,28 +235,13 @@ private fun PlayerHome(
                 infoGameId = game.id
                 viewModel.refresh(game.id)
             },
-            onOpenSettings = { screen = Screen.Settings },
+            onOpenSettings = { route = Routes.SETTINGS },
             onRequestAccess = onRequestAccess,
         )
-        Screen.Settings -> {
-            BackHandler { screen = Screen.Library }
-            SettingsScreen(
-                versionName = versionName,
-                frameRateCapEnabled = viewModel.playerSettings.frameRateCap > 0,
-                logToFile = viewModel.logToFile,
-                logLocation = if (viewModel.logToFile) DebugLog.logDirectory()?.let { Format.path(it.path) } else null,
-                snackbarHostState = snackbarHostState,
-                onBack = { screen = Screen.Library },
-                onFrameRateCapChange = viewModel::setFrameRateCapEnabled,
-                onLogToFileChange = viewModel::setLogToFileEnabled,
-                onShareLogs = { viewModel.exportLogs(onStartIntent) },
-                onOpenUrl = onOpenUrl,
-            )
-        }
     }
 
     val infoGame = infoGameId?.let { id -> viewModel.games.firstOrNull { it.id == id } }
-    if (infoGame != null && screen == Screen.Library) {
+    if (infoGame != null && route == Routes.LIBRARY) {
         GameInfoSheet(
             game = infoGame,
             cover = viewModel.covers[infoGame.id],
@@ -170,6 +254,10 @@ private fun PlayerHome(
             onRemove = {
                 infoGameId = null
                 viewModel.removeGame(infoGame.id)
+            },
+            onOpenSettings = {
+                infoGameId = null
+                route = Routes.GAME + infoGame.id
             },
         )
     }

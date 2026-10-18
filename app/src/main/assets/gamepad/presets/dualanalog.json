@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "id": "dualanalog",
+  "nameKey": "preset_dualanalog",
+  "controls": [
+    {
+      "id": "stick",
+      "type": "stick",
+      "anchor": "bottom_start",
+      "x": 0.24,
+      "y": 0.5,
+      "size": 0.3
+    },
+    {
+      "id": "dpad",
+      "type": "dpad",
+      "anchor": "bottom_start",
+      "x": 0.52,
+      "y": 0.2,
+      "size": 0.28
+    },
+    {
+      "id": "a",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.27,
+      "y": 0.16,
+      "size": 0.13,
+      "label": "A",
+      "action": "ok"
+    },
+    {
+      "id": "b",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.13,
+      "y": 0.3,
+      "size": 0.13,
+      "label": "B",
+      "action": "cancel"
+    },
+    {
+      "id": "x",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.41,
+      "y": 0.3,
+      "size": 0.13,
+      "label": "X",
+      "action": "shift"
+    },
+    {
+      "id": "y",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.27,
+      "y": 0.44,
+      "size": 0.13,
+      "label": "Y",
+      "action": "menu"
+    },
+    {
+      "id": "l1",
+      "type": "shoulder",
+      "anchor": "top_start",
+      "x": 0.2,
+      "y": 0.1,
+      "size": 0.26,
+      "label": "L1",
+      "action": "pageup"
+    },
+    {
+      "id": "r1",
+      "type": "shoulder",
+      "anchor": "top_end",
+      "x": 0.2,
+      "y": 0.1,
+      "size": 0.26,
+      "label": "R1",
+      "action": "pagedown"
+    },
+    {
+      "id": "select",
+      "type": "pill",
+      "anchor": "bottom_center",
+      "x": -0.13,
+      "y": 0.07,
+      "size": 0.16,
+      "label": "SELECT",
+      "action": "shift"
+    },
+    {
+      "id": "start",
+      "type": "pill",
+      "anchor": "bottom_center",
+      "x": 0.13,
+      "y": 0.07,
+      "size": 0.16,
+      "label": "START",
+      "action": "menu"
+    },
+    {
+      "id": "quickmenu",
+      "type": "pill",
+      "anchor": "top_center",
+      "x": 0,
+      "y": 0.07,
+      "size": 0.16,
+      
+      "action": "quickmenu"
+    }
+  ]
+}

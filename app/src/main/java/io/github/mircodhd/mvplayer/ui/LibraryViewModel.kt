@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
-import io.github.mircodhd.mvplayer.PlayerSettings
 import io.github.mircodhd.mvplayer.R
 import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.debug.LogExporter
@@ -27,11 +26,19 @@ import io.github.mircodhd.mvplayer.game.GameInspector
 import io.github.mircodhd.mvplayer.library.GameEntry
 import io.github.mircodhd.mvplayer.library.GameLibrary
 import io.github.mircodhd.mvplayer.library.GameScanner
+import io.github.mircodhd.mvplayer.overlay.GamepadLayout
+import io.github.mircodhd.mvplayer.overlay.LayoutRepository
+import io.github.mircodhd.mvplayer.settings.GameSettings
+import io.github.mircodhd.mvplayer.settings.GlobalSettings
+import io.github.mircodhd.mvplayer.settings.OverlaySettings
+import io.github.mircodhd.mvplayer.settings.SettingsStore
 import java.io.File
 import java.util.concurrent.Executors
 
 class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     private val library = GameLibrary.get(app)
+    private val settingsStore = SettingsStore.get(app)
+    private val layoutRepository = LayoutRepository(app)
     private val io = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
 
@@ -45,8 +52,12 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var adding by mutableStateOf(false)
         private set
-    var playerSettings by mutableStateOf(PlayerSettings.load(app))
+    var global by mutableStateOf(settingsStore.global())
         private set
+    var layouts by mutableStateOf(layoutRepository.all())
+        private set
+    /** Per-game overrides that the UI has loaded, by game id. */
+    val gameSettings = mutableStateMapOf<String, GameSettings>()
     var logToFile by mutableStateOf(DebugLog.settings.logToFile)
         private set
     /** One-off message for the snackbar; cleared by [messageShown]. */
@@ -64,6 +75,10 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         hasAccess = Environment.isExternalStorageManager()
         if (hasAccess) DebugLog.relocateIfPossible()
         games = library.all() // play time changes while a game runs
+        // Settings and layouts may have changed in a game or in the layout editor.
+        global = settingsStore.global()
+        layouts = layoutRepository.all()
+        gameSettings.keys.toList().forEach { gameSettings[it] = settingsStore.game(it) }
         missing = games.filterNot { it.folder.isDirectory }.map { it.id }.toSet()
     }
 
@@ -104,6 +119,8 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
 
     fun removeGame(id: String) {
         library.remove(id)
+        settingsStore.removeGame(id)
+        gameSettings.remove(id)
         covers.remove(id)
         games = library.all()
     }
@@ -142,11 +159,34 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun updateGlobal(settings: GlobalSettings) {
+        settingsStore.setGlobal(settings)
+        global = settings
+    }
+
     fun setFrameRateCapEnabled(enabled: Boolean) {
-        val updated = PlayerSettings(frameRateCap = if (enabled) PlayerSettings.DEFAULT_FRAME_RATE_CAP else 0)
-        PlayerSettings.save(getApplication(), updated)
-        playerSettings = updated
-        DebugLog.i(TAG, "Frame rate cap set to ${updated.frameRateCap}")
+        updateGlobal(global.copy(frameRateCap = if (enabled) GlobalSettings.DEFAULT_FRAME_RATE_CAP else 0))
+        DebugLog.i(TAG, "Frame rate cap set to ${global.frameRateCap}")
+    }
+
+    fun gameSettings(id: String): GameSettings = gameSettings.getOrPut(id) { settingsStore.game(id) }
+
+    fun setGameSettings(id: String, settings: GameSettings) {
+        settingsStore.setGame(id, settings)
+        gameSettings[id] = settings
+    }
+
+    /** Deletes a custom layout; settings that used it fall back to the default preset. */
+    fun deleteLayout(layout: GamepadLayout) {
+        layoutRepository.deleteCustom(layout.id)
+        if (global.overlay.layoutId == layout.id) {
+            updateGlobal(global.copy(overlay = global.overlay.copy(layoutId = OverlaySettings.DEFAULT_LAYOUT)))
+        }
+        for (entry in library.all()) {
+            val game = settingsStore.game(entry.id)
+            if (game.overlayLayoutId == layout.id) setGameSettings(entry.id, game.copy(overlayLayoutId = null))
+        }
+        layouts = layoutRepository.all()
     }
 
     fun setLogToFileEnabled(enabled: Boolean) {

@@ -10,39 +10,32 @@ import io.github.mircodhd.mvplayer.debug.DebugLog
 import kotlin.math.abs
 
 /**
- * Captures hardware controllers natively and reduces them to the W3C "standard gamepad"
- * button layout (0 = A/bottom ... 15 = d-pad right, 16 = home), packed into a bitmask.
- * The game side reads that mask instead of navigator.getGamepads(), whose support in
- * Android WebView is unreliable. All connected controllers are merged into one.
+ * Captures hardware controllers natively and reports the set of physical controls that
+ * are held (see [Controls]); [InputRouter] turns them into game input via the mapping.
+ * navigator.getGamepads() is not used, its support in Android WebView is unreliable.
+ * All connected controllers are merged into one.
  */
-class GamepadInput(private val onChange: (buttons: Int) -> Unit) {
+class GamepadInput(private val onChange: (controls: Set<String>) -> Unit) {
     private class DeviceState {
-        var keys = 0
-        var axes = 0
+        val keys = HashSet<String>()
+        var axes: Set<String> = emptySet()
     }
 
     private val devices = HashMap<Int, DeviceState>()
-    private var lastSent = 0
+    private var lastSent: Set<String> = emptySet()
+
+    val activeControls: Set<String> get() = lastSent
 
     fun handleKeyEvent(event: KeyEvent): Boolean {
-        if (!isController(event.device)) return false
-        val button = buttonFor(event.keyCode)
-        if (button == null) {
-            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-                DebugLog.i(TAG, "Unmapped controller key ${KeyEvent.keyCodeToString(event.keyCode)} " +
-                    "(scan ${event.scanCode}) from '${event.device?.name}'")
-            }
-            return false
-        }
+        if (!isController(event.device) || !isControllerKey(event.keyCode)) return false
         if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return true
+        val control = Controls.key(event.keyCode)
         if (event.repeatCount == 0) {
             DebugLog.d(TAG, "${KeyEvent.keyCodeToString(event.keyCode)} " +
-                "${if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"} -> ${BUTTON_NAMES[button]} " +
-                "from '${event.device?.name}' (id ${event.deviceId})")
+                "${if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"} from '${event.device?.name}' (id ${event.deviceId})")
         }
         val state = devices.getOrPut(event.deviceId) { DeviceState() }
-        val bit = 1 shl button
-        state.keys = if (event.action == KeyEvent.ACTION_DOWN) state.keys or bit else state.keys and bit.inv()
+        if (event.action == KeyEvent.ACTION_DOWN) state.keys += control else state.keys -= control
         publish()
         return true
     }
@@ -51,29 +44,22 @@ class GamepadInput(private val onChange: (buttons: Int) -> Unit) {
         if (event.action != MotionEvent.ACTION_MOVE) return false
         if (!event.isFromSource(InputDevice.SOURCE_JOYSTICK) && !event.isFromSource(InputDevice.SOURCE_GAMEPAD)) return false
         val device = event.device ?: return false
-        var bits = 0
-
-        // D-pads are often reported as a hat axis instead of key events.
-        val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
-        val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
-        val stickX = centered(event, device, MotionEvent.AXIS_X)
-        val stickY = centered(event, device, MotionEvent.AXIS_Y)
-        if (hatY < -AXIS_THRESHOLD || stickY < -AXIS_THRESHOLD) bits = bits or (1 shl DPAD_UP)
-        if (hatY > AXIS_THRESHOLD || stickY > AXIS_THRESHOLD) bits = bits or (1 shl DPAD_DOWN)
-        if (hatX < -AXIS_THRESHOLD || stickX < -AXIS_THRESHOLD) bits = bits or (1 shl DPAD_LEFT)
-        if (hatX > AXIS_THRESHOLD || stickX > AXIS_THRESHOLD) bits = bits or (1 shl DPAD_RIGHT)
-
-        val leftTrigger = maxOf(event.getAxisValue(MotionEvent.AXIS_LTRIGGER), event.getAxisValue(MotionEvent.AXIS_BRAKE))
-        val rightTrigger = maxOf(event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_GAS))
-        if (leftTrigger > AXIS_THRESHOLD) bits = bits or (1 shl L2)
-        if (rightTrigger > AXIS_THRESHOLD) bits = bits or (1 shl R2)
-
-        val state = devices.getOrPut(event.deviceId) { DeviceState() }
-        if (state.axes != bits && DebugLog.verbose) {
-            DebugLog.v(TAG, "axes from '${device.name}': stick=%.2f,%.2f hat=%.0f,%.0f triggers=%.2f,%.2f -> %s".format(
-                stickX, stickY, hatX, hatY, leftTrigger, rightTrigger, describe(bits)))
+        val axes = HashSet<String>()
+        for ((axis, name) in STICK_AXES) {
+            val value = centered(event, device, axis)
+            if (value < -AXIS_THRESHOLD) axes += Controls.axis(name, false)
+            if (value > AXIS_THRESHOLD) axes += Controls.axis(name, true)
         }
-        state.axes = bits
+        // Triggers rest at 0; some controllers report them as brake/gas instead.
+        if (maxOf(event.getAxisValue(MotionEvent.AXIS_LTRIGGER), event.getAxisValue(MotionEvent.AXIS_BRAKE)) > AXIS_THRESHOLD) {
+            axes += Controls.axis("LTRIGGER", true)
+        }
+        if (maxOf(event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_GAS)) > AXIS_THRESHOLD) {
+            axes += Controls.axis("RTRIGGER", true)
+        }
+        val state = devices.getOrPut(event.deviceId) { DeviceState() }
+        if (state.axes != axes && DebugLog.verbose) DebugLog.v(TAG, "axes from '${device.name}': ${axes.sorted()}")
+        state.axes = axes
         publish()
         return true
     }
@@ -89,17 +75,17 @@ class GamepadInput(private val onChange: (buttons: Int) -> Unit) {
     }
 
     private fun publish() {
-        var combined = 0
-        for (state in devices.values) combined = combined or state.keys or state.axes
+        val combined = HashSet<String>()
+        for (state in devices.values) {
+            combined += state.keys
+            combined += state.axes
+        }
         if (combined != lastSent) {
             lastSent = combined
-            DebugLog.d(TAG, "pad = ${describe(combined)}")
+            DebugLog.d(TAG, "controls = ${if (combined.isEmpty()) "none" else combined.sorted().joinToString("+") { ControlNames.short(it) }}")
             onChange(combined)
         }
     }
-
-    private fun describe(bits: Int): String =
-        if (bits == 0) "none" else BUTTON_NAMES.indices.filter { bits and (1 shl it) != 0 }.joinToString("+") { BUTTON_NAMES[it] }
 
     private fun centered(event: MotionEvent, device: InputDevice, axis: Int): Float {
         val value = event.getAxisValue(axis)
@@ -107,47 +93,70 @@ class GamepadInput(private val onChange: (buttons: Int) -> Unit) {
         return if (abs(value) > flat) value else 0f
     }
 
-    private fun isController(device: InputDevice?): Boolean {
-        if (device == null || device.isVirtual) return false
-        val sources = device.sources
-        return sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
-            sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
-    }
+    companion object {
+        private const val TAG = "Input"
+        private const val AXIS_THRESHOLD = 0.5f
 
-    private fun buttonFor(keyCode: Int): Int? = when (keyCode) {
-        KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER -> 0
-        // Some controllers report their B button as BACK.
-        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> 1
-        KeyEvent.KEYCODE_BUTTON_X -> 2
-        KeyEvent.KEYCODE_BUTTON_Y -> 3
-        KeyEvent.KEYCODE_BUTTON_L1 -> 4
-        KeyEvent.KEYCODE_BUTTON_R1 -> 5
-        KeyEvent.KEYCODE_BUTTON_L2 -> L2
-        KeyEvent.KEYCODE_BUTTON_R2 -> R2
-        KeyEvent.KEYCODE_BUTTON_SELECT -> 8
-        KeyEvent.KEYCODE_BUTTON_START -> 9
-        KeyEvent.KEYCODE_BUTTON_THUMBL -> 10
-        KeyEvent.KEYCODE_BUTTON_THUMBR -> 11
-        KeyEvent.KEYCODE_DPAD_UP -> DPAD_UP
-        KeyEvent.KEYCODE_DPAD_DOWN -> DPAD_DOWN
-        KeyEvent.KEYCODE_DPAD_LEFT -> DPAD_LEFT
-        KeyEvent.KEYCODE_DPAD_RIGHT -> DPAD_RIGHT
-        KeyEvent.KEYCODE_BUTTON_MODE -> 16
-        else -> null
-    }
-
-    private companion object {
-        const val TAG = "Input"
-        val BUTTON_NAMES = listOf(
-            "A", "B", "X", "Y", "L1", "R1", "L2", "R2", "SELECT", "START", "L3", "R3",
-            "UP", "DOWN", "LEFT", "RIGHT", "HOME",
+        /** Axes reported as directions: d-pad hat, left stick, right stick (Z/RZ or RX/RY). */
+        private val STICK_AXES = listOf(
+            MotionEvent.AXIS_HAT_X to "HAT_X",
+            MotionEvent.AXIS_HAT_Y to "HAT_Y",
+            MotionEvent.AXIS_X to "X",
+            MotionEvent.AXIS_Y to "Y",
+            MotionEvent.AXIS_Z to "Z",
+            MotionEvent.AXIS_RZ to "RZ",
+            MotionEvent.AXIS_RX to "RX",
+            MotionEvent.AXIS_RY to "RY",
         )
-        const val AXIS_THRESHOLD = 0.5f
-        const val L2 = 6
-        const val R2 = 7
-        const val DPAD_UP = 12
-        const val DPAD_DOWN = 13
-        const val DPAD_LEFT = 14
-        const val DPAD_RIGHT = 15
+
+        fun isController(device: InputDevice?): Boolean {
+            if (device == null || device.isVirtual) return false
+            val sources = device.sources
+            return sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
+                sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+        }
+
+        /** Gamepad buttons, d-pad keys and BACK (some controllers report B as BACK). */
+        private fun isControllerKey(keyCode: Int) = KeyEvent.isGamepadButton(keyCode) || keyCode in listOf(
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_BACK,
+        )
     }
+}
+
+/** Human-readable names for controls, shown in the mapping screen and the log. */
+object ControlNames {
+    fun short(control: String): String {
+        Controls.keyCodeOf(control)?.let { code ->
+            return when (code) {
+                KeyEvent.KEYCODE_DPAD_UP -> "D-pad ↑"
+                KeyEvent.KEYCODE_DPAD_DOWN -> "D-pad ↓"
+                KeyEvent.KEYCODE_DPAD_LEFT -> "D-pad ←"
+                KeyEvent.KEYCODE_DPAD_RIGHT -> "D-pad →"
+                KeyEvent.KEYCODE_DPAD_CENTER -> "D-pad center"
+                KeyEvent.KEYCODE_BACK -> "Back"
+                KeyEvent.KEYCODE_BUTTON_THUMBL -> "L3"
+                KeyEvent.KEYCODE_BUTTON_THUMBR -> "R3"
+                KeyEvent.KEYCODE_BUTTON_MODE -> "Home"
+                else -> KeyEvent.keyCodeToString(code).removePrefix("KEYCODE_BUTTON_").removePrefix("KEYCODE_")
+                    .lowercase().replaceFirstChar { it.uppercase() }
+                    .let { if (it.length <= 2) it.uppercase() else it }
+            }
+        }
+        val (axis, positive) = Controls.axisOf(control) ?: return control
+        val sign = { neg: String, pos: String -> if (positive) pos else neg }
+        return when (axis) {
+            "HAT_X" -> "D-pad ${sign("←", "→")}"
+            "HAT_Y" -> "D-pad ${sign("↑", "↓")}"
+            "X" -> "Left stick ${sign("←", "→")}"
+            "Y" -> "Left stick ${sign("↑", "↓")}"
+            "Z", "RX" -> "Right stick ${sign("←", "→")}"
+            "RZ", "RY" -> "Right stick ${sign("↑", "↓")}"
+            "LTRIGGER" -> "L2"
+            "RTRIGGER" -> "R2"
+            else -> "$axis ${if (positive) "+" else "−"}"
+        }
+    }
+
+    fun binding(binding: List<String>): String = binding.joinToString(" + ") { short(it) }
 }

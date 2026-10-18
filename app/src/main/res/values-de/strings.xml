@@ -17,7 +17,7 @@
     <string name="lib_already_added">„%1$s“ ist bereits in deiner Bibliothek.</string>
     <string name="lib_add_failed">Das Spiel konnte nicht hinzugefügt werden. Details stehen im Log.</string>
 
-    <string name="fmt_playtime_under_minute">weniger als eine Minute</string>
+    <string name="fmt_playtime_under_minute">unter 1 min</string>
     <string name="fmt_playtime_minutes">%1$d min</string>
     <string name="fmt_playtime_hours">%1$d h %2$d min</string>
 
@@ -70,6 +70,99 @@
     <string name="set_third_party_summary">AndroidX und Jetpack Compose (Apache License 2.0)</string>
     <string name="set_trademark">RPG Maker ist eine Marke der jeweiligen Inhaber. MV Player ist ein unabhängiges Projekt und steht in keiner Verbindung zu ihnen. Spiele sind nicht enthalten.</string>
     <string name="set_no_browser">Keine App zum Öffnen des Links gefunden.</string>
+
+    <!-- Shared settings UI -->
+    <string name="badge_experimental">Experimentell</string>
+    <string name="badge_changes_gameplay">Verändert das Spielgefühl</string>
+    <string name="set_use_default">Standard verwenden</string>
+    <string name="set_use_default_value">Standard verwenden (%1$s)</string>
+    <string name="set_default_value">Standard: %1$s</string>
+    <string name="dialog_ok">OK</string>
+    <string name="value_default">Standard</string>
+    <string name="value_on">An</string>
+    <string name="value_off">Aus</string>
+    <string name="set_section_input">Eingabe</string>
+    <string name="set_section_display">Anzeige</string>
+
+    <!-- Controller mapping -->
+    <string name="controller_title">Controller</string>
+    <string name="controller_title_game">Controller · %1$s</string>
+    <string name="controller_summary">Controller-Tasten den Spielaktionen zuweisen</string>
+    <string name="controller_reset">Auf Standard zurücksetzen</string>
+    <string name="controller_unassigned">Keine Taste zugewiesen</string>
+    <string name="controller_remove">Entfernen</string>
+    <string name="controller_add">Taste zuweisen</string>
+    <string name="controller_conflict">Auch belegt für: %1$s</string>
+    <string name="controller_none_connected">Kein Controller verbunden</string>
+    <string name="controller_connected">Verbunden: %1$s</string>
+    <string name="controller_hint">Tippe auf eine Taste, um sie zu entfernen, oder auf +, um eine weitere zuzuweisen. Mehrere Tasten pro Aktion sind erlaubt.</string>
+    <string name="controller_follows_default">Dieses Spiel nutzt die Standardbelegung. Änderungen erstellen eine Belegung nur für dieses Spiel.</string>
+    <string name="controller_press_title">Taste drücken</string>
+    <string name="controller_press_text">Drücke die Controller-Taste für „%1$s“.</string>
+    <string name="controller_mapping_custom">Eigene Belegung für dieses Spiel</string>
+    <string name="action_ok">Bestätigen (OK)</string>
+    <string name="action_cancel">Abbrechen / zurück</string>
+    <string name="action_shift">Rennen (Shift)</string>
+    <string name="action_menu">Menü</string>
+    <string name="action_pageup">Vorherige Seite (L)</string>
+    <string name="action_pagedown">Nächste Seite (R)</string>
+    <string name="action_up">Hoch</string>
+    <string name="action_down">Runter</string>
+    <string name="action_left">Links</string>
+    <string name="action_right">Rechts</string>
+    <string name="action_quickmenu">Schnellmenü (App)</string>
+
+    <!-- On-screen controls -->
+    <string name="overlay_title">Bildschirm-Steuerung</string>
+    <string name="overlay_summary">Touch-Gamepad, Vorlagen und Layout-Editor</string>
+    <string name="overlay_mode">Bildschirm-Steuerung anzeigen</string>
+    <string name="overlay_mode_auto">Auto</string>
+    <string name="overlay_mode_always">Immer</string>
+    <string name="overlay_mode_never">Nie</string>
+    <string name="overlay_mode_summary">Auto zeigt die Steuerung, solange kein Hardware-Controller verbunden ist.</string>
+    <string name="overlay_layout">Layout</string>
+    <string name="overlay_customize">Layout anpassen</string>
+    <string name="overlay_appearance">Aussehen</string>
+    <string name="overlay_opacity">Deckkraft</string>
+    <string name="overlay_size">Größe</string>
+    <string name="overlay_haptics">Haptisches Feedback</string>
+    <string name="overlay_haptics_summary">Kurze Vibration beim Drücken</string>
+    <string name="overlay_mirror">Linkshänder</string>
+    <string name="overlay_mirror_summary">Tauscht die linke und rechte Seite des Layouts</string>
+    <string name="overlay_delete_layout">Layout löschen</string>
+    <string name="preset_handheld">Klassischer Handheld</string>
+    <string name="preset_console16">16-Bit-Konsole</string>
+    <string name="preset_arcade6">6-Tasten-Arcade</string>
+    <string name="preset_dualanalog">Moderner Dual-Analog</string>
+    <string name="preset_minimal">Minimal</string>
+    <string name="layout_custom_name">Eigenes (basiert auf %1$s)</string>
+    <string name="editor_hint">Element antippen zum Auswählen, ziehen zum Verschieben</string>
+    <string name="editor_hidden">Ausgeblendet</string>
+    <string name="editor_reset">Zurücksetzen</string>
+    <string name="editor_save">Speichern</string>
+    <string name="editor_save_title">Layout speichern</string>
+    <string name="editor_save_text">Dieses Layout nur für dieses Spiel verwenden oder als Standard für alle Spiele?</string>
+    <string name="editor_save_game">Dieses Spiel</string>
+    <string name="editor_save_global">Alle Spiele</string>
+
+    <!-- Game settings -->
+    <string name="game_settings_title">Einstellungen · %1$s</string>
+    <string name="game_settings_reset_all">Alle zurücksetzen</string>
+    <string name="info_game_settings">Einstellungen</string>
+    <string name="frame_rate_title">Bildrate</string>
+    <string name="frame_rate_summary">Die Begrenzung auf 60 fps hält die Spielzeit korrekt und spart Akku.</string>
+    <string name="frame_rate_fps">%1$d fps</string>
+    <string name="frame_rate_unlimited">Unbegrenzt (Display-Rate)</string>
+    <string name="frame_rate_unlimited_warning">MV zählt gezeichnete Bilder als Spielzeit: Ohne Begrenzung läuft die Spielzeit auf 90/120-Hz-Displays zu schnell, und das Gerät verbraucht mehr Strom.</string>
+
+    <!-- In-game -->
+    <string name="quick_paused">Spiel pausiert</string>
+    <string name="quick_resume">Weiterspielen</string>
+    <string name="quick_show_controls">Bildschirm-Steuerung</string>
+    <string name="quick_game_settings">Spieleinstellungen</string>
+    <string name="quick_quit">Spiel beenden</string>
+    <string name="text_input_title">Namen eingeben</string>
+    <string name="text_input_use_grid">Spieltastatur verwenden</string>
 
     <!-- Engine detection -->
     <string name="engine_mz_unsupported">RPG-Maker-MZ-Spiele werden noch nicht unterstützt.</string>

@@ -6,18 +6,22 @@ package io.github.mircodhd.mvplayer
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.hardware.input.InputManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
 import android.view.Gravity
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.PixelCopy
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
@@ -34,58 +38,93 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.ComposeView
+import androidx.core.graphics.createBitmap
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import io.github.mircodhd.mvplayer.bridge.PlayerBridge
 import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.game.GameInfo
 import io.github.mircodhd.mvplayer.game.GameInspector
 import io.github.mircodhd.mvplayer.input.GamepadInput
+import io.github.mircodhd.mvplayer.input.InputAction
+import io.github.mircodhd.mvplayer.input.InputRouter
 import io.github.mircodhd.mvplayer.library.GameLibrary
+import io.github.mircodhd.mvplayer.overlay.GamepadLayout
+import io.github.mircodhd.mvplayer.overlay.LayoutNames
+import io.github.mircodhd.mvplayer.overlay.LayoutRepository
 import io.github.mircodhd.mvplayer.patch.PatchProfiles
+import io.github.mircodhd.mvplayer.settings.GameSettings
+import io.github.mircodhd.mvplayer.settings.SettingsStore
+import io.github.mircodhd.mvplayer.ui.game.EditorRequest
+import io.github.mircodhd.mvplayer.ui.game.GameOverlay
+import io.github.mircodhd.mvplayer.ui.game.GameOverlayActions
+import io.github.mircodhd.mvplayer.ui.game.GameOverlayState
+import io.github.mircodhd.mvplayer.ui.game.TextInputRequest
+import io.github.mircodhd.mvplayer.ui.theme.MvPlayerTheme
 import io.github.mircodhd.mvplayer.web.GameRequestHandler
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.Executors
 
-/** Fullscreen WebView that runs one game. */
-class GameActivity : ComponentActivity() {
+/** Fullscreen WebView that runs one game, with a Compose overlay for controls and menus. */
+class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host {
     companion object {
         const val EXTRA_GAME_DIR = "game_dir"
+        const val EXTRA_GAME_ID = "game_id"
         private const val TAG = "Game"
         private const val LIFECYCLE = "Lifecycle"
-        private const val SELECT_START = (1 shl 8) or (1 shl 9)
     }
 
     private lateinit var container: FrameLayout
     private lateinit var loading: TextView
     private var webView: WebView? = null
     private var requestHandler: GameRequestHandler? = null
-    private var quitDialog: AlertDialog? = null
     private val executor = Executors.newSingleThreadExecutor()
-    private val gamepad = GamepadInput(::onGamepadChanged)
     private val createdAt = SystemClock.elapsedRealtime()
     private var gameDir: File? = null
+    private var gameId: String? = null
     /** Start of the current foreground stretch, for the library's play time. */
     private var resumedAt = 0L
+    private var appliedFrameRateCap = -1
+
+    private val settingsStore by lazy { SettingsStore.get(this) }
+    private val layoutRepository by lazy { LayoutRepository(this) }
+    private lateinit var overlayState: GameOverlayState
+
+    private val router = InputRouter(
+        mapping = io.github.mircodhd.mvplayer.input.ControllerMapping.DEFAULT,
+        onBits = ::sendPad,
+        onAppAction = ::onAppAction,
+    )
+    private val gamepad = GamepadInput { controls -> router.setHardware(controls) }
 
     private val audioManager by lazy { getSystemService(AudioManager::class.java) }
     private val powerManager by lazy { getSystemService(PowerManager::class.java) }
+    private val inputManager by lazy { getSystemService(InputManager::class.java) }
 
     private val deviceListener = object : InputManager.InputDeviceListener {
         override fun onInputDeviceAdded(deviceId: Int) {
             DebugLog.i(LIFECYCLE, "Input device added: ${describeDevice(deviceId)}")
+            updateControllerConnected()
         }
 
         override fun onInputDeviceChanged(deviceId: Int) {
             DebugLog.d(LIFECYCLE, "Input device changed: ${describeDevice(deviceId)}")
+            updateControllerConnected()
         }
 
         override fun onInputDeviceRemoved(deviceId: Int) {
             DebugLog.i(LIFECYCLE, "Input device removed: $deviceId")
             gamepad.onDeviceRemoved(deviceId)
+            updateControllerConnected()
         }
     }
 
@@ -110,35 +149,47 @@ class GameActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         hideSystemBars()
 
+        val dir = intent.getStringExtra(EXTRA_GAME_DIR)?.let(::File)
+        val library = GameLibrary.get(this)
+        val entry = intent.getStringExtra(EXTRA_GAME_ID)?.let(library::find) ?: dir?.let { library.findByPath(it.absolutePath) }
+        gameDir = dir
+        gameId = entry?.id
+        overlayState = GameOverlayState(entry?.title ?: dir?.name.orEmpty())
+
         container = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         loading = TextView(this).apply {
             setText(R.string.game_loading)
             setTextColor(Color.GRAY)
         }
         container.addView(loading, FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER))
+        val overlayView = ComposeView(this).apply {
+            setContent { MvPlayerTheme { GameOverlay(overlayState, this@GameActivity) } }
+        }
+        container.addView(overlayView, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         setContentView(container)
 
         onBackPressedDispatcher.addCallback(this) {
-            DebugLog.i(TAG, "Back pressed")
-            confirmQuit()
+            DebugLog.i(TAG, "Back pressed, opening quick menu")
+            overlayState.quickMenu = true
         }
-        val inputManager = getSystemService(InputManager::class.java)
         inputManager.registerInputDeviceListener(deviceListener, null)
         inputManager.inputDeviceIds
             .filter { InputDevice.getDevice(it)?.isVirtual == false }
             .forEach { DebugLog.i(LIFECYCLE, "Input device present: ${describeDevice(it)}") }
+        updateControllerConnected()
         audioManager.registerAudioDeviceCallback(audioDeviceCallback, null) // reports current outputs too
         powerManager.addThermalStatusListener(thermalListener)
         DebugLog.i("Thermal", "Thermal status ${thermalName(powerManager.currentThermalStatus)}")
 
-        val dir = intent.getStringExtra(EXTRA_GAME_DIR)?.let(::File)
+        loadSettings()
+        observeModalState()
+
         if (dir == null) {
             DebugLog.e(TAG, "Started without a game folder")
             finish()
             return
         }
-        gameDir = dir
-        DebugLog.i(TAG, "Opening game in $dir")
+        DebugLog.i(TAG, "Opening game in $dir (library id $gameId)")
         executor.execute {
             val result = runCatching {
                 val webRoot = GameInspector.detect(dir).webRoot ?: error("No MV game in $dir")
@@ -151,27 +202,57 @@ class GameActivity : ComponentActivity() {
         }
     }
 
+    // --- Settings -----------------------------------------------------------------------
+
+    private fun loadSettings() {
+        overlayState.global = settingsStore.global()
+        overlayState.game = gameId?.let(settingsStore::game) ?: GameSettings()
+        overlayState.layouts = layoutRepository.all()
+        applySettings()
+    }
+
+    /** Applies the effective settings to input, overlay and frame rate, also mid-game. */
+    private fun applySettings() {
+        val effective = settingsStore.effective(gameId)
+        router.mapping = effective.mapping
+        overlayState.overlay = effective.overlay
+        val layout = layoutRepository.find(effective.overlay.layoutId)
+        overlayState.layout = if (effective.overlay.mirror) layout.mirrored() else layout
+        if (effective.frameRateCap != appliedFrameRateCap) {
+            appliedFrameRateCap = effective.frameRateCap
+            applyFrameRateCap(effective.frameRateCap)
+            webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.setFrameRateCap&&MvPlayer.setFrameRateCap(${effective.frameRateCap})", null)
+        }
+        DebugLog.d(TAG, "Effective settings: $effective")
+    }
+
+    override fun onGameSettingsChange(settings: GameSettings) {
+        val id = gameId ?: return
+        settingsStore.setGame(id, settings)
+        overlayState.game = settings
+        applySettings()
+    }
+
+    // --- Game -----------------------------------------------------------------------------
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun startGame(info: GameInfo) {
         val (profileIds, patches) = PatchProfiles.select(info)
         DebugLog.i(TAG, "Patch profiles: $profileIds")
         val debugSettings = DebugLog.settings
-        val playerSettings = PlayerSettings.load(this)
-        DebugLog.i(TAG, "Player settings: $playerSettings")
-        applyFrameRateCap(playerSettings.frameRateCap)
         val config = JSONObject()
             .put("title", info.title)
             .put("engineVersion", info.engineVersion ?: JSONObject.NULL)
             .put("audioExt", info.audioExt)
             .put("videoExt", info.videoExt)
             .put("profiles", JSONArray(profileIds))
-            .put("frameRateCap", playerSettings.frameRateCap)
+            .put("frameRateCap", appliedFrameRateCap.coerceAtLeast(0))
             .put("debug", JSONObject()
                 .put("verbose", debugSettings.verbose)
                 .put("statsIntervalSeconds", debugSettings.statsIntervalSeconds))
         val handler = GameRequestHandler(assets, info, patches, config.toString())
         requestHandler = handler
-        val bridge = PlayerBridge(File(info.webRoot, "save")) { runOnUiThread { finish() } }
+        val bridge = PlayerBridge(File(info.webRoot, "save"), this)
 
         WebView.setWebContentsDebuggingEnabled(debugSettings.remoteDebugging)
         val view = WebView(this).apply {
@@ -205,13 +286,14 @@ class GameActivity : ComponentActivity() {
                     return block
                 }
 
-                override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
+                override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
                     DebugLog.i(TAG, "Page started: $url")
                 }
 
                 override fun onPageFinished(view: WebView, url: String) {
                     DebugLog.i(TAG, "Page finished: $url, ${SystemClock.elapsedRealtime() - createdAt} ms after onCreate")
                     container.removeView(loading)
+                    overlayState.gameReady = true
                 }
 
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
@@ -251,23 +333,36 @@ class GameActivity : ComponentActivity() {
         view.loadUrl(GameRequestHandler.START_URL)
     }
 
-    private fun onGamepadChanged(buttons: Int) {
-        if (buttons and SELECT_START == SELECT_START) {
-            DebugLog.i(TAG, "Select+Start pressed, asking to quit")
-            confirmQuit()
-            return
+    // --- Input ------------------------------------------------------------------------------
+
+    private fun sendPad(bits: Int) {
+        webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.setPad($bits)", null)
+    }
+
+    private fun onAppAction(action: InputAction) {
+        if (action == InputAction.QUICK_MENU && !overlayState.isModal) {
+            DebugLog.i(TAG, "Quick menu opened by controller")
+            overlayState.quickMenu = true
         }
-        webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.setPad($buttons)", null)
+    }
+
+    override fun onGamepadActions(actions: Set<InputAction>) = router.setOverlay(actions)
+
+    private fun updateControllerConnected() {
+        val connected = inputManager.inputDeviceIds.any { GamepadInput.isController(InputDevice.getDevice(it)) }
+        if (overlayState.controllerConnected != connected) DebugLog.i(TAG, "Controller connected: $connected")
+        overlayState.controllerConnected = connected
     }
 
     // Lint flags androidx's restricted override of this framework method; overriding it is fine.
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (gamepad.handleKeyEvent(event)) return true
+        // While a menu covers the game, Compose handles the keys (focus navigation, back).
+        if (!overlayState.isModal && gamepad.handleKeyEvent(event)) return true
         if (event.repeatCount == 0 && DebugLog.verbose) {
             DebugLog.v("Input", "Key ${KeyEvent.keyCodeToString(event.keyCode)} " +
                 "${if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"} from '${event.device?.name}' " +
-                "sources=0x${event.source.toString(16)} (passed to WebView)")
+                "sources=0x${event.source.toString(16)} (passed on)")
         }
         if (event.action == KeyEvent.ACTION_UP &&
             (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
@@ -278,7 +373,92 @@ class GameActivity : ComponentActivity() {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean =
-        gamepad.handleMotionEvent(event) || super.dispatchGenericMotionEvent(event)
+        (!overlayState.isModal && gamepad.handleMotionEvent(event)) || super.dispatchGenericMotionEvent(event)
+
+    /** Pauses the game while a menu covers it and releases all held input. */
+    private fun observeModalState() {
+        lifecycleScope.launch {
+            // drop(1): the first value is the initial state, not a change.
+            snapshotFlow { overlayState.isModal }.drop(1).collect { modal ->
+                DebugLog.i(TAG, if (modal) "Menu open, game paused" else "Menu closed, game resumed")
+                gamepad.reset()
+                router.reset()
+                val call = if (modal) "pause" else "resume"
+                webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.$call&&MvPlayer.$call('menu')", null)
+                if (!modal) {
+                    hideSystemBars()
+                    webView?.requestFocus()
+                }
+            }
+        }
+    }
+
+    // --- Overlay callbacks ----------------------------------------------------------------
+
+    override fun requestTextInput(current: String, maxLength: Int) {
+        runOnUiThread { overlayState.textInput = TextInputRequest(current, maxLength) }
+    }
+
+    override fun onTextResult(text: String?) {
+        DebugLog.i("TextInput", if (text == null) "Text input cancelled" else "Text input: ${text.length} characters")
+        val argument = text?.let { JSONObject.quote(it) } ?: "null"
+        webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.onTextInput&&MvPlayer.onTextInput($argument)", null)
+        hideSystemBars()
+    }
+
+    override fun exitGame() {
+        runOnUiThread { finish() }
+    }
+
+    override fun onQuit() {
+        DebugLog.i(TAG, "Quit confirmed")
+        finish()
+    }
+
+    override fun onCustomizeLayout(layout: GamepadLayout) {
+        // Edit what the player sees: mirrored if left-handed mode is on (saved as shown).
+        val mirror = overlayState.overlay.mirror
+        val preset = layoutRepository.presets().firstOrNull { it.id == (layout.basedOn ?: layout.id) } ?: layout
+        val shown = if (mirror) layout.mirrored() else layout
+        val original = if (mirror) preset.mirrored() else preset
+        val state = overlayState
+        state.quickMenu = false
+        state.hideControls = true
+        // Two frames later the menu and controls are gone; take the screenshot then.
+        container.postOnAnimation {
+            container.postOnAnimation {
+                captureWindow { bitmap ->
+                    state.hideControls = false
+                    state.editor = EditorRequest(shown, original, bitmap?.asImageBitmap())
+                }
+            }
+        }
+    }
+
+    override fun onEditorSave(layout: GamepadLayout, forGame: Boolean) {
+        val base = layoutRepository.all().firstOrNull { it.id == layout.id } ?: layout
+        val saved = layoutRepository.saveCustom(layout, LayoutNames.customName(this, base))
+        val id = gameId
+        if (forGame && id != null) {
+            onGameSettingsChange(settingsStore.game(id).copy(overlayLayoutId = saved.id, overlayMirror = false))
+        } else {
+            val global = settingsStore.global()
+            settingsStore.setGlobal(global.copy(overlay = global.overlay.copy(layoutId = saved.id, mirror = false)))
+        }
+        loadSettings()
+    }
+
+    private fun captureWindow(onResult: (Bitmap?) -> Unit) {
+        val decor = window.decorView
+        if (decor.width <= 0 || decor.height <= 0) return onResult(null)
+        val bitmap = createBitmap(decor.width, decor.height)
+        PixelCopy.request(window, bitmap, { result ->
+            if (result != PixelCopy.SUCCESS) DebugLog.w(TAG, "Screenshot for the layout editor failed ($result)")
+            onResult(if (result == PixelCopy.SUCCESS) bitmap else null)
+        }, Handler(Looper.getMainLooper()))
+    }
+
+    // --- Lifecycle --------------------------------------------------------------------------
 
     override fun onPause() {
         super.onPause()
@@ -286,6 +466,7 @@ class GameActivity : ComponentActivity() {
         recordPlayTime()
         requestHandler?.let { DebugLog.i("Request", "Totals: ${it.stats()}") }
         gamepad.reset()
+        router.reset()
         webView?.run {
             evaluateJavascript("window.MvPlayer&&MvPlayer.onPause()", null)
             onPause()
@@ -299,6 +480,8 @@ class GameActivity : ComponentActivity() {
         DebugLog.i(LIFECYCLE, "onResume")
         resumedAt = SystemClock.elapsedRealtime()
         hideSystemBars()
+        // Settings may have changed in the library while the game was in the background.
+        if (::overlayState.isInitialized) loadSettings()
         webView?.run {
             resumeTimers()
             onResume()
@@ -325,16 +508,20 @@ class GameActivity : ComponentActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         DebugLog.i(LIFECYCLE, "Window focus $hasFocus")
-        if (hasFocus) hideSystemBars() else gamepad.reset()
+        if (hasFocus) {
+            hideSystemBars()
+        } else {
+            gamepad.reset()
+            router.reset()
+        }
     }
 
     override fun onDestroy() {
         DebugLog.i(LIFECYCLE, "onDestroy (finishing=$isFinishing)")
-        getSystemService(InputManager::class.java).unregisterInputDeviceListener(deviceListener)
+        inputManager.unregisterInputDeviceListener(deviceListener)
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
         powerManager.removeThermalStatusListener(thermalListener)
         executor.shutdownNow()
-        quitDialog?.dismiss()
         webView?.run {
             container.removeView(this)
             destroy()
@@ -342,20 +529,6 @@ class GameActivity : ComponentActivity() {
         webView = null
         DebugLog.flush()
         super.onDestroy()
-    }
-
-    private fun confirmQuit() {
-        if (quitDialog?.isShowing == true) return
-        quitDialog = AlertDialog.Builder(this)
-            .setTitle(R.string.game_quit_title)
-            .setMessage(R.string.game_quit_message)
-            .setPositiveButton(R.string.game_quit_confirm) { _, _ ->
-                DebugLog.i(TAG, "Quit confirmed")
-                finish()
-            }
-            .setNegativeButton(R.string.game_quit_cancel, null)
-            .setOnDismissListener { hideSystemBars() }
-            .show()
     }
 
     private fun showFatalError(error: Throwable) {
@@ -368,14 +541,15 @@ class GameActivity : ComponentActivity() {
     }
 
     /**
-     * Asks Android to drive the display at the cap (e.g. 60 instead of 120 Hz). This saves
-     * power in the panel too; framerate.js covers displays that ignore the request.
+     * Asks Android to drive the display at the cap (e.g. 60 instead of 120 Hz), or lifts the
+     * preference for 0. This saves power in the panel too; framerate.js covers displays
+     * that ignore the request.
      */
     private fun applyFrameRateCap(cap: Int) {
-        if (cap <= 0) return
-        window.attributes = window.attributes.apply { preferredRefreshRate = cap.toFloat() }
+        window.attributes = window.attributes.apply { preferredRefreshRate = cap.coerceAtLeast(0).toFloat() }
         container.postDelayed({
-            DebugLog.i("Frames", "Requested $cap Hz, display runs at ${"%.1f".format(display?.refreshRate ?: 0f)} Hz")
+            DebugLog.i("Frames", "Requested ${if (cap > 0) "$cap Hz" else "no limit"}, " +
+                "display runs at ${"%.1f".format(display?.refreshRate ?: 0f)} Hz")
         }, 1000)
     }
 

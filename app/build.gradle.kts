@@ -14,8 +14,8 @@ android {
         applicationId = "io.github.mircodhd.mvplayer"
         minSdk = 30
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.2.0"
+        versionCode = 7
+        versionName = "0.3.0"
     }
 
     buildTypes {
@@ -53,4 +53,7 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.core)
     debugImplementation(libs.compose.ui.tooling)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.org.json)
 }

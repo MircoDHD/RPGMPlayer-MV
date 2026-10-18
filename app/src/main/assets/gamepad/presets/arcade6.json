@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "id": "arcade6",
+  "nameKey": "preset_arcade6",
+  "controls": [
+    {
+      "id": "dpad",
+      "type": "dpad",
+      "anchor": "bottom_start",
+      "x": 0.27,
+      "y": 0.3,
+      "size": 0.38
+    },
+    {
+      "id": "x",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.48,
+      "y": 0.4,
+      "size": 0.13,
+      "label": "X",
+      "action": "shift"
+    },
+    {
+      "id": "y",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.32,
+      "y": 0.44,
+      "size": 0.13,
+      "label": "Y",
+      "action": "menu"
+    },
+    {
+      "id": "z",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.16,
+      "y": 0.44,
+      "size": 0.13,
+      "label": "Z",
+      "action": "pageup"
+    },
+    {
+      "id": "a",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.48,
+      "y": 0.22,
+      "size": 0.13,
+      "label": "A",
+      "action": "ok"
+    },
+    {
+      "id": "b",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.32,
+      "y": 0.26,
+      "size": 0.13,
+      "label": "B",
+      "action": "cancel"
+    },
+    {
+      "id": "c",
+      "type": "button",
+      "anchor": "bottom_end",
+      "x": 0.16,
+      "y": 0.26,
+      "size": 0.13,
+      "label": "C",
+      "action": "pagedown"
+    },
+    {
+      "id": "start",
+      "type": "pill",
+      "anchor": "bottom_center",
+      "x": 0,
+      "y": 0.07,
+      "size": 0.16,
+      "label": "START",
+      "action": "menu"
+    },
+    {
+      "id": "quickmenu",
+      "type": "pill",
+      "anchor": "top_center",
+      "x": 0,
+      "y": 0.07,
+      "size": 0.16,
+      
+      "action": "quickmenu"
+    }
+  ]
+}

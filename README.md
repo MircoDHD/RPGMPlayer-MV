@@ -10,7 +10,12 @@ No game files are included. You need your own copy of a game.
 Add a game with "Add game" and pick the folder that contains `Game.exe` or `index.html`.
 The library shows each game with its title screen image, folder, play time and a play
 button; the info button lists technical details (MV and PIXI version, plugins, size).
-Settings hold the 60 fps limit, the diagnostic log opt-out, log sharing and app info.
+Settings hold controller remapping, the on-screen controls (presets, layout editor,
+opacity, size, haptics, left-handed), the 60 fps limit, the diagnostic log opt-out, log
+sharing and app info. Each game can override these defaults ("Settings" in its info
+sheet). In a game, Select + Start, the back gesture or the ☰ touch button opens the quick
+menu (resume, on-screen controls, layout, frame rate, game settings, quit). Name entry
+scenes open the Android keyboard.
 
 ## How it works
 
@@ -20,8 +25,8 @@ Settings hold the 60 fps limit, the diagnostic log opt-out, log sharing and app 
   grouped into profiles (`PatchProfiles.kt`).
 - Saves are written to the game's `www/save/` folder in the PC format, so they can be
   copied between PC and Android.
-- Controllers are read natively and passed to the engine; Select + Start opens the quit
-  dialog.
+- Controllers are read natively, mapped to MV actions (remappable) and passed to the
+  engine together with the touch overlay's input.
 
 ## Building
 
@@ -29,9 +34,12 @@ Requirements: JDK 17+ and the Android SDK.
 
 ```bash
 scripts/setup-sdk.sh        # installs the SDK to ~/Android/Sdk, writes local.properties
-./gradlew assembleDebug     # APK in app/build/outputs/apk/debug/
+./gradlew testDebugUnitTest assembleDebug lintDebug   # tests, APK, lint
 ./gradlew installDebug      # install on a connected device
 ```
+
+Touch-gamepad presets live in `app/src/main/assets/gamepad/presets/` (JSON, positions in
+units of the screen height); the unit tests validate them.
 
 Debug builds allow remote debugging through `chrome://inspect`.
 

@@ -29,7 +29,8 @@ ENCRYPTED_EXTENSIONS = {"png": "rpgmvp", "ogg": "rpgmvo", "m4a": "rpgmvm"}
 
 # Mirrors PatchProfiles.kt.
 BEFORE_ENGINE = ["common/player.js"]
-BEFORE_PLUGINS = ["mv/debug.js", "mv/engine.js", "mv/framerate.js", "mv/storage.js", "mv/input.js", "mv/lifecycle.js"]
+BEFORE_PLUGINS = ["mv/debug.js", "mv/engine.js", "mv/framerate.js", "mv/storage.js", "mv/input.js", "mv/lifecycle.js",
+                  "mv/textinput.js"]
 GREENWORKS_PATCHES = ["stubs/greenworks.js"]
 
 HOST_SHIM = """
@@ -46,6 +47,13 @@ window.MvPlayerHost = (function () {
         saveExists: function (name) { return call('HEAD', name).status === 200; },
         saveRemove: function (name) { return call('DELETE', name).status === 204; },
         exitGame: function () { document.body.innerHTML = '<p style="color:#888">exitGame() called</p>'; },
+        requestTextInput: function (current, maxLength) {
+            // Asynchronous like the app's dialog.
+            setTimeout(function () {
+                var text = window.prompt('Name (max ' + maxLength + ')', current);
+                MvPlayer.onTextInput(text);
+            }, 0);
+        },
         log: function (level, category, message) {
             var method = level === 'e' ? 'error' : level === 'w' ? 'warn' : 'log';
             console[method]('[' + level.toUpperCase() + ' ' + category + '] ' + message);
