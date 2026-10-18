@@ -20,6 +20,8 @@ class SettingsJsonTest {
             frameRateCap = 0,
             mapping = mapping,
             overlay = OverlaySettings(OverlayMode.NEVER, 0.3f, 1.2f, haptics = false, mirror = true, layoutId = "minimal"),
+            titleEditUnlocked = true,
+            libraryTitle = "My games",
         )
         val parsed = SettingsJson.globalFromJson(JSONObject(SettingsJson.globalToJson(settings).toString()))
         assertEquals(settings, parsed)

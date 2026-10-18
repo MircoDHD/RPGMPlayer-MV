@@ -4,8 +4,9 @@
 package io.github.mircodhd.mvplayer.overlay
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
@@ -20,10 +21,14 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.mircodhd.mvplayer.input.InputAction
 import kotlin.math.atan2
 import kotlin.math.hypot
@@ -53,9 +58,8 @@ fun ControlVisual(
     colors: ControlColors,
     modifier: Modifier = Modifier,
     stick: Offset = Offset.Zero,
-    labelScale: Float = 1f,
 ) {
-    Box(modifier, contentAlignment = Alignment.Center) {
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             when (control.type) {
                 ControlType.DPAD -> drawDpad(active, colors)
@@ -67,23 +71,33 @@ fun ControlVisual(
         if (control.action == InputAction.QUICK_MENU) {
             Icon(Icons.Filled.Menu, contentDescription = null, tint = colors.content, modifier = Modifier.fillMaxSize(0.6f))
         } else if (control.label != null) {
+            // The label scales with the control, so it fits and stays centred at any size
+            // (previews, size slider, editor) instead of overflowing to one side.
+            val byHeight = maxHeight * if (control.type == ControlType.BUTTON) 0.36f else 0.5f
+            val byWidth = maxWidth * 0.78f / (control.label.length * AVERAGE_GLYPH_WIDTH)
             Text(
                 text = control.label,
                 color = colors.content,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = (labelSize(control) * labelScale).sp,
+                fontSize = with(LocalDensity.current) { minOf(byHeight, byWidth).toSp() },
+                textAlign = TextAlign.Center,
                 maxLines = 1,
+                softWrap = false,
+                style = CenteredLabel,
+                modifier = Modifier.wrapContentSize(unbounded = true),
             )
         }
     }
 }
 
-private fun labelSize(control: OverlayControl): Float = when {
-    control.label == null -> 14f
-    control.label.length <= 2 -> 18f
-    control.label.length <= 4 -> 12f
-    else -> 10f
-}
+/** Typical glyph width of the bold UI font relative to its size. */
+private const val AVERAGE_GLYPH_WIDTH = 0.62f
+
+/** Centres the glyphs themselves vertically (no extra font padding above or below). */
+private val CenteredLabel = TextStyle(
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+    lineHeightStyle = LineHeightStyle(alignment = LineHeightStyle.Alignment.Center, trim = LineHeightStyle.Trim.Both),
+)
 
 private fun DrawScope.drawCircleButton(pressed: Boolean, colors: ControlColors) {
     val radius = size.minDimension / 2

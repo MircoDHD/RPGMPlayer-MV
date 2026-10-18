@@ -52,10 +52,12 @@ class LayoutEditorActivity : ComponentActivity() {
                     background = null,
                     scale = overlay.scale,
                     canSaveForGame = gameId != null,
-                    onSave = { edited, forGame ->
-                        val saved = repository.saveCustom(edited, LayoutNames.customName(this, layout))
+                    onSave = { edited, forGame, asCopy ->
+                        val saved = repository.saveCustom(edited, LayoutNames.customName(this, layout), asCopy)
                         if (forGame && gameId != null) {
-                            store.setGame(gameId, store.game(gameId).copy(overlayLayoutId = saved.id, overlayMirror = false))
+                            // Saved as shown, so it must not be mirrored again; null when that is the default.
+                            val mirror = if (store.global().overlay.mirror) false else null
+                            store.setGame(gameId, store.game(gameId).copy(overlayLayoutId = saved.id, overlayMirror = mirror))
                         } else {
                             val global = store.global()
                             store.setGlobal(global.copy(overlay = global.overlay.copy(layoutId = saved.id, mirror = false)))

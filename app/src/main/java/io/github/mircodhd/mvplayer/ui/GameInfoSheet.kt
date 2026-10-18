@@ -83,7 +83,7 @@ fun GameInfoSheet(
             Spacer(Modifier.height(16.dp))
             Text(game.title, style = MaterialTheme.typography.headlineSmall)
             Text(
-                Format.path(game.path),
+                game.location,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -142,7 +142,7 @@ fun GameInfoSheet(
                 InfoRow(stringResource(R.string.info_steam_stub), if (details.usesGreenworks) yes else no)
                 InfoRow(stringResource(R.string.info_profiles), details.profiles.joinToString())
             }
-            InfoRow(stringResource(R.string.info_folder), game.path)
+            InfoRow(stringResource(R.string.info_folder), game.location)
         }
     }
 

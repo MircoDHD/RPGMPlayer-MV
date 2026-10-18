@@ -11,13 +11,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -31,7 +31,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,8 +41,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.mircodhd.mvplayer.R
 
-/** Flags shown next to an option. */
-enum class OptionBadge { EXPERIMENTAL, CHANGES_GAMEPLAY }
+/** Flags shown next to an option; DEFAULT marks the value a game inherits from the global settings. */
+enum class OptionBadge { DEFAULT, EXPERIMENTAL, CHANGES_GAMEPLAY }
 
 @Composable
 fun SectionHeader(title: String) {
@@ -56,11 +55,17 @@ fun SectionHeader(title: String) {
 }
 
 @Composable
-fun Badges(badges: List<OptionBadge>) {
+/** [inline]: next to a value on the same line instead of below a text. */
+fun Badges(badges: List<OptionBadge>, modifier: Modifier = Modifier, inline: Boolean = false) {
     if (badges.isEmpty()) return
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = modifier.padding(top = if (inline) 0.dp else 4.dp)) {
         for (badge in badges) {
             val (text, container, content) = when (badge) {
+                OptionBadge.DEFAULT -> Triple(
+                    stringResource(R.string.badge_default),
+                    MaterialTheme.colorScheme.secondaryContainer,
+                    MaterialTheme.colorScheme.onSecondaryContainer,
+                )
                 OptionBadge.EXPERIMENTAL -> Triple(
                     stringResource(R.string.badge_experimental),
                     MaterialTheme.colorScheme.tertiaryContainer,
@@ -73,7 +78,7 @@ fun Badges(badges: List<OptionBadge>) {
                 )
             }
             Surface(shape = MaterialTheme.shapes.small, color = container, contentColor = content) {
-                Text(text, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                Text(text, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp))
             }
         }
     }
@@ -106,10 +111,7 @@ fun SwitchRow(
     )
 }
 
-/**
- * A row showing a value; [isDefault] adds "(default)" handling for per-game overrides,
- * [onReset] shows a reset button when the value is overridden.
- */
+/** A row showing a value; [onReset] shows a reset button. */
 @Composable
 fun ValueRow(
     title: String,
@@ -125,9 +127,17 @@ fun ValueRow(
         supportingContent = if (value != null || summary != null || badges.isNotEmpty()) {
             {
                 Column {
-                    value?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+                    if (value != null) {
+                        // Value and tags on one line, e.g. "60 fps  [Default]", sharing one baseline:
+                        // ListItem reads differing first and last baselines as a second line.
+                        Row {
+                            Text(value, color = MaterialTheme.colorScheme.primary, modifier = Modifier.alignByBaseline())
+                            if (badges.isNotEmpty()) Spacer(Modifier.width(8.dp))
+                            Badges(badges, Modifier.alignByBaseline(), inline = true)
+                        }
+                    }
                     summary?.let { Text(it) }
-                    Badges(badges)
+                    if (value == null) Badges(badges)
                 }
             }
         } else {
@@ -137,7 +147,7 @@ fun ValueRow(
         trailingContent = onReset?.let {
             {
                 IconButton(onClick = it) {
-                    Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.set_use_default))
+                    Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.set_reset_default))
                 }
             }
         },
@@ -145,15 +155,28 @@ fun ValueRow(
     )
 }
 
-/** One entry of a [ChoiceDialog]; `value == null` is "Use default". */
-data class Choice<T>(val value: T?, val label: String, val badges: List<OptionBadge> = emptyList())
+/** One entry of a [ChoiceDialog]. */
+data class Choice<T>(val value: T, val label: String, val badges: List<OptionBadge> = emptyList())
+
+/**
+ * Choices for a per-game override: the option equal to the global value [default] carries
+ * the DEFAULT badge. Pass the picked value through [overrideOf] to store it.
+ */
+fun <T> overrideChoices(options: List<Pair<T, String>>, default: T, extra: (T) -> List<OptionBadge> = { emptyList() }) =
+    options.map { (value, label) -> Choice(value, label, (if (value == default) listOf(OptionBadge.DEFAULT) else emptyList()) + extra(value)) }
+
+/** Picking the global value again means "follow the default" (no override). */
+fun <T> overrideOf(picked: T, default: T): T? = picked.takeUnless { it == default }
+
+/** DEFAULT badge for a row whose per-game value follows the global setting. */
+fun defaultBadge(override: Any?): List<OptionBadge> = if (override == null) listOf(OptionBadge.DEFAULT) else emptyList()
 
 @Composable
 fun <T> ChoiceDialog(
     title: String,
     choices: List<Choice<T>>,
-    selected: T?,
-    onSelect: (T?) -> Unit,
+    selected: T,
+    onSelect: (T) -> Unit,
     onDismiss: () -> Unit,
     note: String? = null,
 ) {
@@ -190,48 +213,45 @@ fun <T> ChoiceDialog(
     )
 }
 
-/** Slider with an optional "Use default" checkbox (per-game overrides). */
+/**
+ * Slider with the current value. With a [defaultValue] (per-game overrides) the default is
+ * marked with a badge and one tap away; confirming the default stores no override (null).
+ */
 @Composable
 fun SliderDialog(
     title: String,
-    value: Float?,
-    defaultValue: Float,
+    value: Float,
     range: ClosedFloatingPointRange<Float>,
     format: (Float) -> String,
-    allowDefault: Boolean,
     onConfirm: (Float?) -> Unit,
     onDismiss: () -> Unit,
+    defaultValue: Float? = null,
 ) {
-    var useDefault by remember { mutableStateOf(allowDefault && value == null) }
-    var current by remember { mutableFloatStateOf(value ?: defaultValue) }
+    var current by remember { mutableFloatStateOf(value) }
+    val isDefault = defaultValue != null && kotlin.math.abs(current - defaultValue) < 0.005f
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
             Column {
-                Text(format(if (useDefault) defaultValue else current), style = MaterialTheme.typography.headlineSmall)
-                Slider(
-                    value = if (useDefault) defaultValue else current,
-                    onValueChange = {
-                        useDefault = false
-                        current = it
-                    },
-                    valueRange = range,
-                )
-                if (allowDefault) {
-                    Row(
-                        Modifier.clickable { useDefault = !useDefault },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(checked = useDefault, onCheckedChange = { useDefault = it })
-                        Text(stringResource(R.string.set_use_default_value, format(defaultValue)))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(format(current), style = MaterialTheme.typography.headlineSmall)
+                    if (isDefault) {
+                        Spacer(Modifier.width(12.dp))
+                        Badges(listOf(OptionBadge.DEFAULT), inline = true)
+                    }
+                }
+                Slider(value = current, onValueChange = { current = it }, valueRange = range)
+                if (defaultValue != null && !isDefault) {
+                    TextButton(onClick = { current = defaultValue }) {
+                        Text(stringResource(R.string.set_back_to_default, format(defaultValue)))
                     }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = {
-                onConfirm(if (useDefault) null else current)
+                onConfirm(if (isDefault) null else current)
                 onDismiss()
             }) { Text(stringResource(R.string.dialog_ok)) }
         },

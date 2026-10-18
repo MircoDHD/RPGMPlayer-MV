@@ -37,10 +37,13 @@ class LayoutRepository(private val context: Context) {
     fun find(id: String): GamepadLayout =
         all().let { list -> list.firstOrNull { it.id == id } ?: list.firstOrNull { it.id == OverlaySettings.DEFAULT_LAYOUT } ?: list.first() }
 
-    /** Saves a customised copy and returns it (a new id unless [layout] is already custom). */
-    fun saveCustom(layout: GamepadLayout, name: String): GamepadLayout {
+    /**
+     * Saves a customised copy and returns it: a new id unless [layout] is already custom and
+     * [asCopy] is false (a copy keeps per-game changes away from other users of the layout).
+     */
+    fun saveCustom(layout: GamepadLayout, name: String, asCopy: Boolean = false): GamepadLayout {
         val saved = layout.copy(
-            id = if (layout.builtIn) "custom-${UUID.randomUUID()}" else layout.id,
+            id = if (layout.builtIn || asCopy) "custom-${UUID.randomUUID()}" else layout.id,
             name = name,
             nameKey = null,
             basedOn = layout.basedOn ?: layout.id.takeIf { layout.builtIn },
@@ -54,6 +57,18 @@ class LayoutRepository(private val context: Context) {
             DebugLog.e(TAG, "Could not save layout ${saved.id}", e)
         }
         return saved
+    }
+
+    /** Writes a custom layout from a settings import, keeping its id (replaces an existing one). */
+    fun saveImported(layout: GamepadLayout) {
+        if (!layout.id.startsWith("custom-")) return
+        try {
+            customDir.mkdirs()
+            File(customDir, "${layout.id.filter { it.isLetterOrDigit() || it == '-' }}.json")
+                .writeText(LayoutJson.toJson(layout.copy(builtIn = false)).toString(2))
+        } catch (e: IOException) {
+            DebugLog.e(TAG, "Could not import layout ${layout.id}", e)
+        }
     }
 
     fun deleteCustom(id: String) {

@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,22 +37,19 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -70,44 +66,46 @@ fun LibraryScreen(
     games: List<GameEntry>,
     covers: Map<String, ImageBitmap>,
     missing: Set<String>,
-    hasAccess: Boolean,
+    title: String,
     adding: Boolean,
     snackbarHostState: SnackbarHostState,
     onAddGame: () -> Unit,
     onPlay: (GameEntry) -> Unit,
     onInfo: (GameEntry) -> Unit,
     onOpenSettings: () -> Unit,
-    onRequestAccess: () -> Unit,
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
-                title = { Text(stringResource(R.string.app_name_short)) },
+            // A fixed bar: the title stays next to the settings button instead of scrolling away.
+            TopAppBar(
+                title = {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 actions = {
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.set_title))
                     }
                 },
-                scrollBehavior = scrollBehavior,
             )
         },
         floatingActionButton = {
-            if (hasAccess) {
-                ExtendedFloatingActionButton(
-                    onClick = { if (!adding) onAddGame() },
-                    shape = CircleShape, // pill
-                    icon = {
-                        if (adding) {
-                            CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Filled.Add, contentDescription = null)
-                        }
-                    },
-                    text = { Text(stringResource(R.string.lib_add_game)) },
-                )
-            }
+            ExtendedFloatingActionButton(
+                onClick = { if (!adding) onAddGame() },
+                shape = CircleShape, // pill
+                icon = {
+                    if (adding) {
+                        CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Filled.Add, contentDescription = null)
+                    }
+                },
+                text = { Text(stringResource(R.string.lib_add_game)) },
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
@@ -123,10 +121,7 @@ fun LibraryScreen(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (!hasAccess) {
-                item(span = { GridItemSpan(maxLineSpan) }) { AccessCard(onRequestAccess) }
-            }
-            if (games.isEmpty() && hasAccess) {
+            if (games.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) { EmptyLibrary() }
             }
             items(games, key = { it.id }) { game ->
@@ -182,7 +177,7 @@ private fun GameCapsule(
                     }
                 }
                 Text(
-                    text = Format.path(game.path),
+                    text = game.location,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -265,23 +260,6 @@ fun Cover(cover: ImageBitmap?, title: String, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
-        }
-    }
-}
-
-@Composable
-private fun AccessCard(onRequestAccess: () -> Unit) {
-    OutlinedCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(20.dp)) {
-            Text(stringResource(R.string.lib_access_title), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                stringResource(R.string.lib_access_text),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(14.dp))
-            Button(onClick = onRequestAccess) { Text(stringResource(R.string.lib_access_button)) }
         }
     }
 }

@@ -3,6 +3,7 @@
 
 package io.github.mircodhd.mvplayer.game
 
+import io.github.mircodhd.mvplayer.storage.FileNode
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -23,7 +24,7 @@ class GameFilesTest {
         File(root, "__MACOSX").mkdirs()
         File(root, "__MACOSX/junk.png").writeText("x")
         File(root, ".DS_Store").writeText("x")
-        val index = FileIndex.build(root)
+        val index = FileIndex.build(FileNode(root))
         assertEquals(1, index.size)
         assertEquals("Penance1_1.rpgmvp", index.resolve("img/sv_actors/penance1_1.rpgmvp")?.name)
         assertNull(index.resolve("__MACOSX/junk.png"))

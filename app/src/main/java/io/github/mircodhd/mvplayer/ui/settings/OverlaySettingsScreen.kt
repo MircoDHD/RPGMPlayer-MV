@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.mircodhd.mvplayer.R
@@ -67,6 +68,7 @@ fun OverlaySettingsScreen(
     onDeleteLayout: (GamepadLayout) -> Unit,
     onBack: () -> Unit,
 ) {
+    val view = LocalView.current
     Scaffold(
         topBar = {
             TopAppBar(
@@ -97,6 +99,7 @@ fun OverlaySettingsScreen(
             item {
                 LayoutGallery(
                     layouts = layouts,
+                    settings = settings,
                     selectedId = settings.layoutId,
                     onSelect = { onChange(settings.copy(layoutId = it.id)) },
                     onDelete = onDeleteLayout,
@@ -136,7 +139,10 @@ fun OverlaySettingsScreen(
                     stringResource(R.string.overlay_haptics),
                     stringResource(R.string.overlay_haptics_summary),
                     settings.haptics,
-                    { onChange(settings.copy(haptics = it)) },
+                    {
+                        if (it) previewHaptics(view)
+                        onChange(settings.copy(haptics = it))
+                    },
                 )
             }
             item {
@@ -187,6 +193,7 @@ private fun SliderRow(title: String, value: Float, range: ClosedFloatingPointRan
 @Composable
 fun LayoutGallery(
     layouts: List<GamepadLayout>,
+    settings: OverlaySettings,
     selectedId: String?,
     onSelect: (GamepadLayout) -> Unit,
     onDelete: ((GamepadLayout) -> Unit)?,
@@ -214,7 +221,7 @@ fun LayoutGallery(
                         .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainerLowest),
                 ) {
-                    LayoutPreview(layout)
+                    LayoutPreview(layout, scale = settings.scale, opacity = settings.opacity, mirror = settings.mirror)
                 }
                 Row(Modifier.padding(start = 14.dp, end = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(

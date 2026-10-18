@@ -1,8 +1,37 @@
 # Changelog
 
-All notable changes to RobustPlainGameMaker Player - MyVersion ("RPGM Player").
+All notable changes to RobustPlainGameMaker Player - MyVersion ("RPGM Player - MV").
 Versions follow `major.minor.patch`: the minor digit for new features, the patch digit for
 fixes. Dates are build dates.
+
+## 0.3.3 – 2026-10-18
+### Changed
+- **New package id** `io.github.mircodhd.rpgmplayermv`: this version installs as a new app.
+  Uninstall the old one and add your games again; saves in the game folders are kept.
+- **No more all-files access.** Each game folder is shared through the system folder
+  picker (read and write access to that folder only); session logs are written to
+  `Documents/RPGM Player/logs/` without any permission.
+- Short name **RPGM Player - MV**. The title stays in the top bar next to the settings
+  button instead of scrolling away.
+- Per-game settings no longer have separate "Use default" entries: the option that matches
+  the global setting carries a **Default** tag, and choosing it follows the global setting
+  again.
+- On-screen controls: labels scale with their button and stay centred; the layout previews
+  show opacity, size and left-handed mode live.
+### Added
+- Layout editor: size readout next to the selected control and a field to type the size,
+  add and delete controls, rename button labels (per game only), and a toolbar that can be
+  dragged out of the way.
+- Switching haptic feedback on gives a short pulse, so you can feel it right away.
+- "What's new" box after an update; also available under Settings → About.
+- Export and import of settings: global settings, custom layouts and per-game settings.
+- A small surprise in the settings for the curious.
+
+## 0.3.2 – 2026-10-18
+### Fixed
+- Starting a game again after leaving one with "Quit game" no longer hangs on the loading
+  screen until the app is closed completely. Leaving the game paused the JavaScript timers
+  of the whole app, and the next game started with them still paused.
 
 ## 0.3.1 – 2026-10-18
 ### Changed
@@ -12,12 +41,10 @@ fixes. Dates are build dates.
 - Session logs are now written to `Documents/RPGM Player/logs/`; logs from the old
   `Documents/MV Player/logs/` folder are still included when sharing logs.
 - The "About" section shows the full app name with the version.
-- New README with overview, requirements, installation, roadmap and disclaimer.
 - APK files are named `RPGM-Player-<version>-<debug|release>.apk` instead of
   `app-<type>.apk`.
 ### Added
-- Signed, minified release build (R8). From this version on, every release is published
-  on the GitHub Releases page with its changelog, so older versions stay downloadable.
+- Release APKs are signed.
 
 ## 0.3.0 – 2026-10-18 (Phase A: input)
 ### Added

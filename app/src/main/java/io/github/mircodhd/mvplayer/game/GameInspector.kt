@@ -5,18 +5,20 @@ package io.github.mircodhd.mvplayer.game
 
 import android.os.SystemClock
 import io.github.mircodhd.mvplayer.debug.DebugLog
+import io.github.mircodhd.mvplayer.storage.GameNode
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 
 enum class Engine { MV, MZ, RGSS, RPG2K, UNKNOWN }
 
 /** Result of a cheap check that only looks at a few marker files. */
-data class EngineMatch(val engine: Engine, val webRoot: File?)
+data class EngineMatch(val engine: Engine, val webRoot: GameNode?)
 
 /** Everything the player needs to know about an MV game before it starts. */
 data class GameInfo(
-    val webRoot: File,
+    val webRoot: GameNode,
+    /** Name of the picked game folder, used when System.json has no title. */
+    val folderName: String,
     val title: String,
     val engineVersion: String?,
     val enabledPlugins: List<String>,
@@ -38,17 +40,26 @@ object GameInspector {
     private const val BOM = "\uFEFF"
 
     /** Finds the folder that holds index.html and identifies the engine. */
-    fun detect(dir: File): EngineMatch = detectEngine(dir).also {
-        DebugLog.i(TAG, "Detected ${it.engine} in $dir (web root ${it.webRoot})")
+    fun detect(dir: GameNode): EngineMatch = detectEngine(dir).also {
+        DebugLog.i(TAG, "Detected ${it.engine} in ${dir.name} (web root ${it.webRoot?.name})")
     }
 
-    private fun detectEngine(dir: File): EngineMatch {
-        val webRoot = listOf(File(dir, "www"), dir).firstOrNull { File(it, "index.html").isFile }
-        if (webRoot != null) {
-            if (File(webRoot, "js/rpg_core.js").isFile) return EngineMatch(Engine.MV, webRoot)
-            if (File(webRoot, "js/rmmz_core.js").isFile) return EngineMatch(Engine.MZ, webRoot)
+    private fun detectEngine(dir: GameNode): EngineMatch {
+        val top = dir.children()
+        fun List<GameNode>.find(name: String) = firstOrNull { it.name.equals(name, ignoreCase = true) }
+        val www = top.find("www")?.takeIf { it.isDirectory }
+        val wwwChildren = www?.children().orEmpty()
+        val webRoot = when {
+            wwwChildren.find("index.html") != null -> www
+            top.find("index.html") != null -> dir
+            else -> null
         }
-        val names = dir.list()?.map { it.lowercase() }?.toSet().orEmpty()
+        if (webRoot != null) {
+            val js = (if (webRoot === dir) top else wwwChildren).find("js")?.children().orEmpty()
+            if (js.find("rpg_core.js") != null) return EngineMatch(Engine.MV, webRoot)
+            if (js.find("rmmz_core.js") != null) return EngineMatch(Engine.MZ, webRoot)
+        }
+        val names = top.map { it.name.lowercase() }.toSet()
         if ("rpg_rt.ldb" in names || "rpg_rt.lmt" in names) return EngineMatch(Engine.RPG2K, null)
         val rgssArchives = setOf("game.rgssad", "game.rgss2a", "game.rgss3a")
         if ("game.ini" in names && (names.any { it in rgssArchives } || "data" in names)) {
@@ -58,22 +69,22 @@ object GameInspector {
     }
 
     /** Full inspection of an MV game. Reads plugin files, so call it off the main thread. */
-    fun inspectMv(webRoot: File): GameInfo {
+    fun inspectMv(webRoot: GameNode, folderName: String): GameInfo {
         val start = SystemClock.elapsedRealtime()
         val index = FileIndex.build(webRoot)
-        DebugLog.i(TAG, "Indexed ${index.size} files under $webRoot in ${SystemClock.elapsedRealtime() - start} ms")
-        val (plugins, totalPlugins) = readPlugins(webRoot)
+        DebugLog.i(TAG, "Indexed ${index.size} files under $folderName in ${SystemClock.elapsedRealtime() - start} ms")
+        val (plugins, totalPlugins) = readPlugins(index)
         val usesGreenworks = plugins.any { name ->
             val file = index.resolve("js/plugins/$name.js") ?: return@any false
             val text = runCatching { file.readText() }.getOrDefault("")
             text.contains("greenworks", ignoreCase = true)
         }
-        val system = readSystem(webRoot)
+        val system = readSystem(index)
         return GameInfo(
             webRoot = webRoot,
-            title = system?.optString("gameTitle")?.takeIf { it.isNotBlank() }
-                ?: webRoot.absoluteFile.parentFile?.name ?: webRoot.name,
-            engineVersion = readCoreVersion(webRoot),
+            folderName = folderName,
+            title = system?.optString("gameTitle")?.takeIf { it.isNotBlank() } ?: folderName,
+            engineVersion = readCoreVersion(index),
             enabledPlugins = plugins,
             totalPlugins = totalPlugins,
             pixiVersion = readPixiVersion(index),
@@ -94,21 +105,19 @@ object GameInspector {
         }
     }
 
-    private fun readSystem(webRoot: File): JSONObject? = runCatching {
-        JSONObject(File(webRoot, "data/System.json").readText().removePrefix(BOM))
+    private fun readSystem(index: FileIndex): JSONObject? = runCatching {
+        JSONObject(index.require("data/System.json").readText().removePrefix(BOM))
     }.onFailure { DebugLog.w(TAG, "Could not read data/System.json", it) }.getOrNull()
 
-    private fun readCoreVersion(webRoot: File): String? = runCatching {
-        val head = File(webRoot, "js/rpg_core.js").bufferedReader().use { r ->
-            CharArray(16 * 1024).let { buf -> String(buf, 0, r.read(buf).coerceAtLeast(0)) }
-        }
+    private fun readCoreVersion(index: FileIndex): String? = runCatching {
+        val head = index.require("js/rpg_core.js").readHead(16 * 1024)
         Regex("""RPGMAKER_VERSION\s*=\s*["']([^"']+)""").find(head)?.groupValues?.get(1)
             ?: Regex("""rpg_core\.js v([\d.]+)""").find(head)?.groupValues?.get(1)
     }.getOrNull()
 
     /** Enabled plugin names and the total number of entries. */
-    private fun readPlugins(webRoot: File): Pair<List<String>, Int> = runCatching {
-        val text = File(webRoot, "js/plugins.js").readText()
+    private fun readPlugins(index: FileIndex): Pair<List<String>, Int> = runCatching {
+        val text = index.require("js/plugins.js").readText()
         val array = JSONArray(text.substring(text.indexOf('['), text.lastIndexOf(']') + 1))
         val enabled = (0 until array.length())
             .map { array.getJSONObject(it) }
@@ -124,10 +133,12 @@ object GameInspector {
     /** From the banner ("pixi.js - v4.5.4"), else from the VERSION constant further down. */
     private fun readPixiVersion(index: FileIndex): String? = runCatching {
         val file = index.resolve("js/libs/pixi.js") ?: return null
-        val head = file.bufferedReader().use { r -> CharArray(1024).let { String(it, 0, r.read(it).coerceAtLeast(0)) } }
+        val head = file.readHead(1024)
         Regex("""pixi\.js - v([\d.]+)""").find(head)?.groupValues?.get(1)
             ?: Regex("""VERSION\s*=\s*(?:exports\.VERSION\s*=\s*)?['"]([\d.]+)['"]""").find(file.readText())?.groupValues?.get(1)
     }.getOrNull()
+
+    private fun FileIndex.require(path: String): GameNode = resolve(path) ?: throw java.io.FileNotFoundException(path)
 
     // Utils.isMobileDevice() makes MV ask for .m4a/.mp4; serve whatever the game actually ships.
     private fun pickAudioExt(index: FileIndex): String {

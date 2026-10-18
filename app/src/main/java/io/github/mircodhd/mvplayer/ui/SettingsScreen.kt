@@ -3,29 +3,45 @@
 
 package io.github.mircodhd.mvplayer.ui
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -55,8 +71,16 @@ fun SettingsScreen(
     onLogToFileChange: (Boolean) -> Unit,
     onShareLogs: () -> Unit,
     onOpenUrl: (String) -> Unit,
+    onOpenChangelog: () -> Unit,
+    onExportSettings: () -> Unit,
+    onImportSettings: () -> Unit,
+    onUnlockTitle: () -> Unit,
+    onLibraryTitleChange: (String) -> Unit,
 ) {
     val resources = LocalResources.current
+    var versionTaps by remember { mutableIntStateOf(0) }
+    var thanks by remember { mutableStateOf(false) }
+    var editTitle by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -122,14 +146,61 @@ fun SettingsScreen(
                 )
             }
 
+            if (global.titleEditUnlocked) {
+                item { SectionHeader(stringResource(R.string.set_section_personal)) }
+                item {
+                    ValueRow(
+                        icon = Icons.Filled.Edit,
+                        title = stringResource(R.string.set_library_title),
+                        value = global.libraryTitle ?: stringResource(R.string.app_name_short),
+                        onClick = { editTitle = true },
+                    )
+                }
+            }
+
+            item { SectionHeader(stringResource(R.string.set_section_backup)) }
+            item {
+                ValueRow(
+                    icon = Icons.Filled.KeyboardArrowUp,
+                    title = stringResource(R.string.backup_export),
+                    value = null,
+                    summary = stringResource(R.string.backup_export_summary),
+                    onClick = onExportSettings,
+                )
+            }
+            item {
+                ValueRow(
+                    icon = Icons.Filled.KeyboardArrowDown,
+                    title = stringResource(R.string.backup_import),
+                    value = null,
+                    summary = stringResource(R.string.backup_import_summary),
+                    onClick = onImportSettings,
+                )
+            }
+
             item { SectionHeader(stringResource(R.string.set_section_about)) }
             item {
                 ValueRow(
                     title = stringResource(R.string.app_name),
                     value = null,
-                    onClick = null,
+                    // Ten taps on the version unlock a thank-you and the custom library title.
+                    onClick = {
+                        versionTaps++
+                        if (versionTaps == EASTER_EGG_TAPS) {
+                            versionTaps = 0
+                            thanks = true
+                        }
+                    },
                     icon = Icons.Filled.Info,
                     summary = stringResource(R.string.set_version_value, versionName),
+                )
+            }
+            item {
+                ValueRow(
+                    icon = Icons.Filled.Notifications,
+                    title = stringResource(R.string.changelog_open),
+                    value = null,
+                    onClick = onOpenChangelog,
                 )
             }
             item {
@@ -168,4 +239,62 @@ fun SettingsScreen(
             }
         }
     }
+
+    if (thanks) {
+        AlertDialog(
+            onDismissRequest = {},
+            icon = { Icon(Icons.Filled.Favorite, contentDescription = null) },
+            title = { Text(stringResource(R.string.egg_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        if (global.titleEditUnlocked) R.string.egg_text_again else R.string.egg_text,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    thanks = false
+                    if (!global.titleEditUnlocked) onUnlockTitle()
+                }) { Text(stringResource(R.string.egg_ok)) }
+            },
+        )
+    }
+
+    if (editTitle) {
+        TitleDialog(
+            current = global.libraryTitle.orEmpty(),
+            placeholder = stringResource(R.string.app_name_short),
+            onConfirm = {
+                editTitle = false
+                onLibraryTitleChange(it)
+            },
+            onDismiss = { editTitle = false },
+        )
+    }
+}
+
+private const val EASTER_EGG_TAPS = 10
+
+@Composable
+private fun TitleDialog(current: String, placeholder: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.set_library_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.set_library_title_text), style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it.take(GlobalSettings.MAX_TITLE_LENGTH) },
+                    singleLine = true,
+                    placeholder = { Text(placeholder) },
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text(stringResource(R.string.dialog_ok)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
+    )
 }

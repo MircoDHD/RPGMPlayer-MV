@@ -20,8 +20,9 @@ import java.util.concurrent.TimeUnit
 /**
  * App-wide logger. Every line goes to logcat (tag "MvPlayer", filter with
  * `adb logcat -s MvPlayer`) and, if enabled, to a session file that can be shared without
- * adb: Documents/RPGM Player/logs/ when all-files access is granted, otherwise the app's
- * external files directory. File writes happen on a background thread.
+ * adb: Documents/RPGM Player/logs/. Since Android 11 an app may create and manage its own
+ * files there without any storage permission; if that fails the app's external files
+ * directory is used. File writes happen on a background thread.
  *
  * Identical messages that repeat quickly (e.g. a plugin command issued every frame) are
  * collapsed: the first [REPEAT_LIMIT] per minute are logged, the rest are counted and
@@ -98,22 +99,6 @@ object DebugLog {
         }
     }
 
-    /** Moves the session file to Documents once all-files access has been granted. */
-    fun relocateIfPossible() {
-        val context = appContext ?: return
-        if (!settings.logToFile) return
-        writerThread.execute {
-            val target = preferredDir(context)
-            val file = currentFile ?: return@execute
-            if (file.parentFile == target) return@execute
-            closeWriter()
-            if (!target.mkdirs() && !target.isDirectory) return@execute openAppend(file)
-            val moved = File(target, file.name)
-            val ok = runCatching { file.copyTo(moved, overwrite = true); file.delete() }.isSuccess
-            openAppend(if (ok) moved else file)
-        }
-    }
-
     fun v(category: String, message: String) = log(Level.VERBOSE, category, message)
     fun d(category: String, message: String) = log(Level.DEBUG, category, message)
     fun i(category: String, message: String) = log(Level.INFO, category, message)
@@ -178,13 +163,13 @@ object DebugLog {
             repeat.message.take(300))
     }
 
-    /** Where new session logs go: Documents with all-files access, the app folder otherwise. */
+    /** Where new session logs go: Documents if writable, the app folder otherwise. */
     fun logDirectory(): File? = appContext?.let(::preferredDir)
 
     /** All session logs in both possible locations, oldest first. */
     fun logFiles(): List<File> {
         val context = appContext ?: return emptyList()
-        return listOf(publicDir(), legacyPublicDir(), privateDir(context))
+        return listOf(publicDir(), privateDir(context))
             .distinct()
             .flatMap { dir -> dir.listFiles { f -> f.name.endsWith(".log") }?.toList().orEmpty() }
             .sortedBy { it.name }
@@ -200,14 +185,10 @@ object DebugLog {
     }
 
     private fun preferredDir(context: Context): File =
-        if (Environment.isExternalStorageManager()) publicDir() else privateDir(context)
+        publicDir().takeIf { (it.mkdirs() || it.isDirectory) && it.canWrite() } ?: privateDir(context)
 
     private fun publicDir() =
         File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "RPGM Player/logs")
-
-    /** Folder used before the app was renamed (0.1.2–0.3.0); its logs are still exported. */
-    private fun legacyPublicDir() =
-        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "MV Player/logs")
 
     private fun privateDir(context: Context) = File(context.getExternalFilesDir(null) ?: context.filesDir, "logs")
 

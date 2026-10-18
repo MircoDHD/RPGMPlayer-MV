@@ -3,7 +3,9 @@
 
 package io.github.mircodhd.mvplayer.game
 
-import java.io.File
+import io.github.mircodhd.mvplayer.storage.GameNode
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 
 /**
  * Snapshot of all files below a game's web root. Games are developed on Windows, where
@@ -11,13 +13,16 @@ import java.io.File
  * Immutable after [build], safe to use from WebView's request threads.
  */
 class FileIndex private constructor(
-    private val exact: Map<String, File>,
-    private val lower: Map<String, File>,
+    private val exact: Map<String, GameNode>,
+    private val lower: Map<String, GameNode>,
 ) {
     val size: Int get() = exact.size
 
     /** [path] is relative to the web root, using '/' separators and no leading slash. */
-    fun resolve(path: String): File? = exact[path] ?: lower[path.lowercase()]
+    fun resolve(path: String): GameNode? = exact[path] ?: lower[path.lowercase()]
+
+    /** Sum of all indexed file sizes. */
+    val totalBytes: Long get() = exact.values.sumOf { it.length }
 
     /** e.g. "rpgmvp=2074, rpgmvo=433, json=184", most common first. */
     fun extensionCounts(): String = lower.keys
@@ -35,24 +40,35 @@ class FileIndex private constructor(
         private val IGNORED_DIRS = setOf("__macosx", ".git")
         private val IGNORED_FILES = setOf(".ds_store", "thumbs.db", "desktop.ini")
 
-        fun build(root: File): FileIndex {
-            val exact = HashMap<String, File>(8192)
-            val lower = HashMap<String, File>(8192)
-            fun walk(dir: File, prefix: String) {
-                val children = dir.listFiles() ?: return
-                for (child in children) {
-                    val name = child.name
-                    val lowerName = name.lowercase()
-                    if (child.isDirectory) {
-                        if (lowerName !in IGNORED_DIRS) walk(child, "$prefix$name/")
-                    } else if (lowerName !in IGNORED_FILES && !name.startsWith("._")) {
-                        val path = prefix + name
-                        exact[path] = child
-                        lower.putIfAbsent(path.lowercase(), child)
+        /** Folders are listed level by level, several at once: each listing is a provider query. */
+        fun build(root: GameNode, parallelism: Int = 6): FileIndex {
+            val exact = HashMap<String, GameNode>(8192)
+            val lower = HashMap<String, GameNode>(8192)
+            val pool = Executors.newFixedThreadPool(parallelism)
+            try {
+                var level = listOf(root to "")
+                while (level.isNotEmpty()) {
+                    val listings = pool.invokeAll(level.map { (dir, prefix) -> Callable { dir.children() to prefix } })
+                    val next = ArrayList<Pair<GameNode, String>>()
+                    for (future in listings) {
+                        val (children, prefix) = future.get()
+                        for (child in children) {
+                            val name = child.name
+                            val lowerName = name.lowercase()
+                            if (child.isDirectory) {
+                                if (lowerName !in IGNORED_DIRS) next += child to "$prefix$name/"
+                            } else if (lowerName !in IGNORED_FILES && !name.startsWith("._")) {
+                                val path = prefix + name
+                                exact[path] = child
+                                lower.putIfAbsent(path.lowercase(), child)
+                            }
+                        }
                     }
+                    level = next
                 }
+            } finally {
+                pool.shutdown()
             }
-            walk(root, "")
             return FileIndex(exact, lower)
         }
     }

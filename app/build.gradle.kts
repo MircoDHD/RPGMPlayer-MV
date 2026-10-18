@@ -9,8 +9,8 @@ plugins {
 }
 
 // Bump both for every APK that is handed out or released (see CHANGELOG.md).
-val appVersionCode = 8
-val appVersionName = "0.3.1"
+val appVersionCode = 10
+val appVersionName = "0.3.3"
 
 // Release signing from keystore.properties (not committed). Without it, release builds
 // are left unsigned.
@@ -23,12 +23,38 @@ base {
     archivesName = "RPGM-Player-$appVersionName"
 }
 
+/** Puts CHANGELOG.md into the APK as assets/changelog/en.md for the in-app "What's new" box. */
+abstract class CopyChangelog : DefaultTask() {
+    @get:InputFile
+    abstract val source: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val dir = outputDir.get().asFile.resolve("changelog")
+        dir.mkdirs()
+        source.get().asFile.copyTo(dir.resolve("en.md"), overwrite = true)
+    }
+}
+
+val copyChangelog = tasks.register<CopyChangelog>("copyChangelog") {
+    source = rootProject.layout.projectDirectory.file("CHANGELOG.md")
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(copyChangelog, CopyChangelog::outputDir)
+    }
+}
+
 android {
     namespace = "io.github.mircodhd.mvplayer"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.mircodhd.mvplayer"
+        applicationId = "io.github.mircodhd.rpgmplayermv"
         minSdk = 30
         targetSdk = 36
         versionCode = appVersionCode

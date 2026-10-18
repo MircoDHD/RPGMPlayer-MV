@@ -38,5 +38,8 @@ object Format {
         return if (path.startsWith(root)) path.removePrefix(root).trimStart('/') else path
     }
 
+    /** "2026-10-18_19-30" for file names. */
+    fun fileStamp(): String = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm", java.util.Locale.US).format(java.util.Date())
+
     fun size(context: Context, bytes: Long): String = Formatter.formatFileSize(context, bytes)
 }

@@ -5,7 +5,10 @@ package io.github.mircodhd.mvplayer.library
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.net.Uri
+import androidx.core.net.toUri
 import io.github.mircodhd.mvplayer.debug.DebugLog
+import io.github.mircodhd.mvplayer.storage.DocumentNode
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -27,15 +30,18 @@ data class GameDetails(
 
 data class GameEntry(
     val id: String,
-    /** Folder the user picked (contains Game.exe or index.html). */
-    val path: String,
+    /** Tree URI of the folder the user picked (contains Game.exe or index.html). */
+    val uri: String,
     val title: String,
     val addedAt: Long,
     val lastPlayedAt: Long,
     val playTimeMs: Long,
     val details: GameDetails?,
 ) {
-    val folder: File get() = File(path)
+    val treeUri: Uri get() = uri.toUri()
+
+    /** Readable location such as "Games/Fear & Hunger". */
+    val location: String get() = DocumentNode.describe(treeUri)
 }
 
 /**
@@ -53,15 +59,15 @@ class GameLibrary private constructor(private val context: Context) {
     fun find(id: String): GameEntry? = entries.firstOrNull { it.id == id }
 
     @Synchronized
-    fun findByPath(path: String): GameEntry? = entries.firstOrNull { it.path == path }
+    fun findByUri(uri: String): GameEntry? = entries.firstOrNull { it.uri == uri }
 
     /** Returns the new entry, or null if this folder is already in the library. */
     @Synchronized
-    fun add(path: String, title: String): GameEntry? {
-        if (findByPath(path) != null) return null
+    fun add(uri: String, title: String): GameEntry? {
+        if (findByUri(uri) != null) return null
         val entry = GameEntry(
             id = UUID.randomUUID().toString(),
-            path = path,
+            uri = uri,
             title = title,
             addedAt = System.currentTimeMillis(),
             lastPlayedAt = 0,
@@ -70,7 +76,7 @@ class GameLibrary private constructor(private val context: Context) {
         )
         entries = entries + entry
         save()
-        DebugLog.i(TAG, "Added '$title' ($path)")
+        DebugLog.i(TAG, "Added '$title' (${entry.location})")
         return entry
     }
 
@@ -86,13 +92,13 @@ class GameLibrary private constructor(private val context: Context) {
         entries = entries.filterNot { it.id == id }
         save()
         coverFile(id).delete()
-        DebugLog.i(TAG, "Removed '${entry.title}' (${entry.path}); game files untouched")
+        DebugLog.i(TAG, "Removed '${entry.title}' (${entry.location}); game files untouched")
     }
 
     /** Adds foreground time of a play session and marks the game as just played. */
     @Synchronized
-    fun recordPlay(path: String, durationMs: Long) {
-        val entry = findByPath(path) ?: return
+    fun recordPlay(id: String, durationMs: Long) {
+        val entry = find(id) ?: return
         update(entry.id) { it.copy(playTimeMs = it.playTimeMs + durationMs, lastPlayedAt = System.currentTimeMillis()) }
     }
 
@@ -121,7 +127,7 @@ class GameLibrary private constructor(private val context: Context) {
 
     private fun toJson(entry: GameEntry) = JSONObject()
         .put("id", entry.id)
-        .put("path", entry.path)
+        .put("uri", entry.uri)
         .put("title", entry.title)
         .put("addedAt", entry.addedAt)
         .put("lastPlayedAt", entry.lastPlayedAt)
@@ -141,7 +147,7 @@ class GameLibrary private constructor(private val context: Context) {
 
     private fun fromJson(json: JSONObject) = GameEntry(
         id = json.getString("id"),
-        path = json.getString("path"),
+        uri = json.getString("uri"),
         title = json.optString("title"),
         addedAt = json.optLong("addedAt"),
         lastPlayedAt = json.optLong("lastPlayedAt"),

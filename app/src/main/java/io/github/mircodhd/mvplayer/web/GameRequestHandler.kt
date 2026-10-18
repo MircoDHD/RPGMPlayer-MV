@@ -12,7 +12,6 @@ import io.github.mircodhd.mvplayer.game.GameInfo
 import io.github.mircodhd.mvplayer.game.MvDecrypter
 import io.github.mircodhd.mvplayer.patch.PatchSet
 import java.io.ByteArrayInputStream
-import java.io.FileInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.util.concurrent.atomic.AtomicInteger
@@ -98,20 +97,36 @@ class GameRequestHandler(
         }
         val mime = MimeTypes.forPath(file.name)
         val encoding = if (MimeTypes.isText(mime)) "UTF-8" else null
-        val length = file.length()
+        val length = file.length
         val headers = mutableMapOf("Accept-Ranges" to "bytes", "Cache-Control" to "no-store")
 
         // <video> and some audio paths issue range requests; answer them properly.
         val range = requestHeaders.entries.firstOrNull { it.key.equals("Range", ignoreCase = true) }?.value
         parseRange(range, length)?.let { (start, end) ->
             val count = end - start + 1
-            val stream = FileInputStream(file).apply { channel.position(start) }
+            val stream = try {
+                file.open(start)
+            } catch (e: Exception) {
+                return unreadable(path, e)
+            }
             headers["Content-Range"] = "bytes $start-$end/$length"
             headers["Content-Length"] = count.toString()
             return WebResourceResponse(mime, encoding, 206, "Partial Content", headers, LimitedInputStream(stream, count))
         }
         headers["Content-Length"] = length.toString()
-        return WebResourceResponse(mime, encoding, 200, "OK", headers, FileInputStream(file))
+        val stream = try {
+            file.open()
+        } catch (e: Exception) {
+            return unreadable(path, e)
+        }
+        return WebResourceResponse(mime, encoding, 200, "OK", headers, stream)
+    }
+
+    // Exception, not IOException: a folder grant revoked while the game runs throws SecurityException.
+    private fun unreadable(path: String, e: Exception): WebResourceResponse {
+        notFoundCount.incrementAndGet()
+        DebugLog.w(TAG, "Cannot open $path", e)
+        return error(404, "Not Found")
     }
 
     /**
@@ -124,7 +139,7 @@ class GameRequestHandler(
         val ext = path.substringAfterLast('.', "").lowercase()
         val encryptedExt = MvDecrypter.ENCRYPTED_EXTENSIONS[ext] ?: return null
         val twin = info.index.resolve(path.dropLast(ext.length) + encryptedExt) ?: return null
-        val bytes = MvDecrypter.decrypt(twin.readBytes(), key) ?: return null
+        val bytes = runCatching { MvDecrypter.decrypt(twin.readBytes(), key) }.getOrNull() ?: return null
         decryptedCount.incrementAndGet()
         DebugLog.i(TAG, "Serving decrypted ${twin.name} for $path")
         val headers = mapOf("Cache-Control" to "no-store", "Content-Length" to bytes.size.toString())

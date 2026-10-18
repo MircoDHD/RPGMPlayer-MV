@@ -117,12 +117,21 @@ fun ControlPlacement(
     }
 }
 
-/** Static, non-interactive rendering of a layout, e.g. for preset cards. */
+/**
+ * Static, non-interactive rendering of a layout, e.g. for preset cards; [opacity], [scale]
+ * and [mirror] follow the overlay settings so the preview shows what the game will show.
+ */
 @Composable
-fun LayoutPreview(layout: GamepadLayout, modifier: Modifier = Modifier, scale: Float = 1f) {
+fun LayoutPreview(
+    layout: GamepadLayout,
+    modifier: Modifier = Modifier,
+    scale: Float = 1f,
+    opacity: Float = 1f,
+    mirror: Boolean = false,
+) {
     val colors = controlColors()
-    ControlPlacement(layout, scale, modifier, insets = false) { control, boxModifier ->
-        ControlVisual(control, emptySet(), colors, boxModifier, labelScale = 0.45f)
+    ControlPlacement(if (mirror) layout.mirrored() else layout, scale, modifier.alpha(opacity), insets = false) { control, boxModifier ->
+        ControlVisual(control, emptySet(), colors, boxModifier)
     }
 }
 

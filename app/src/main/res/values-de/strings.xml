@@ -7,13 +7,10 @@
     <string name="lib_playtime">Gespielt: %1$s</string>
     <string name="lib_never_played">Noch nicht gespielt</string>
     <string name="lib_last_played">Zuletzt gespielt %1$s</string>
-    <string name="lib_folder_missing">Ordner nicht gefunden</string>
-    <string name="lib_access_title">Dateizugriff erforderlich</string>
-    <string name="lib_access_text">RPGM Player liest Spiele direkt aus ihren Ordnern und speichert daneben, genau wie am PC. Dafür verlangt Android den Zugriff auf alle Dateien.</string>
-    <string name="lib_access_button">Zugriff erlauben</string>
+    <string name="lib_folder_missing">Ordner nicht verfügbar</string>
     <string name="lib_empty_title">Noch keine Spiele</string>
     <string name="lib_empty_text">Tippe auf „Spiel hinzufügen“ und wähle den Ordner, der die Game.exe oder index.html eines RPG-Maker-MV-Spiels enthält.</string>
-    <string name="lib_folder_unresolvable">Dieser Ordner kann nicht direkt geöffnet werden. Wähle einen Ordner im internen Speicher oder auf einer SD-Karte.</string>
+    <string name="lib_folder_unresolvable">Dieser Ordner kann nicht geöffnet werden. Wähle ihn erneut über die Ordnerauswahl aus.</string>
     <string name="lib_already_added">„%1$s“ ist bereits in deiner Bibliothek.</string>
     <string name="lib_add_failed">Das Spiel konnte nicht hinzugefügt werden. Details stehen im Log.</string>
 
@@ -55,7 +52,7 @@
     <string name="set_frame_cap_summary">MV-Spiele berechnen ihre Logik mit 60 Schritten pro Sekunde. Schnelleres Zeichnen kostet nur Akku und lässt die Spielzeit auf 90/120-Hz-Displays zu schnell laufen.</string>
     <string name="set_section_privacy">Datenschutz &amp; Diagnose</string>
     <string name="set_diagnostics">Diagnose-Logs speichern</string>
-    <string name="set_diagnostics_summary">Schreibt Sitzungsprotokolle nur auf dieses Gerät, um Fehler zu finden. RPGM Player sendet niemals Daten; die App hat keinen Internetzugriff.</string>
+    <string name="set_diagnostics_summary">Schreibt Sitzungsprotokolle nur auf dieses Gerät, um Fehler zu finden. RPGM Player - MV sendet niemals Daten; die App hat keinen Internetzugriff.</string>
     <string name="set_share_logs">Logs teilen</string>
     <string name="set_log_location">Gespeichert in %1$s</string>
     <string name="set_share_logs_chooser">RPGM-Player-Logs teilen</string>
@@ -68,17 +65,14 @@
     <string name="set_license_summary">Freie Software unter der GNU General Public License v3.0 oder später</string>
     <string name="set_third_party">Software von Drittanbietern</string>
     <string name="set_third_party_summary">AndroidX und Jetpack Compose (Apache License 2.0)</string>
-    <string name="set_trademark">RPG Maker ist eine Marke der jeweiligen Inhaber. RPGM Player ist ein unabhängiges Projekt und steht in keiner Verbindung zu ihnen. Spiele sind nicht enthalten.</string>
+    <string name="set_trademark">RPG Maker ist eine Marke der jeweiligen Inhaber. RPGM Player - MV ist ein unabhängiges Projekt und steht in keiner Verbindung zu ihnen. Spiele sind nicht enthalten.</string>
     <string name="set_no_browser">Keine App zum Öffnen des Links gefunden.</string>
 
     <!-- Shared settings UI -->
     <string name="badge_experimental">Experimentell</string>
     <string name="badge_changes_gameplay">Verändert das Spielgefühl</string>
     <string name="set_use_default">Standard verwenden</string>
-    <string name="set_use_default_value">Standard verwenden (%1$s)</string>
-    <string name="set_default_value">Standard: %1$s</string>
     <string name="dialog_ok">OK</string>
-    <string name="value_default">Standard</string>
     <string name="value_on">An</string>
     <string name="value_off">Aus</string>
     <string name="set_section_input">Eingabe</string>
@@ -176,4 +170,36 @@
     <string name="game_quit_message">Nicht gespeicherter Fortschritt geht verloren.</string>
     <string name="game_quit_confirm">Beenden</string>
     <string name="game_quit_cancel">Abbrechen</string>
+    <string name="badge_default">Standard</string>
+    <string name="set_reset_default">Auf Standard zurücksetzen</string>
+    <string name="set_back_to_default">Zurück zum Standard (%1$s)</string>
+    <string name="editor_size_value">%1$d %%</string>
+    <string name="editor_add">Hinzufügen</string>
+    <string name="editor_add_title">Bedienelement hinzufügen</string>
+    <string name="editor_add_dpad">Steuerkreuz</string>
+    <string name="editor_add_stick">Analogstick</string>
+    <string name="editor_rename">Beschriftung</string>
+    <string name="editor_rename_title">Tastenbeschriftung</string>
+    <string name="editor_rename_text">Gilt nur für dieses Spiel. Bis zu 6 Zeichen; leer lassen für keine Beschriftung.</string>
+    <string name="editor_delete">Bedienelement löschen</string>
+    <string name="set_section_personal">Persönlich</string>
+    <string name="set_library_title">Bibliothekstitel</string>
+    <string name="set_library_title_text">Wird oben in der Bibliothek angezeigt. Leer lassen für den App-Namen.</string>
+    <string name="set_section_backup">Sicherung</string>
+    <string name="backup_export">Einstellungen exportieren</string>
+    <string name="backup_export_summary">Speichert globale Einstellungen, deine Layouts und Spieleinstellungen in einer Datei</string>
+    <string name="backup_import">Einstellungen importieren</string>
+    <string name="backup_import_summary">Stellt sie wieder her, z. B. nach einer Neuinstallation. Füge zuerst deine Spiele hinzu, damit ihre Einstellungen zugeordnet werden können.</string>
+    <string name="backup_exported">Einstellungen exportiert</string>
+    <string name="backup_export_failed">Einstellungen konnten nicht exportiert werden</string>
+    <string name="backup_imported">Einstellungen importiert</string>
+    <string name="backup_imported_unmatched">Einstellungen importiert. Nicht in der Bibliothek und daher übersprungen: %1$s</string>
+    <string name="backup_import_failed">Diese Datei konnte nicht importiert werden</string>
+    <string name="changelog_open">Was ist neu</string>
+    <string name="changelog_title">Was ist neu</string>
+    <string name="changelog_title_version">Neu in %1$s</string>
+    <string name="egg_title">Danke!</string>
+    <string name="egg_text">Danke, dass du meiner Software vertraust und sie ausprobierst. Das bedeutet mir viel.\n\nAls kleines Dankeschön kannst du der Bibliothek jetzt einen eigenen Titel geben: Einstellungen → Persönlich → Bibliothekstitel.</string>
+    <string name="egg_text_again">Immer noch da? Wirklich, danke. Dein eigener Bibliothekstitel ist unter Einstellungen → Persönlich schon freigeschaltet.</string>
+    <string name="egg_ok">Gern geschehen</string>
 </resources>

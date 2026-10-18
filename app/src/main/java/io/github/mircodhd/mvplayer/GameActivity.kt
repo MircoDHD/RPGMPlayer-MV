@@ -45,6 +45,7 @@ import androidx.core.graphics.createBitmap
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import io.github.mircodhd.mvplayer.bridge.PlayerBridge
 import io.github.mircodhd.mvplayer.debug.DebugLog
@@ -71,13 +72,12 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
+import io.github.mircodhd.mvplayer.storage.DocumentNode
 import java.util.concurrent.Executors
 
 /** Fullscreen WebView that runs one game, with a Compose overlay for controls and menus. */
 class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host {
     companion object {
-        const val EXTRA_GAME_DIR = "game_dir"
         const val EXTRA_GAME_ID = "game_id"
         private const val TAG = "Game"
         private const val LIFECYCLE = "Lifecycle"
@@ -89,7 +89,6 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
     private var requestHandler: GameRequestHandler? = null
     private val executor = Executors.newSingleThreadExecutor()
     private val createdAt = SystemClock.elapsedRealtime()
-    private var gameDir: File? = null
     private var gameId: String? = null
     /** Start of the current foreground stretch, for the library's play time. */
     private var resumedAt = 0L
@@ -149,12 +148,9 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         hideSystemBars()
 
-        val dir = intent.getStringExtra(EXTRA_GAME_DIR)?.let(::File)
-        val library = GameLibrary.get(this)
-        val entry = intent.getStringExtra(EXTRA_GAME_ID)?.let(library::find) ?: dir?.let { library.findByPath(it.absolutePath) }
-        gameDir = dir
+        val entry = intent.getStringExtra(EXTRA_GAME_ID)?.let(GameLibrary.get(this)::find)
         gameId = entry?.id
-        overlayState = GameOverlayState(entry?.title ?: dir?.name.orEmpty())
+        overlayState = GameOverlayState(entry?.title.orEmpty())
 
         container = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         loading = TextView(this).apply {
@@ -184,16 +180,17 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         loadSettings()
         observeModalState()
 
-        if (dir == null) {
-            DebugLog.e(TAG, "Started without a game folder")
+        if (entry == null) {
+            DebugLog.e(TAG, "Started without a known game")
             finish()
             return
         }
-        DebugLog.i(TAG, "Opening game in $dir (library id $gameId)")
+        DebugLog.i(TAG, "Opening game in ${entry.location} (library id $gameId)")
         executor.execute {
             val result = runCatching {
-                val webRoot = GameInspector.detect(dir).webRoot ?: error("No MV game in $dir")
-                GameInspector.inspectMv(webRoot)
+                val dir = DocumentNode.root(this, entry.treeUri) ?: error("No access to ${entry.location}")
+                val webRoot = GameInspector.detect(dir).webRoot ?: error("No MV game in ${entry.location}")
+                GameInspector.inspectMv(webRoot, dir.name)
             }
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
@@ -252,7 +249,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
                 .put("statsIntervalSeconds", debugSettings.statsIntervalSeconds))
         val handler = GameRequestHandler(assets, info, patches, config.toString())
         requestHandler = handler
-        val bridge = PlayerBridge(File(info.webRoot, "save"), this)
+        val bridge = PlayerBridge(info.webRoot, this)
 
         WebView.setWebContentsDebuggingEnabled(debugSettings.remoteDebugging)
         val view = WebView(this).apply {
@@ -329,6 +326,9 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         container.addView(view, 0, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         view.requestFocus()
         webView = view
+        // pauseTimers() is process-wide and may still be in effect from a previous game in
+        // this process; onResume ran before this view existed, so resume here.
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) view.resumeTimers()
         logMediaVolume()
         view.loadUrl(GameRequestHandler.START_URL)
     }
@@ -435,12 +435,14 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         }
     }
 
-    override fun onEditorSave(layout: GamepadLayout, forGame: Boolean) {
+    override fun onEditorSave(layout: GamepadLayout, forGame: Boolean, asCopy: Boolean) {
         val base = layoutRepository.all().firstOrNull { it.id == layout.id } ?: layout
-        val saved = layoutRepository.saveCustom(layout, LayoutNames.customName(this, base))
+        val saved = layoutRepository.saveCustom(layout, LayoutNames.customName(this, base), asCopy)
         val id = gameId
         if (forGame && id != null) {
-            onGameSettingsChange(settingsStore.game(id).copy(overlayLayoutId = saved.id, overlayMirror = false))
+            // Saved as shown, so it must not be mirrored again; null when that is the default.
+            val mirror = if (settingsStore.global().overlay.mirror) false else null
+            onGameSettingsChange(settingsStore.game(id).copy(overlayLayoutId = saved.id, overlayMirror = mirror))
         } else {
             val global = settingsStore.global()
             settingsStore.setGlobal(global.copy(overlay = global.overlay.copy(layoutId = saved.id, mirror = false)))
@@ -523,6 +525,9 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         powerManager.removeThermalStatusListener(thermalListener)
         executor.shutdownNow()
         webView?.run {
+            // Undo the process-wide pauseTimers() from onPause, or the next game started in
+            // this process hangs while loading.
+            resumeTimers()
             container.removeView(this)
             destroy()
         }
@@ -554,11 +559,11 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
     }
 
     private fun recordPlayTime() {
-        val dir = gameDir ?: return
+        val id = gameId ?: return
         if (resumedAt == 0L) return
         val played = SystemClock.elapsedRealtime() - resumedAt
         resumedAt = 0L
-        GameLibrary.get(this).recordPlay(dir.absolutePath, played)
+        GameLibrary.get(this).recordPlay(id, played)
         DebugLog.d(TAG, "Recorded ${played / 1000} s of play time")
     }
 

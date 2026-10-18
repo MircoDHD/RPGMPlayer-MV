@@ -1,6 +1,6 @@
 # RobustPlainGameMaker Player - MyVersion
 
-**RPGM Player** for short: an ad-free, tracking-free Android player for games made with
+**RPGM Player - MV** for short: an ad-free, tracking-free Android player for games made with
 **RPG Maker MV**. It runs the PC (Windows/NW.js) version of a game straight from a folder
 on your phone, with controller support, on-screen controls and PC-compatible saves.
 
@@ -26,15 +26,19 @@ No games are included. You need your own copy of a game.
   file lookup (games made on Windows), encrypted assets supported.
 - **PC-compatible saves**: written to the game's own `www/save/` folder in the same format,
   so you can copy saves between PC and phone.
+- **No storage permission**: you share each game folder once through Android's folder
+  picker; the app sees only those folders.
 - **Hardware controllers**, natively supported and **remappable** (globally or per game).
-- **On-screen gamepad** with five generic presets, a layout editor, opacity, size, haptics
-  and a left-handed mode; shown automatically when no controller is connected.
+- **On-screen gamepad** with five generic presets, a layout editor (move, resize, add and
+  remove controls, rename labels per game), opacity, size, haptics and a left-handed mode;
+  shown automatically when no controller is connected.
 - **Quick menu** in game (Select + Start, back gesture or ☰ button): pause, controls,
   layout, frame rate, game settings, quit.
 - **Android keyboard** for name entry scenes.
 - **60 fps limit** by default: MV counts drawn frames as play time, so on 90/120 Hz
   screens the in-game play time would otherwise run too fast.
-- **Per-game settings** that override the global defaults.
+- **Per-game settings** that override the global defaults, and **export/import** of all
+  settings.
 - **Private**: no internet permission, no ads, no tracking, no telemetry. Diagnostic logs
   stay on the device and can be switched off.
 - Material 3 design with dynamic colours, English and German.
@@ -68,10 +72,10 @@ Early development. Tested on a OnePlus 15 (Android 16) with a Razer Kishi V3 Pro
 2. **Copy the game folder** to the device, for example with USB file transfer to
    `Internal storage/Games/<Game name>/`. The `www` folder is what matters; `Game.exe` and
    the DLLs are not needed.
-3. **Start the app** and tap **Grant access**. Android asks for "All files access"; the
-   app needs it to read the game folder and to write saves next to it.
-4. Tap **Add game** and choose the game folder (the one containing `www` or `index.html`).
-5. Tap the **play button**. Use a controller or the on-screen controls; Select + Start or
+3. **Start the app**, tap **Add game** and choose the game folder (the one containing
+   `www` or `index.html`), then confirm **Allow**. This gives the app read and write
+   access to that folder only, for reading the game and writing saves next to it.
+4. Tap the **play button**. Use a controller or the on-screen controls; Select + Start or
    the back gesture opens the quick menu.
 
 Saves from the PC version can be copied into `www/save/` of the game folder on the
@@ -109,6 +113,7 @@ More technical detail: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) and
 
 - **No internet access:** the app has no internet permission and sends nothing anywhere.
   No ads, no tracking, no telemetry.
+- **No storage permission:** the app can only open the game folders you pick yourself.
 - **Diagnostic logs stay on the device:** to help find bugs, session logs are written to
   `Documents/RPGM Player/logs/` (the last 15 sessions are kept).
 - **What is logged:** device and WebView details, game info, app lifecycle, controller
@@ -119,7 +124,7 @@ More technical detail: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) and
 
 ## License
 
-RobustPlainGameMaker Player - MyVersion is free software: you can redistribute it and/or
+RPGM Player - MV is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License as published by the Free
 Software Foundation, either version 3 of the License, or (at your option) any later
 version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY.

@@ -7,7 +7,6 @@ import android.app.ActivityManager
 import android.content.Context
 import android.hardware.display.DisplayManager
 import android.os.Build
-import android.os.Environment
 import android.view.Display
 import android.webkit.WebView
 
@@ -33,8 +32,7 @@ object DeviceInfo {
             "low=${memory.lowMemory}, app heap limit ${Runtime.getRuntime().maxMemory() / MB} MB")
         DebugLog.i("Session", "Display: ${metrics.widthPixels}x${metrics.heightPixels} @${metrics.densityDpi}dpi, " +
             "${display?.refreshRate?.let { "%.0f".format(it) }} Hz")
-        DebugLog.i("Session", "All-files access: ${Environment.isExternalStorageManager()}, " +
-            "settings: ${DebugLog.settings}")
+        DebugLog.i("Session", "Log settings: ${DebugLog.settings}")
     }
 
     private const val MB = 1024 * 1024

@@ -28,7 +28,7 @@ object LogExporter {
         dir.mkdirs()
         dir.listFiles()?.forEach { it.delete() } // only the latest export is kept
         val stamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date())
-        val zip = File(dir, "mvplayer-logs_$stamp.zip")
+        val zip = File(dir, "rpgm-player-logs_$stamp.zip")
         ZipOutputStream(zip.outputStream().buffered()).use { out ->
             for (log in logs) {
                 out.putNextEntry(ZipEntry(log.name))

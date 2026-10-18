@@ -6,7 +6,6 @@ package io.github.mircodhd.mvplayer
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -29,6 +28,7 @@ import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.input.ControllerMapping
 import io.github.mircodhd.mvplayer.library.GameEntry
 import io.github.mircodhd.mvplayer.overlay.GamepadLayout
+import io.github.mircodhd.mvplayer.ui.ChangelogDialog
 import io.github.mircodhd.mvplayer.ui.Format
 import io.github.mircodhd.mvplayer.ui.GameInfoSheet
 import io.github.mircodhd.mvplayer.ui.LibraryScreen
@@ -46,15 +46,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        @Suppress("DEPRECATION") // the flags overload needs API 33
-        val versionName = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
         setContent {
             MvPlayerTheme {
                 PlayerHome(
                     viewModel = viewModel,
-                    versionName = versionName,
                     onPlay = ::launchGame,
-                    onRequestAccess = ::requestAllFilesAccess,
                     onOpenUrl = ::openUrl,
                     onStartIntent = ::startActivity,
                     onCustomizeLayout = ::customizeLayout,
@@ -69,12 +65,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchGame(game: GameEntry) {
-        DebugLog.i(TAG, "Launching '${game.title}' from ${game.path}")
-        startActivity(
-            Intent(this, GameActivity::class.java)
-                .putExtra(GameActivity.EXTRA_GAME_DIR, game.path)
-                .putExtra(GameActivity.EXTRA_GAME_ID, game.id),
-        )
+        DebugLog.i(TAG, "Launching '${game.title}' from ${game.location}")
+        startActivity(Intent(this, GameActivity::class.java).putExtra(GameActivity.EXTRA_GAME_ID, game.id))
     }
 
     private fun customizeLayout(layout: GamepadLayout, gameId: String?) {
@@ -83,12 +75,6 @@ class MainActivity : ComponentActivity() {
                 .putExtra(LayoutEditorActivity.EXTRA_LAYOUT_ID, layout.id)
                 .putExtra(LayoutEditorActivity.EXTRA_GAME_ID, gameId),
         )
-    }
-
-    private fun requestAllFilesAccess() {
-        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, "package:$packageName".toUri())
-        runCatching { startActivity(intent) }
-            .onFailure { startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) }
     }
 
     private fun openUrl(url: String) {
@@ -123,9 +109,7 @@ private object Routes {
 @Composable
 private fun PlayerHome(
     viewModel: LibraryViewModel,
-    versionName: String,
     onPlay: (GameEntry) -> Unit,
-    onRequestAccess: () -> Unit,
     onOpenUrl: (String) -> Unit,
     onStartIntent: (Intent) -> Unit,
     onCustomizeLayout: (GamepadLayout, String?) -> Unit,
@@ -144,23 +128,24 @@ private fun PlayerHome(
         }
     }
 
-    val folderUnresolvable = stringResource(R.string.lib_folder_unresolvable)
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        val dir = StoragePaths.treeUriToFile(context, uri)
-        DebugLog.i("Main", "Picked $uri -> $dir")
-        if (dir == null || !dir.isDirectory) {
-            viewModel.showMessage(folderUnresolvable)
-        } else {
-            viewModel.addGame(dir)
-        }
+        DebugLog.i("Main", "Picked $uri")
+        viewModel.addGame(uri)
+    }
+
+    val exportSettings = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) viewModel.exportSettings(uri)
+    }
+    val importSettings = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) viewModel.importSettings(uri)
     }
 
     if (route != Routes.LIBRARY) BackHandler(onBack = back)
 
     when {
         route == Routes.SETTINGS -> SettingsScreen(
-            versionName = versionName,
+            versionName = viewModel.versionName,
             global = viewModel.global,
             logToFile = viewModel.logToFile,
             logLocation = if (viewModel.logToFile) DebugLog.logDirectory()?.let { Format.path(it.path) } else null,
@@ -172,6 +157,11 @@ private fun PlayerHome(
             onLogToFileChange = viewModel::setLogToFileEnabled,
             onShareLogs = { viewModel.exportLogs(onStartIntent) },
             onOpenUrl = onOpenUrl,
+            onOpenChangelog = viewModel::openChangelog,
+            onExportSettings = { exportSettings.launch("rpgm-player-settings_${Format.fileStamp()}.json") },
+            onImportSettings = { importSettings.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+            onUnlockTitle = viewModel::unlockTitleEdit,
+            onLibraryTitleChange = viewModel::setLibraryTitle,
         )
         route == Routes.CONTROLLER -> ControllerScreen(
             title = stringResource(R.string.controller_title),
@@ -226,7 +216,7 @@ private fun PlayerHome(
             games = viewModel.games,
             covers = viewModel.covers,
             missing = viewModel.missing,
-            hasAccess = viewModel.hasAccess,
+            title = viewModel.global.libraryTitle ?: stringResource(R.string.app_name_short),
             adding = viewModel.adding,
             snackbarHostState = snackbarHostState,
             onAddGame = { pickFolder.launch(null) },
@@ -236,9 +226,10 @@ private fun PlayerHome(
                 viewModel.refresh(game.id)
             },
             onOpenSettings = { route = Routes.SETTINGS },
-            onRequestAccess = onRequestAccess,
         )
     }
+
+    viewModel.changelog?.let { entries -> ChangelogDialog(entries, onDismiss = viewModel::closeChangelog) }
 
     val infoGame = infoGameId?.let { id -> viewModel.games.firstOrNull { it.id == id } }
     if (infoGame != null && route == Routes.LIBRARY) {

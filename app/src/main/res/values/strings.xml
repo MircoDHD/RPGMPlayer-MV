@@ -2,7 +2,9 @@
 <resources>
     <string name="app_name" translatable="false">RobustPlainGameMaker Player - MyVersion</string>
     <!-- Short form for the launcher and the library title (initials of the full name). -->
-    <string name="app_name_short" translatable="false">RPGM Player</string>
+    <string name="app_name_short" translatable="false">RPGM Player - MV</string>
+    <!-- Launcher label; the short name above does not fit under an icon. -->
+    <string name="launcher_label" translatable="false">RPGM Player</string>
 
     <!-- Library -->
     <string name="lib_add_game">Add game</string>
@@ -11,13 +13,10 @@
     <string name="lib_playtime">Played %1$s</string>
     <string name="lib_never_played">Not played yet</string>
     <string name="lib_last_played">Last played %1$s</string>
-    <string name="lib_folder_missing">Folder not found</string>
-    <string name="lib_access_title">File access needed</string>
-    <string name="lib_access_text">RPGM Player reads games directly from their folders and saves next to them, just like on PC. Android asks for all-files access for that.</string>
-    <string name="lib_access_button">Grant access</string>
+    <string name="lib_folder_missing">Folder not available</string>
     <string name="lib_empty_title">No games yet</string>
     <string name="lib_empty_text">Tap “Add game” and choose the folder that contains Game.exe or index.html of an RPG Maker MV game.</string>
-    <string name="lib_folder_unresolvable">This folder cannot be opened directly. Choose a folder on internal storage or an SD card.</string>
+    <string name="lib_folder_unresolvable">This folder cannot be opened. Choose it again with the folder picker.</string>
     <string name="lib_already_added">“%1$s” is already in your library.</string>
     <string name="lib_add_failed">The game could not be added. Details are in the log.</string>
 
@@ -59,10 +58,10 @@
     <string name="set_frame_cap_summary">MV games run their logic at 60 steps per second. Rendering faster only costs battery and makes the in-game play time run too fast on 90/120 Hz screens.</string>
     <string name="set_section_privacy">Privacy &amp; diagnostics</string>
     <string name="set_diagnostics">Save diagnostic logs</string>
-    <string name="set_diagnostics_summary">Writes session logs to this device only, to help find bugs. RPGM Player never sends any data; it has no internet access.</string>
+    <string name="set_diagnostics_summary">Writes session logs to this device only, to help find bugs. RPGM Player - MV never sends any data; it has no internet access.</string>
     <string name="set_share_logs">Share logs</string>
     <string name="set_log_location">Saved in %1$s</string>
-    <string name="set_share_logs_chooser">Share RPGM Player logs</string>
+    <string name="set_share_logs_chooser">Share RPGM Player - MV logs</string>
     <string name="set_no_logs">No logs yet.</string>
     <string name="set_section_about">About</string>
     <string name="set_version_value">Version %1$s</string>
@@ -72,17 +71,14 @@
     <string name="set_license_summary">Free software under the GNU General Public License v3.0 or later</string>
     <string name="set_third_party">Third-party software</string>
     <string name="set_third_party_summary">AndroidX and Jetpack Compose (Apache License 2.0)</string>
-    <string name="set_trademark">RPG Maker is a trademark of its respective owners. RPGM Player is an independent project and not affiliated with or endorsed by them. Games are not included.</string>
+    <string name="set_trademark">RPG Maker is a trademark of its respective owners. RPGM Player - MV is an independent project and not affiliated with or endorsed by them. Games are not included.</string>
     <string name="set_no_browser">No app found to open the link.</string>
 
     <!-- Shared settings UI -->
     <string name="badge_experimental">Experimental</string>
     <string name="badge_changes_gameplay">Changes how the game plays</string>
     <string name="set_use_default">Use default</string>
-    <string name="set_use_default_value">Use default (%1$s)</string>
-    <string name="set_default_value">Default: %1$s</string>
     <string name="dialog_ok">OK</string>
-    <string name="value_default">Default</string>
     <string name="value_on">On</string>
     <string name="value_off">Off</string>
     <string name="set_section_input">Input</string>
@@ -180,4 +176,36 @@
     <string name="game_quit_message">Unsaved progress will be lost.</string>
     <string name="game_quit_confirm">Quit</string>
     <string name="game_quit_cancel">Cancel</string>
+    <string name="badge_default">Default</string>
+    <string name="set_reset_default">Reset to default</string>
+    <string name="set_back_to_default">Back to default (%1$s)</string>
+    <string name="editor_size_value">%1$d %%</string>
+    <string name="editor_add">Add</string>
+    <string name="editor_add_title">Add a control</string>
+    <string name="editor_add_dpad">D-pad</string>
+    <string name="editor_add_stick">Analog stick</string>
+    <string name="editor_rename">Label</string>
+    <string name="editor_rename_title">Button label</string>
+    <string name="editor_rename_text">Applies to this game only. Up to 6 characters; leave empty for no label.</string>
+    <string name="editor_delete">Delete control</string>
+    <string name="set_section_personal">Personal</string>
+    <string name="set_library_title">Library title</string>
+    <string name="set_library_title_text">Shown at the top of the library. Leave empty for the app name.</string>
+    <string name="set_section_backup">Backup</string>
+    <string name="backup_export">Export settings</string>
+    <string name="backup_export_summary">Saves global settings, your layouts and per-game settings to a file</string>
+    <string name="backup_import">Import settings</string>
+    <string name="backup_import_summary">Restores them, e.g. after a reinstall. Add your games first so their settings can be matched.</string>
+    <string name="backup_exported">Settings exported</string>
+    <string name="backup_export_failed">Settings could not be exported</string>
+    <string name="backup_imported">Settings imported</string>
+    <string name="backup_imported_unmatched">Settings imported. Not in the library, so skipped: %1$s</string>
+    <string name="backup_import_failed">This file could not be imported</string>
+    <string name="changelog_open">What\'s new</string>
+    <string name="changelog_title">What\'s new</string>
+    <string name="changelog_title_version">What\'s new in %1$s</string>
+    <string name="egg_title">Thank you!</string>
+    <string name="egg_text">Thank you for trusting my software and giving it a try. It means a lot to me.\n\nAs a small thank-you, you can now give the library your own title: Settings → Personal → Library title.</string>
+    <string name="egg_text_again">Still here? Thank you, really. Your custom library title is already unlocked under Settings → Personal.</string>
+    <string name="egg_ok">You\'re welcome</string>
 </resources>

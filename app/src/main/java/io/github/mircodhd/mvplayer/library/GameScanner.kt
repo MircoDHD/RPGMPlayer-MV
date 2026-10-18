@@ -14,6 +14,7 @@ import io.github.mircodhd.mvplayer.game.GameInfo
 import io.github.mircodhd.mvplayer.game.GameInspector
 import io.github.mircodhd.mvplayer.game.MvDecrypter
 import io.github.mircodhd.mvplayer.patch.PatchProfiles
+import io.github.mircodhd.mvplayer.storage.GameNode
 import java.io.File
 
 /** Reads library details and the cover image from a game folder. Call off the main thread. */
@@ -21,16 +22,18 @@ object GameScanner {
     private const val TAG = "Scanner"
     private const val COVER_MAX_WIDTH = 640
 
-    fun scan(folder: File, coverOut: File): Pair<GameInfo, GameDetails>? {
+    fun scan(folder: GameNode, coverOut: File): Pair<GameInfo, GameDetails>? {
         val start = SystemClock.elapsedRealtime()
         val webRoot = GameInspector.detect(folder).webRoot ?: return null
-        val info = GameInspector.inspectMv(webRoot)
+        val info = GameInspector.inspectMv(webRoot, folder.name)
         val details = GameDetails(
             engineVersion = info.engineVersion,
             pixiVersion = info.pixiVersion,
             enabledPlugins = info.enabledPlugins.size,
             totalPlugins = info.totalPlugins,
-            sizeBytes = folder.walkTopDown().filter { it.isFile }.sumOf { it.length() },
+            // The web root is already indexed; only files next to it (Game.exe, DLLs) need a walk.
+            sizeBytes = info.index.totalBytes +
+                if (webRoot === folder) 0 else folder.children().filterNot { it.name == webRoot.name }.sumOf { it.totalSize() },
             fileCount = info.index.size,
             encrypted = info.encryptionKey != null,
             usesGreenworks = info.usesGreenworks,
@@ -61,7 +64,7 @@ object GameScanner {
             }
             if (fallback == null) fallback = bitmap
         }
-        val icon = fallback ?: info.index.resolve("icon/icon.png")?.let { BitmapFactory.decodeFile(it.path) }
+        val icon = fallback ?: info.index.resolve("icon/icon.png")?.let(::decodePlain)
         if (icon != null) save(icon, out) else DebugLog.i(TAG, "No cover image found for ${info.title}")
     }
 
@@ -72,8 +75,10 @@ object GameScanner {
             val bytes = MvDecrypter.decrypt(file.readBytes(), key) ?: return@let
             return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         }
-        return info.index.resolve("$base.png")?.let { BitmapFactory.decodeFile(it.path) }
+        return info.index.resolve("$base.png")?.let(::decodePlain)
     }
+
+    private fun decodePlain(node: GameNode): Bitmap? = runCatching { node.open().use(BitmapFactory::decodeStream) }.getOrNull()
 
     private fun isOpaque(bitmap: Bitmap): Boolean {
         if (!bitmap.hasAlpha()) return true

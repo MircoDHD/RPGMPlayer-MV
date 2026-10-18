@@ -66,10 +66,11 @@ import io.github.mircodhd.mvplayer.settings.GlobalSettings
 import io.github.mircodhd.mvplayer.settings.OverlayMode
 import io.github.mircodhd.mvplayer.settings.OverlaySettings
 import io.github.mircodhd.mvplayer.settings.SettingsResolver
-import io.github.mircodhd.mvplayer.ui.settings.Choice
 import io.github.mircodhd.mvplayer.ui.settings.ChoiceDialog
 import io.github.mircodhd.mvplayer.ui.settings.ControllerScreen
 import io.github.mircodhd.mvplayer.ui.settings.FrameRateDialog
+import io.github.mircodhd.mvplayer.ui.settings.overrideChoices
+import io.github.mircodhd.mvplayer.ui.settings.overrideOf
 import io.github.mircodhd.mvplayer.ui.settings.GameSettingsScreen
 import io.github.mircodhd.mvplayer.ui.settings.frameRateLabel
 
@@ -112,7 +113,7 @@ interface GameOverlayActions {
     fun onTextResult(text: String?)
     fun onGameSettingsChange(settings: GameSettings)
     fun onCustomizeLayout(layout: GamepadLayout)
-    fun onEditorSave(layout: GamepadLayout, forGame: Boolean)
+    fun onEditorSave(layout: GamepadLayout, forGame: Boolean, asCopy: Boolean)
     fun onQuit()
 }
 
@@ -134,9 +135,9 @@ fun GameOverlay(state: GameOverlayState, actions: GameOverlayActions) {
             background = request.background,
             scale = state.overlay.scale,
             canSaveForGame = true,
-            onSave = { saved, forGame ->
+            onSave = { saved, forGame, asCopy ->
                 state.editor = null
-                actions.onEditorSave(saved, forGame)
+                actions.onEditorSave(saved, forGame, asCopy)
             },
             onCancel = { state.editor = null },
         )
@@ -222,17 +223,15 @@ private fun QuickMenu(state: GameOverlayState, actions: GameOverlayActions) {
     when (dialog) {
         QuickDialog.LAYOUT -> ChoiceDialog(
             title = stringResource(R.string.overlay_layout),
-            choices = listOf(Choice<String>(null, stringResource(R.string.set_use_default))) +
-                state.layouts.map { Choice(it.id, LayoutNames.name(context, it)) },
-            selected = state.game.overlayLayoutId,
-            onSelect = { actions.onGameSettingsChange(state.game.copy(overlayLayoutId = it)) },
+            choices = overrideChoices(state.layouts.map { it.id to LayoutNames.name(context, it) }, state.global.overlay.layoutId),
+            selected = effective.overlay.layoutId,
+            onSelect = { actions.onGameSettingsChange(state.game.copy(overlayLayoutId = overrideOf(it, state.global.overlay.layoutId))) },
             onDismiss = { dialog = null },
         )
         QuickDialog.FRAME_RATE -> FrameRateDialog(
-            selected = state.game.frameRateCap,
+            selected = effective.frameRateCap,
             defaultCap = state.global.frameRateCap,
-            allowDefault = true,
-            onSelect = { actions.onGameSettingsChange(state.game.copy(frameRateCap = it)) },
+            onSelect = { actions.onGameSettingsChange(state.game.copy(frameRateCap = overrideOf(it, state.global.frameRateCap))) },
             onDismiss = { dialog = null },
         )
         null -> Unit

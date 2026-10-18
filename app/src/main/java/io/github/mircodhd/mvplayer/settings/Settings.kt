@@ -38,9 +38,14 @@ data class GlobalSettings(
     val frameRateCap: Int = DEFAULT_FRAME_RATE_CAP,
     val mapping: ControllerMapping = ControllerMapping.DEFAULT,
     val overlay: OverlaySettings = OverlaySettings(),
+    /** Unlocked by tapping the version ten times; allows [libraryTitle]. */
+    val titleEditUnlocked: Boolean = false,
+    /** Own name shown at the top of the library instead of the app name; null = app name. */
+    val libraryTitle: String? = null,
 ) {
     companion object {
         const val DEFAULT_FRAME_RATE_CAP = 60
+        const val MAX_TITLE_LENGTH = 40
     }
 }
 
@@ -93,6 +98,8 @@ object SettingsJson {
             .put("haptics", s.overlay.haptics)
             .put("mirror", s.overlay.mirror)
             .put("layoutId", s.overlay.layoutId))
+        .put("titleEditUnlocked", s.titleEditUnlocked)
+        .apply { s.libraryTitle?.let { put("libraryTitle", it) } }
 
     fun globalFromJson(json: JSONObject): GlobalSettings {
         val defaults = GlobalSettings()
@@ -109,6 +116,8 @@ object SettingsJson {
                 mirror = o.optBoolean("mirror", d.mirror),
                 layoutId = o.optString("layoutId").ifBlank { d.layoutId },
             ),
+            titleEditUnlocked = json.optBoolean("titleEditUnlocked", false),
+            libraryTitle = json.optString("libraryTitle").trim().take(GlobalSettings.MAX_TITLE_LENGTH).ifBlank { null },
         )
     }
 
