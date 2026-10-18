@@ -1,7 +1,7 @@
 # Feature plan: input, display, compatibility, saves (0.3 – 0.6)
 
 Status: approved 2026-10-18. **Phase A implemented in 0.3.0**; B–D pending.
-Base: version 0.2.0 (commit 3ed41ce). Architecture: `docs/analysis.md`, part 2. Clean-room and license rules: `CLAUDE.md` → Conventions.
+Base: version 0.2.0. Architecture: `docs/analysis.md`, part 2.
 
 Size estimates are rough lines of new/changed code (Kotlin + JS + GLSL), excluding tests.
 
