@@ -29,16 +29,14 @@ No games are included. You need your own copy of a game.
 - **No storage permission**: you share each game folder once through Android's folder
   picker; the app sees only those folders.
 - **Hardware controllers**, natively supported and **remappable** (globally or per game).
-- **On-screen gamepad** with five generic presets, a layout editor (move, resize, add and
-  remove controls, rename labels per game), opacity, size, haptics and a left-handed mode;
+- **On-screen gamepad** with presets, a layout editor, opacity, size, haptics and a left-handed mode;
   shown automatically when no controller is connected.
-- **Quick menu** in game (Select + Start, back gesture or ☰ button): pause, controls,
+- **Quick menu** in game (back gesture or ☰ button): pause, controls,
   layout, frame rate, game settings, quit.
-- **Android keyboard** for name entry scenes.
-- **60 fps limit** by default: MV counts drawn frames as play time, so on 90/120 Hz
-  screens the in-game play time would otherwise run too fast.
-- **Per-game settings** that override the global defaults, and **export/import** of all
-  settings.
+- **Android keyboard** support.
+- **60 fps limit** by default: MV counts drawn frames as play time, on higher Hz
+  screens the in-game play time would run too fast.
+- **Per-game settings** and **export/import** of all settings.
 - **Private**: no internet permission, no ads, no tracking, no telemetry. Diagnostic logs
   stay on the device and can be switched off.
 - Material 3 design with dynamic colours, English and German.
@@ -66,15 +64,13 @@ Early development. Tested on a OnePlus 15 (Android 16) with a Razer Kishi V3 Pro
 ## Installation
 
 1. **Download the APK** of the latest version from the
-   [Releases page](../../releases) (`RPGM-Player-<version>-release.apk`) and install it.
+   [Releases page](../../releases) and install it.
    Your file manager or browser asks once for permission to install apps from that source.
-   Older versions stay available there.
-2. **Copy the game folder** to the device, for example with USB file transfer to
+2. **Copy the game folder** to the device and extract it to the desired location.
    `Internal storage/Games/<Game name>/`. The `www` folder is what matters; `Game.exe` and
    the DLLs are not needed.
 3. **Start the app**, tap **Add game** and choose the game folder (the one containing
-   `www` or `index.html`), then confirm **Allow**. This gives the app read and write
-   access to that folder only, for reading the game and writing saves next to it.
+   `www` or `index.html`), then confirm **Allow**.
 4. Tap the **play button**. Use a controller or the on-screen controls; Select + Start or
    the back gesture opens the quick menu.
 
@@ -114,7 +110,7 @@ More technical detail: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) and
 - **No internet access:** the app has no internet permission and sends nothing anywhere.
   No ads, no tracking, no telemetry.
 - **No storage permission:** the app can only open the game folders you pick yourself.
-- **Diagnostic logs stay on the device:** to help find bugs, session logs are written to
+- **Diagnostic logs** to help find bugs, session logs are written to
   `Documents/RPGM Player/logs/` (the last 15 sessions are kept).
 - **What is logged:** device and WebView details, game info, app lifecycle, controller
   input, audio state, scene changes, errors and performance statistics.
