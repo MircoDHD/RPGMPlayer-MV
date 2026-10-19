@@ -37,14 +37,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -57,8 +60,16 @@ import kotlin.math.roundToInt
 
 private val HudText = Color(0xFFF2F2F2)
 private val HudDim = Color(0xFFB0B0B0)
-private val GraphLine = Color(0xFF9CCC65)
-private val GraphSlow = Color(0xFFFF8A65)
+private val Good = Color(0xFF9CCC65)
+private val Warn = Color(0xFFFFCA28)
+private val Bad = Color(0xFFFF6E6E)
+
+private fun HudLevel?.color(): Color = when (this) {
+    HudLevel.GOOD -> Good
+    HudLevel.WARN -> Warn
+    HudLevel.BAD -> Bad
+    null -> HudText
+}
 
 /**
  * The HUD in its corner of the safe area, above the game and below menus. It draws only
@@ -176,7 +187,7 @@ fun HudPanel(
                 }
                 Column {
                     for (module in modules) {
-                        Text(module.value(snapshot, res) ?: "…", style = style)
+                        Text(module.value(snapshot, res) ?: "…", style = style.copy(color = module.level(snapshot).color()))
                         if (module.graph) {
                             FrameGraph(
                                 snapshot.frameHistory,
@@ -190,39 +201,50 @@ fun HudPanel(
         } else {
             // No breaks inside a module (non-breaking spaces, word joiner after '/'), so lines
             // only break between modules.
-            val parts = modules.mapNotNull { it.compact(snapshot, res, settings.shortLabels)?.replace(" ", "\u00A0")?.replace("/", "/\u2060") }
-            Text(if (parts.isEmpty()) "…" else parts.joinToString("  "), style = style)
+            val parts = modules.mapNotNull { module ->
+                module.compact(snapshot, res, settings.shortLabels)?.let { text ->
+                    text.replace(" ", "\u00A0").replace("/", "/\u2060") to module.level(snapshot)
+                }
+            }
+            val line = buildAnnotatedString {
+                parts.forEachIndexed { i, (text, level) ->
+                    if (i > 0) append("  ")
+                    if (level == null) append(text) else withStyle(SpanStyle(color = level.color())) { append(text) }
+                }
+            }
+            Text(if (parts.isEmpty()) AnnotatedString("…") else line, style = style)
         }
     }
 }
 
 /**
  * Frame times as a line, newest on the right. Dashes mark the target frame time of the
- * current cap (16.7 ms when uncapped) and twice that; frames slower than twice the
- * target turn orange. The scale shows at least three target frames.
+ * current cap (16.7 ms when uncapped) and twice that. Each segment takes the colour of its
+ * newer frame: green up to 1.25 target frames, yellow up to two, red above (see HudLevels).
  */
 @Composable
 private fun FrameGraph(history: List<Float>, targetMs: Double, modifier: Modifier) {
-    val target = if (targetMs > 0) targetMs.toFloat() else 1000f / 60
-    val slow = 2 * target
+    val target = HudLevels.targetMs(targetMs).toFloat()
     Canvas(modifier) {
         if (history.isEmpty()) return@Canvas
         val top = maxOf(3 * target, history.max())
         fun y(ms: Float) = size.height * (1 - ms / top)
-        for (ref in listOf(target, slow)) {
+        for (ref in listOf(target, 2 * target)) {
             drawLine(HudDim.copy(alpha = 0.35f), Offset(0f, y(ref)), Offset(size.width, y(ref)), strokeWidth = 1f)
         }
         val step = size.width / (HISTORY_POINTS - 1)
-        val offset = (HISTORY_POINTS - history.size).coerceAtLeast(0) * step
         val points = history.takeLast(HISTORY_POINTS)
-        val path = Path()
-        points.forEachIndexed { i, ms ->
-            val x = offset + i * step
-            if (i == 0) path.moveTo(x, y(ms)) else path.lineTo(x, y(ms))
-        }
-        drawPath(path, GraphLine, style = Stroke(width = 1.5.dp.toPx()))
-        points.forEachIndexed { i, ms ->
-            if (ms > slow) drawCircle(GraphSlow, 1.8.dp.toPx(), Offset(offset + i * step, y(ms)))
+        val offset = (HISTORY_POINTS - points.size).coerceAtLeast(0) * step
+        val width = 1.5.dp.toPx()
+        for (i in 1 until points.size) {
+            val color = HudLevels.frameTime(points[i].toDouble(), target.toDouble()).color()
+            drawLine(
+                color,
+                Offset(offset + (i - 1) * step, y(points[i - 1])),
+                Offset(offset + i * step, y(points[i])),
+                strokeWidth = width,
+                cap = StrokeCap.Round,
+            )
         }
     }
 }

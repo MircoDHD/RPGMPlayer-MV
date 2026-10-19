@@ -3,6 +3,13 @@
 Deutsche Fassung von CHANGELOG.md für die "Was ist neu"-Box der App. Bei jeder Version
 zusammen mit CHANGELOG.md aktualisieren.
 
+## 0.4.2 – 19.10.2026
+### Neu
+- HUD-Farben: Bildrate, Frame-Zeit (auch der Graph) und 1 %-Low werden grün, gelb oder
+  rot, gemessen an der gewählten Bildrate (bei 30 fps sind 30 grün, gelb erst unter 24);
+  andere Werte werden nur nahe einer Grenze gelb oder rot (wenig Akku, heißer Akku,
+  Wärme, JavaScript-Speicher oder -Zeit, langsame Spiellogik).
+
 ## 0.4.1 – 19.10.2026 (Phase B, Teil 2: Bildraten)
 ### Neu
 - **Bildraten-Auswahl** global und pro Spiel: 30 fps (Akku sparen), 60 fps (Standard) und

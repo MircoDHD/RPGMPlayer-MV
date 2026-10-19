@@ -4,6 +4,13 @@ All notable changes to RobustPlainGameMaker Player - MyVersion ("RPGM Player - M
 Versions follow `major.minor.patch`: the minor digit for new features, the patch digit for
 fixes. Dates are build dates.
 
+## 0.4.2 – 2026-10-19
+### Added
+- HUD colours: frame rate, frame time (graph included) and 1 % low turn green, yellow or
+  red against the chosen frame rate (at 30 fps, 30 is green and yellow starts below 24);
+  other values only turn yellow or red near a limit (low battery, hot battery, heat,
+  JavaScript memory or time, slow game logic).
+
 ## 0.4.1 – 2026-10-19 (Phase B, part 2: frame rates)
 ### Added
 - **Frame rate options** globally and per game: 30 fps (battery saver), 60 fps (default) and

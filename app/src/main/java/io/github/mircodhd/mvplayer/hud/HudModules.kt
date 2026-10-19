@@ -54,6 +54,9 @@ abstract class HudModule(
 
     /** Draws the frame time graph below the value in the detailed layout. */
     open val graph: Boolean get() = false
+
+    /** Colour of the value; null = neutral (see [HudLevels]). */
+    open fun level(data: HudSnapshot): HudLevel? = null
 }
 
 enum class HudPreset { MINIMAL, STANDARD, FULL }
@@ -61,10 +64,12 @@ enum class HudPreset { MINIMAL, STANDARD, FULL }
 object HudRegistry {
     val modules: List<HudModule> = listOf(
         object : HudModule("fps", R.string.hud_mod_fps, R.string.hud_mod_fps_summary, "FPS") {
+            override fun level(data: HudSnapshot) = data.js?.fps?.let { HudLevels.fps(it, HudLevels.targetMs(data.js?.frameIntervalMs)) }
             override val titleInCompact get() = false
             override fun value(data: HudSnapshot, res: Resources) = data.js?.fps?.let { "${it.roundToInt()} fps" }
         },
         object : HudModule("frametime", R.string.hud_mod_frametime, R.string.hud_mod_frametime_summary, "FT") {
+            override fun level(data: HudSnapshot) = data.js?.frameMs?.let { HudLevels.frameTime(it, HudLevels.targetMs(data.js?.frameIntervalMs)) }
             override val graph get() = true
             // Abbreviated: "60 fps 16,7 ms", as overlays show fps and frame time together.
             override val shortLabelInCompact get() = false
@@ -73,6 +78,7 @@ object HudRegistry {
             override fun compactValue(data: HudSnapshot, res: Resources) = data.js?.frameMs?.let { "${f1(it)} ms" }
         },
         object : HudModule("lows", R.string.hud_mod_lows, R.string.hud_mod_lows_summary, "1%") {
+            override fun level(data: HudSnapshot) = data.js?.low1Fps?.let { HudLevels.fps(it, HudLevels.targetMs(data.js?.frameIntervalMs)) }
             override fun value(data: HudSnapshot, res: Resources): String? {
                 val js = data.js ?: return null
                 val low = js.low1Fps?.let { "${it.roundToInt()} fps" } ?: "–"
@@ -81,6 +87,7 @@ object HudRegistry {
             override fun compactValue(data: HudSnapshot, res: Resources) = data.js?.low1Fps?.let { "${it.roundToInt()} fps" }
         },
         object : HudModule("timing", R.string.hud_mod_timing, R.string.hud_mod_timing_summary, "HZ") {
+            override fun level(data: HudSnapshot) = data.js?.logicUps?.let(HudLevels::logic)
             override val shortLabelInCompact get() = false
             override fun value(data: HudSnapshot, res: Resources): String? {
                 val js = data.js ?: return null
@@ -93,11 +100,13 @@ object HudRegistry {
                 data.js?.let { js -> js.logicUps?.let { "${it.roundToInt()}/s · ${js.displayHz?.roundToInt() ?: "–"} Hz" } }
         },
         object : HudModule("jswork", R.string.hud_mod_jswork, R.string.hud_mod_jswork_summary, "JS") {
+            override fun level(data: HudSnapshot) = data.js?.workMs?.let { HudLevels.jsTime(it, HudLevels.targetMs(data.js?.frameIntervalMs)) }
             override fun value(data: HudSnapshot, res: Resources) =
                 data.js?.workMs?.let { "${f1(it)} ms · max ${f1(data.js.maxWorkMs ?: it)}" }
             override fun compactValue(data: HudSnapshot, res: Resources) = data.js?.workMs?.let { "${f1(it)} ms" }
         },
         object : HudModule("heap", R.string.hud_mod_heap, R.string.hud_mod_heap_summary, "HEAP") {
+            override fun level(data: HudSnapshot) = data.js?.heapUsedMb?.let { HudLevels.memory(it, data.js.heapLimitMb) }
             override fun value(data: HudSnapshot, res: Resources) =
                 data.js?.heapUsedMb?.let { used -> data.js.heapLimitMb?.let { "$used / $it MB" } ?: "$used MB" }
             override fun compactValue(data: HudSnapshot, res: Resources) = data.js?.heapUsedMb?.let { "$it MB" }
@@ -111,6 +120,7 @@ object HudRegistry {
             override fun value(data: HudSnapshot, res: Resources) = data.device.appPssMb?.let { "$it MB" }
         },
         object : HudModule("battery", R.string.hud_mod_battery, R.string.hud_mod_battery_summary, "BATT") {
+            override fun level(data: HudSnapshot) = HudLevels.battery(data.device.batteryPercent, data.device.charging, data.device.batteryTempC)
             override fun value(data: HudSnapshot, res: Resources): String? {
                 val d = data.device
                 val percent = d.batteryPercent ?: return null
@@ -126,6 +136,7 @@ object HudRegistry {
             }
         },
         object : HudModule("thermal", R.string.hud_mod_thermal, R.string.hud_mod_thermal_summary, "THRM") {
+            override fun level(data: HudSnapshot) = HudLevels.thermal(data.device.thermalStatus, data.device.thermalHeadroom)
             override fun value(data: HudSnapshot, res: Resources): String? {
                 val status = data.device.thermalStatus ?: return null
                 val heat = data.device.thermalHeadroom?.let { " · " + res.getString(R.string.hud_thermal_heat, (it * 100).roundToInt()) } ?: ""

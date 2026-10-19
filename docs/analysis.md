@@ -186,6 +186,10 @@ overridden (see part 1).
   the panel switches compact/detailed, dragging moves it (offset from the chosen corner,
   clamped so it stays on screen when its size changes). It is drawn below the on-screen
   controls, so they keep their touches. It measures its own update and draw time.
+- Colours (`HudLevels`): frame rate, frame time and 1 % low are green up to 1.25 target
+  frames, yellow up to two, red beyond, with the target taken from the frame rate cap
+  (60 fps when uncapped). Other values have no green state; they turn yellow or red only
+  near a limit, so the HUD stays calm when everything is fine.
 
 ## Saves (`bridge/PlayerBridge.kt`)
 
