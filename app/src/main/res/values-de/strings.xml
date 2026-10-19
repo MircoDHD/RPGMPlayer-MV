@@ -48,8 +48,6 @@
     <string name="set_title">Einstellungen</string>
     <string name="set_back">Zurück</string>
     <string name="set_section_game">Spiele</string>
-    <string name="set_frame_cap">Auf 60 fps begrenzen</string>
-    <string name="set_frame_cap_summary">MV-Spiele berechnen ihre Logik mit 60 Schritten pro Sekunde. Schnelleres Zeichnen kostet nur Akku und lässt die Spielzeit auf 90/120-Hz-Displays zu schnell laufen.</string>
     <string name="set_section_privacy">Datenschutz &amp; Diagnose</string>
     <string name="set_diagnostics">Diagnose-Logs speichern</string>
     <string name="set_diagnostics_summary">Schreibt Sitzungsprotokolle nur auf dieses Gerät, um Fehler zu finden. RPGM Player - MV sendet niemals Daten; die App hat keinen Internetzugriff.</string>
@@ -144,10 +142,10 @@
     <string name="game_settings_reset_all">Alle zurücksetzen</string>
     <string name="info_game_settings">Einstellungen</string>
     <string name="frame_rate_title">Bildrate</string>
-    <string name="frame_rate_summary">Die Begrenzung auf 60 fps hält die Spielzeit korrekt und spart Akku.</string>
+    <string name="frame_rate_summary">Wie oft das Spiel ein Bild zeichnet. Die Spielzeit im Spiel stimmt bei jeder Einstellung.</string>
     <string name="frame_rate_fps">%1$d fps</string>
     <string name="frame_rate_unlimited">Unbegrenzt (Display-Rate)</string>
-    <string name="frame_rate_unlimited_warning">Spielzeit läuft auf 90/120-Hz-Displays zu schnell; braucht mehr Strom</string>
+    <string name="frame_rate_unlimited_warning">Zeichnet mit der Display-Rate (z. B. 120 Hz); meist nicht flüssiger, braucht mehr Strom</string>
 
     <!-- In-game -->
     <string name="quick_paused">Spiel pausiert</string>
@@ -281,10 +279,10 @@
     <string name="hud_thermal_critical">kritisch</string>
     <string name="hud_thermal_emergency">Notfall</string>
     <string name="hud_thermal_shutdown">Abschaltung</string>
-    <string name="renderer_webgl_description">Passt für fast jedes Spiel</string>
-    <string name="renderer_canvas_description">Langsamer; Effekte, die WebGL brauchen (Mode 7, Licht, Filter), fehlen</string>
-    <string name="renderer_webgl2_description">Weicht auf WebGL aus, wenn es nicht startet</string>
-    <string name="frame_rate_60_description">Hält die Spielzeit im Spiel korrekt</string>
+    <string name="renderer_webgl_description">Schnell, mit allen Effekten; passt für fast jedes Spiel</string>
+    <string name="renderer_canvas_description">Für Geräte, auf denen WebGL Fehler zeigt; langsamer, ohne Licht und Mode 7</string>
+    <string name="renderer_webgl2_description">Zum Ausprobieren; weicht auf WebGL aus, wenn es nicht startet</string>
+    <string name="frame_rate_60_description">So sind MV-Spiele gemacht; flüssig und sparsam</string>
     <string name="hud_position_reset">Verschobene Position zurücksetzen</string>
     <string name="hud_width">Breite (hier bricht die kompakte Zeile um)</string>
     <string name="hud_thermal_heat">Wärme %1$d %%</string>
@@ -296,8 +294,8 @@
     <string name="hud_info_intro">Jedes Modul mit ausgeschriebenem Namen und Abkürzung. Für einen schnellen Blick beim Spielen reichen meist FPS und Frame-Zeit; die anderen helfen herauszufinden, warum ein Spiel ruckelt oder langsam wird.</string>
     <string name="hud_example_same">Im HUD: %1$s</string>
     <string name="hud_info_fps">Wie viele Bilder das Spiel pro Sekunde zeichnet. RPG-Maker-MV-Spiele sind für 60 gemacht; mit der 60-fps-Begrenzung sollte der Wert bei 60 bleiben. Weniger wirkt weniger flüssig.</string>
-    <string name="hud_info_frametime">Zeit zwischen zwei Bildern auf dem Bildschirm, in Millisekunden: 16,7 ms entsprechen 60 fps. Der Durchschnitt zeigt das übliche Tempo, max die längste Lücke. Im Graphen ist jedes Bild ein Punkt; gestrichelte Linien markieren 16,7 und 33,3 ms, orange Punkte sind Bilder, die länger als zwei Bildwechsel brauchten. Solche Ausreißer spürt man als Ruckler, auch wenn die fps gut aussehen.</string>
-    <string name="hud_info_lows">Die Bildrate der langsamsten 1 % der Bilder seit der letzten Aktualisierung: zeigt Ruckler, die ein Durchschnitt versteckt. Langsam zählt Bilder, die länger als zwei 60-Hz-Bildwechsel (33 ms) brauchten.</string>
+    <string name="hud_info_frametime">Zeit zwischen zwei Bildern auf dem Bildschirm, in Millisekunden: 16,7 ms entsprechen 60 fps. Der Durchschnitt zeigt das übliche Tempo, max die längste Lücke. Im Graphen ist jedes Bild ein Punkt; gestrichelte Linien markieren die Ziel-Frame-Zeit (16,7 ms bei 60 fps, 33,3 ms bei 30 fps) und das Doppelte davon; orange Punkte sind Bilder, die länger als zwei Ziel-Bilder brauchten. Solche Ausreißer spürt man als Ruckler, auch wenn die fps gut aussehen.</string>
+    <string name="hud_info_lows">Die Bildrate der langsamsten 1 % der Bilder seit der letzten Aktualisierung: zeigt Ruckler, die ein Durchschnitt versteckt. Langsam zählt Bilder, die länger als zwei Ziel-Bilder brauchten (33 ms bei 60 fps, 67 ms bei 30 fps).</string>
     <string name="hud_info_timing">Logik: Spielschritte pro Sekunde. MV rechnet die Spiellogik mit 60 Schritten pro Sekunde, unabhängig von der Bildrate; weniger heißt, das Spiel selbst läuft langsamer. Hz: wie oft der Bildschirm ein neues Bild angefordert hat; in Klammern die Bildwiederholrate des Displays.</string>
     <string name="hud_info_jswork">Wie lange das JavaScript des Spiels pro Bild braucht (Spiellogik und Zeichenbefehle). Bei 60 fps hat ein Bild 16,7 ms; kommt der Wert dem nahe, kommt das Spiel nicht mehr hinterher. Die Arbeit des Grafikchips ist nicht enthalten.</string>
     <string name="hud_info_heap">Speicher, den das JavaScript des Spiels belegt, und die Grenze, die das WebView erlaubt. Steigt der Wert über eine lange Sitzung immer weiter, kann das auf ein Speicherleck im Spiel hindeuten; nahe der Grenze kann das Spiel abstürzen.</string>
@@ -308,4 +306,32 @@
     <string name="hud_info_renderer">Wie das Spiel gezeichnet wird (WebGL, WebGL 2 oder Canvas, siehe Einstellungen → Renderer) und welchen Grafikchip das WebView nutzt. Konnte WebGL 2 nicht starten, steht das dabei.</string>
     <string name="hud_info_clock">Uhrzeit und wie lange du dieses Spiel in dieser Sitzung schon spielst (Zeit in den Menüs der App zählt mit, Zeit mit der App im Hintergrund nicht).</string>
     <string name="hud_info_cost">Zeit, die das HUD selbst pro Aktualisierung zum Lesen und Zeichnen seiner Werte braucht. Es läuft nur, wenn neue Werte kommen, und bleibt deutlich unter einer Millisekunde.</string>
+    <string name="info_use_case">Sinnvoll, wenn:</string>
+    <string name="info_pros">Vorteile:</string>
+    <string name="info_cons">Nachteile:</string>
+    <string name="renderer_info_title">Über die Renderer</string>
+    <string name="renderer_info_intro">Der Renderer bestimmt, wie das Spiel seine Bilder zeichnet. Für fast jedes Spiel ist WebGL richtig; die anderen beiden sind Ausweichmöglichkeiten, wenn etwas falsch aussieht oder schlecht läuft.</string>
+    <string name="renderer_info_webgl_use">immer zuerst; so läuft das Spiel auch am PC.</string>
+    <string name="renderer_info_webgl_pros">Schnell, nutzt den Grafikchip, und alle Effekte funktionieren: Licht, Nebel, Mode 7 und Filter-Plugins.</string>
+    <string name="renderer_info_webgl_cons">Auf wenigen Geräten hat der Grafiktreiber Fehler, etwa flackernde oder schwarze Bilder.</string>
+    <string name="renderer_info_canvas_use">ein Spiel mit WebGL Grafikfehler zeigt, schwarz bleibt oder abstürzt, oder für sehr einfache Spiele ohne Effekte.</string>
+    <string name="renderer_info_canvas_pros">Eine einfachere, sehr robuste Zeichenweise, die fast überall gleich funktioniert.</string>
+    <string name="renderer_info_canvas_cons">Langsamer, wenn viele Figuren und Effekte zu sehen sind; Licht, Mode 7 und Filter-Plugins fehlen oder funktionieren nicht.</string>
+    <string name="renderer_info_webgl2_use">WebGL auf deinem Gerät Probleme macht, oder aus Neugier.</string>
+    <string name="renderer_info_webgl2_pros">Die neuere Version von WebGL; auf manchen Geräten etwas stabiler oder schneller.</string>
+    <string name="renderer_info_webgl2_cons">Experimentell: Die Zeichen-Bibliothek von RPG-Maker-MV-Spielen ist für WebGL 1 gebaut, meist sieht man daher keinen Unterschied. Startet es nicht, nimmt die App automatisch WebGL.</string>
+    <string name="renderer_info_footer">Eine Änderung gilt beim nächsten Spielstart. Im Performance-HUD (Modul Renderer) siehst du, welcher gerade läuft.</string>
+    <string name="frame_rate_30_description">Spart Akku; Bewegungen wirken weniger flüssig</string>
+    <string name="frame_rate_info_title">Über die Bildraten</string>
+    <string name="frame_rate_info_intro">RPG-Maker-MV-Spiele berechnen ihre Spiellogik immer 60-mal pro Sekunde. Die Bildrate bestimmt nur, wie viele dieser Momente gezeichnet werden. Das Spiel läuft gleich schnell, und die Spielzeit stimmt bei jeder Einstellung.</string>
+    <string name="frame_rate_info_30_use">du lange mit Akku spielst oder das Handy warm wird.</string>
+    <string name="frame_rate_info_30_pros">Spart Akku und hält das Handy kühler; das Spiel selbst wird nicht langsamer.</string>
+    <string name="frame_rate_info_30_cons">Bewegungen wirken weniger flüssig, am deutlichsten beim Laufen und Scrollen.</string>
+    <string name="frame_rate_info_60_use">fast immer; es ist die Standardeinstellung.</string>
+    <string name="frame_rate_info_60_pros">Genau so sind MV-Spiele gemacht: Jeder Moment der Spiellogik wird einmal gezeichnet. Flüssig, ohne Strom zu verschwenden.</string>
+    <string name="frame_rate_info_60_cons">Braucht mehr Akku als 30 fps.</string>
+    <string name="frame_rate_info_unlimited_use">ein Spiel oder Plugin Bewegungen zwischen den Logikschritten selbst glättet (selten), oder zum Testen.</string>
+    <string name="frame_rate_info_unlimited_pros">Zeichnet so oft, wie der Bildschirm wechselt, zum Beispiel 120-mal pro Sekunde.</string>
+    <string name="frame_rate_info_unlimited_cons">Experimentell: Bei normalen MV-Spielen wird dasselbe Bild doppelt gezeichnet, ohne flüssiger zu wirken, und der Akku leert sich schneller.</string>
+    <string name="frame_rate_info_footer">Eine Änderung gilt sofort, auch mitten im Spiel. Das Performance-HUD zeigt die tatsächliche Bildrate.</string>
 </resources>

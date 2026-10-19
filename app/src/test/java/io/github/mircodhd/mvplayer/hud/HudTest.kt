@@ -19,7 +19,7 @@ class HudTest {
                "low1Fps":null,"workMs":3.1,"maxWorkMs":8,"gaps":[16.6,16.8,41.2],
                "heapMb":{"used":80,"total":120,"limit":512},"images":{"items":12,"megapixels":3.4},
                "renderer":{"requested":"webgl2","type":"webgl","gpu":"Some GPU","fallback":"WebGL 2 renderer could not be created"},
-               "paused":true}""",
+               "paused":true,"frameIntervalMs":33.333}""",
         )
         val stats = JsStats.parse(json)
         assertEquals(59.8, stats.fps!!, 0.001)
@@ -33,6 +33,7 @@ class HudTest {
         assertEquals("webgl", stats.rendererType)
         assertTrue(stats.rendererFallback)
         assertTrue(stats.paused)
+        assertEquals(33.333, stats.frameIntervalMs, 0.001)
     }
 
     @Test

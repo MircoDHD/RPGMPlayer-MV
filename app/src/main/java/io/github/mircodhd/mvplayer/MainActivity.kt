@@ -155,7 +155,7 @@ private fun PlayerHome(
             onBack = back,
             onOpenController = { route = Routes.CONTROLLER },
             onOpenOverlay = { route = Routes.OVERLAY },
-            onFrameRateCapChange = viewModel::setFrameRateCapEnabled,
+            onFrameRateCapChange = viewModel::setFrameRateCap,
             onRendererChange = { viewModel.updateGlobal(viewModel.global.copy(renderer = it)) },
             onOpenHud = { route = Routes.HUD },
             onLogToFileChange = viewModel::setLogToFileEnabled,

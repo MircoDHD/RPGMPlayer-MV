@@ -54,8 +54,6 @@
     <string name="set_title">Settings</string>
     <string name="set_back">Back</string>
     <string name="set_section_game">Games</string>
-    <string name="set_frame_cap">Limit to 60 fps</string>
-    <string name="set_frame_cap_summary">MV games run their logic at 60 steps per second. Rendering faster only costs battery and makes the in-game play time run too fast on 90/120 Hz screens.</string>
     <string name="set_section_privacy">Privacy &amp; diagnostics</string>
     <string name="set_diagnostics">Save diagnostic logs</string>
     <string name="set_diagnostics_summary">Writes session logs to this device only, to help find bugs. RPGM Player - MV never sends any data; it has no internet access.</string>
@@ -150,10 +148,10 @@
     <string name="game_settings_reset_all">Reset all</string>
     <string name="info_game_settings">Settings</string>
     <string name="frame_rate_title">Frame rate</string>
-    <string name="frame_rate_summary">Limit to 60 fps keeps play time correct and saves battery.</string>
+    <string name="frame_rate_summary">How often the game draws a picture. The in-game play time stays correct at every setting.</string>
     <string name="frame_rate_fps">%1$d fps</string>
     <string name="frame_rate_unlimited">Unlimited (display rate)</string>
-    <string name="frame_rate_unlimited_warning">Play time runs too fast on 90/120 Hz screens; uses more power</string>
+    <string name="frame_rate_unlimited_warning">Draws at the display rate (e.g. 120 Hz); usually no smoother, uses more power</string>
 
     <!-- In-game -->
     <string name="quick_paused">Game paused</string>
@@ -287,10 +285,10 @@
     <string name="hud_thermal_critical">critical</string>
     <string name="hud_thermal_emergency">emergency</string>
     <string name="hud_thermal_shutdown">shutdown</string>
-    <string name="renderer_webgl_description">Suits almost every game</string>
-    <string name="renderer_canvas_description">Slower; effects that need WebGL (Mode 7, lighting, filters) are missing</string>
-    <string name="renderer_webgl2_description">Falls back to WebGL if it cannot start</string>
-    <string name="frame_rate_60_description">Keeps the in-game play time correct</string>
+    <string name="renderer_webgl_description">Fast, with every effect; suits almost every game</string>
+    <string name="renderer_canvas_description">For devices where WebGL shows errors; slower, without lighting or Mode 7</string>
+    <string name="renderer_webgl2_description">To try out; falls back to WebGL if it cannot start</string>
+    <string name="frame_rate_60_description">How MV games are made; smooth and efficient</string>
     <string name="hud_position_reset">Reset dragged position</string>
     <string name="hud_width">Width (the compact line wraps here)</string>
     <string name="hud_thermal_heat">heat %1$d %%</string>
@@ -302,8 +300,8 @@
     <string name="hud_info_intro">Each module with its written-out name and its abbreviation. For a quick look while playing, FPS and frame time are usually enough; the others help to find out why a game stutters or gets slow.</string>
     <string name="hud_example_same">In the HUD: %1$s</string>
     <string name="hud_info_fps">How many images the game draws per second. RPG Maker MV games are made for 60; with the 60 fps limit the value should stay at 60. Lower values look less smooth.</string>
-    <string name="hud_info_frametime">Time between two images on screen, in milliseconds: 16.7 ms equals 60 fps. The average shows the usual pace, max the longest gap. In the graph every frame is a point; dashed lines mark 16.7 and 33.3 ms, orange dots are frames that took longer than two screen refreshes. Such spikes are felt as stutter even when the fps value looks fine.</string>
-    <string name="hud_info_lows">The frame rate of the slowest 1 % of frames in the last update: it reveals stutter that an average hides. Slow counts frames that took longer than two 60 Hz refreshes (33 ms).</string>
+    <string name="hud_info_frametime">Time between two images on screen, in milliseconds: 16.7 ms equals 60 fps. The average shows the usual pace, max the longest gap. In the graph every frame is a point; dashed lines mark the target frame time (16.7 ms at 60 fps, 33.3 ms at 30 fps) and twice that; orange dots are frames that took longer than two target frames. Such spikes are felt as stutter even when the fps value looks fine.</string>
+    <string name="hud_info_lows">The frame rate of the slowest 1 % of frames in the last update: it reveals stutter that an average hides. Slow counts frames that took longer than two target frames (33 ms at 60 fps, 67 ms at 30 fps).</string>
     <string name="hud_info_timing">Logic: game steps per second. MV runs its game logic at 60 steps per second, independent of the frame rate; fewer means the game itself runs slower. Hz: how often the screen asked for a new image; in brackets the refresh rate of the display.</string>
     <string name="hud_info_jswork">How long the game\'s JavaScript needs per image (game logic and drawing commands). At 60 fps one frame has 16.7 ms; when this value gets close, the game cannot keep up. The graphics chip\'s work is not included.</string>
     <string name="hud_info_heap">Memory used by the game\'s JavaScript, and the limit the WebView allows. A value that keeps rising over a long session can point to a memory leak in the game; close to the limit the game may crash.</string>
@@ -314,4 +312,32 @@
     <string name="hud_info_renderer">How the game is drawn (WebGL, WebGL 2 or Canvas, see Settings → Renderer) and the graphics chip the WebView uses. If WebGL 2 could not start, it says so.</string>
     <string name="hud_info_clock">Time of day, and how long you have been playing since this game was started (time in the app\'s menus counts, time with the app in the background does not).</string>
     <string name="hud_info_cost">Time the HUD itself needs per update to read and draw its values. It only runs when new values arrive and stays well below one millisecond.</string>
+    <string name="info_use_case">Useful when:</string>
+    <string name="info_pros">Pros:</string>
+    <string name="info_cons">Cons:</string>
+    <string name="renderer_info_title">About the renderers</string>
+    <string name="renderer_info_intro">The renderer decides how the game draws its pictures. WebGL is right for almost every game; the other two are alternatives for when something looks or runs wrong.</string>
+    <string name="renderer_info_webgl_use">always try this first; it is how the game runs on PC too.</string>
+    <string name="renderer_info_webgl_pros">Fast, uses the graphics chip, and every effect works: lighting, fog, Mode 7 and filter plugins.</string>
+    <string name="renderer_info_webgl_cons">On a few devices the graphics driver has bugs, for example flickering or black pictures.</string>
+    <string name="renderer_info_canvas_use">a game shows graphics errors, stays black or crashes with WebGL, or for very simple games without effects.</string>
+    <string name="renderer_info_canvas_pros">A simpler, very robust way of drawing that works the same almost everywhere.</string>
+    <string name="renderer_info_canvas_cons">Slower when many characters and effects are on screen; lighting, Mode 7 and filter plugins are missing or do not work.</string>
+    <string name="renderer_info_webgl2_use">WebGL causes problems on your device, or out of curiosity.</string>
+    <string name="renderer_info_webgl2_pros">The newer version of WebGL; on some devices a little more stable or faster.</string>
+    <string name="renderer_info_webgl2_cons">Experimental: the drawing library of RPG Maker MV games is made for WebGL 1, so usually you will not see a difference. If it cannot start, the app uses WebGL automatically.</string>
+    <string name="renderer_info_footer">A change applies the next time the game starts. The performance HUD (Renderer module) shows which one is running.</string>
+    <string name="frame_rate_30_description">Saves battery; motion is less smooth</string>
+    <string name="frame_rate_info_title">About the frame rates</string>
+    <string name="frame_rate_info_intro">RPG Maker MV games always calculate their game logic 60 times per second. The frame rate only decides how many of those moments are drawn. The game runs at the same speed and the play time stays correct at every setting.</string>
+    <string name="frame_rate_info_30_use">you play for a long time on battery or the phone gets warm.</string>
+    <string name="frame_rate_info_30_pros">Saves battery and keeps the phone cooler; the game itself is not slower.</string>
+    <string name="frame_rate_info_30_cons">Movement looks less smooth, most visible when walking or scrolling.</string>
+    <string name="frame_rate_info_60_use">almost always; it is the default.</string>
+    <string name="frame_rate_info_60_pros">Exactly how MV games are made: every moment of the game logic is drawn once. Smooth without wasting power.</string>
+    <string name="frame_rate_info_60_cons">Uses more battery than 30 fps.</string>
+    <string name="frame_rate_info_unlimited_use">a game or plugin smooths motion between logic steps itself (rare), or for testing.</string>
+    <string name="frame_rate_info_unlimited_pros">Draws as often as the screen refreshes, for example 120 times per second.</string>
+    <string name="frame_rate_info_unlimited_cons">Experimental: with normal MV games the same picture is drawn twice without looking smoother, and the battery drains faster.</string>
+    <string name="frame_rate_info_footer">A change applies immediately, even during a game. The performance HUD shows the actual frame rate.</string>
 </resources>

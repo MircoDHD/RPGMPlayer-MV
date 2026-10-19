@@ -4,7 +4,7 @@
 /*
  * RPGM Player: frame timing for the performance HUD and the periodic log stats.
  * Runs after rpg_*.js, before plugins (and before debug.js, which reads it).
- * Patch version: 1
+ * Patch version: 2
  *
  * Consumers open a measurement window; every rendered frame, animation frame and logic
  * step is counted into all open windows. With no window open the hooks only check an
@@ -78,7 +78,8 @@
                         w.gapSum += gap;
                         w.gapCount++;
                         if (gap > w.maxGap) w.maxGap = gap;
-                        if (gap > SLOW_GAP_MS) w.slow++;
+                        // Slow: longer than two frames at the current cap (at least two 60 Hz frames).
+                        if (gap > Math.max(SLOW_GAP_MS, 2 * (MvPlayer.frameIntervalMs || 0))) w.slow++;
                         if (w.gaps) w.gaps.push(gap);
                     }
                 }
@@ -169,6 +170,7 @@
                 };
             }
             if (MvPlayer.renderer) env.renderer = MvPlayer.renderer;
+            env.frameIntervalMs = MvPlayer.frameIntervalMs || 0;
             env.paused = !!(MvPlayer.isPaused && MvPlayer.isPaused());
             return env;
         },

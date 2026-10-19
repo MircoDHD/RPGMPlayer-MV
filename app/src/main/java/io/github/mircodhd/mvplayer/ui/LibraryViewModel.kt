@@ -257,9 +257,9 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         global = settings
     }
 
-    fun setFrameRateCapEnabled(enabled: Boolean) {
-        updateGlobal(global.copy(frameRateCap = if (enabled) GlobalSettings.DEFAULT_FRAME_RATE_CAP else 0))
-        DebugLog.i(TAG, "Frame rate cap set to ${global.frameRateCap}")
+    fun setFrameRateCap(cap: Int) {
+        updateGlobal(global.copy(frameRateCap = cap))
+        DebugLog.i(TAG, "Frame rate cap set to $cap")
     }
 
     fun gameSettings(id: String): GameSettings = gameSettings.getOrPut(id) { settingsStore.game(id) }

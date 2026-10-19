@@ -3,6 +3,20 @@
 Deutsche Fassung von CHANGELOG.md für die "Was ist neu"-Box der App. Bei jeder Version
 zusammen mit CHANGELOG.md aktualisieren.
 
+## 0.4.1 – 19.10.2026 (Phase B, Teil 2: Bildraten)
+### Neu
+- **Bildraten-Auswahl** global und pro Spiel: 30 fps (Akku sparen), 60 fps (Standard) und
+  die Display-Rate (*experimentell*). Gilt sofort, auch mitten im Spiel.
+- ⓘ-Symbole bei der Bildrate und beim Renderer erklären jede Option in einfachen Worten:
+  wann sie sinnvoll ist, Vorteile und Nachteile.
+### Behoben
+- Die Spielzeit im Spiel stimmt jetzt bei jeder Bildrate. MV zählte gezeichnete Bilder,
+  daher lief die Spielzeit bei 120 Hz doppelt so schnell und wäre bei 30 fps nur halb so
+  schnell gelaufen; jedes Bild zählt jetzt die Logikschritte, die es zeigt.
+### Geändert
+- Der globale Schalter "Auf 60 fps begrenzen" ist jetzt eine Bildraten-Auswahl.
+- Die Kurzbeschreibungen von Canvas und WebGL 2 sagen jetzt, wofür sie gut sind.
+
 ## 0.4.0 – 19.10.2026 (Phase B, Teil 1: Renderer und Performance-HUD)
 ### Neu
 - **Renderer-Wahl**, global und pro Spiel: WebGL (Standard), Canvas oder WebGL 2

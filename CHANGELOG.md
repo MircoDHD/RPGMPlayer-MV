@@ -4,6 +4,20 @@ All notable changes to RobustPlainGameMaker Player - MyVersion ("RPGM Player - M
 Versions follow `major.minor.patch`: the minor digit for new features, the patch digit for
 fixes. Dates are build dates.
 
+## 0.4.1 – 2026-10-19 (Phase B, part 2: frame rates)
+### Added
+- **Frame rate options** globally and per game: 30 fps (battery saver), 60 fps (default) and
+  the display rate (*experimental*). They apply immediately, also during a game.
+- ⓘ buttons in the frame rate and renderer choices explain each option in plain words:
+  when it is useful, pros and cons.
+### Fixed
+- The in-game play time is now correct at every frame rate. MV counted drawn frames, so
+  play time ran twice as fast at 120 Hz and would have run at half speed at 30 fps; each
+  frame now adds the game logic steps it shows.
+### Changed
+- The global "Limit to 60 fps" switch became a frame rate choice.
+- Choice descriptions for Canvas and WebGL 2 now say when they are useful.
+
 ## 0.4.0 – 2026-10-19 (Phase B, part 1: renderer and performance HUD)
 ### Added
 - **Renderer choice**, globally and per game: WebGL (default), Canvas, or WebGL 2

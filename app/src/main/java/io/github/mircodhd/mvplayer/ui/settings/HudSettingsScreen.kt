@@ -295,7 +295,8 @@ private val PreviewData = HudSnapshot(
     js = JsStats(
         fps = 60.0, displayHz = 60.0, logicUps = 60.0, frameMs = 16.7, maxFrameMs = 24.3, low1Fps = 52.0, slowFrames = 1,
         workMs = 4.2, maxWorkMs = 9.8, heapUsedMb = 78, heapLimitMb = 512, images = 124, imageMegapixels = 48.3,
-        rendererType = "webgl", gpu = "Sample GPU", rendererFallback = false, paused = false, frameGaps = emptyList(),
+        rendererType = "webgl", gpu = "Sample GPU", rendererFallback = false, paused = false, frameIntervalMs = 1000.0 / 60,
+        frameGaps = emptyList(),
     ),
     device = DeviceStats(
         batteryPercent = 82, charging = false, batteryTempC = 34.5f, thermalStatus = PowerManager.THERMAL_STATUS_NONE,

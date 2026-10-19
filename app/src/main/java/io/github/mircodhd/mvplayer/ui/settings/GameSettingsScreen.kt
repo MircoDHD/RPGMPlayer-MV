@@ -252,9 +252,17 @@ fun previewHaptics(view: View) {
 @Composable
 fun FrameRateDialog(selected: Int, defaultCap: Int?, onSelect: (Int) -> Unit, onDismiss: () -> Unit) {
     val resources = LocalResources.current
-    val options = listOf(60 to frameRateLabel(resources, 60), 0 to frameRateLabel(resources, 0))
+    val options = GlobalSettings.FRAME_RATE_CAPS.map { it to frameRateLabel(resources, it) }
     val experimental = { cap: Int -> if (cap == 0) listOf(OptionBadge.EXPERIMENTAL) else emptyList() }
-    val describe = { cap: Int -> resources.getString(if (cap == 0) R.string.frame_rate_unlimited_warning else R.string.frame_rate_60_description) }
+    val describe = { cap: Int ->
+        resources.getString(
+            when (cap) {
+                30 -> R.string.frame_rate_30_description
+                0 -> R.string.frame_rate_unlimited_warning
+                else -> R.string.frame_rate_60_description
+            },
+        )
+    }
     ChoiceDialog(
         title = stringResource(R.string.frame_rate_title),
         choices = if (defaultCap != null) {
@@ -265,6 +273,31 @@ fun FrameRateDialog(selected: Int, defaultCap: Int?, onSelect: (Int) -> Unit, on
         selected = selected,
         onSelect = onSelect,
         onDismiss = onDismiss,
+        info = InfoContent(
+            title = stringResource(R.string.frame_rate_info_title),
+            intro = stringResource(R.string.frame_rate_info_intro),
+            sections = listOf(
+                InfoSection(
+                    frameRateLabel(resources, 30),
+                    stringResource(R.string.frame_rate_info_30_use),
+                    stringResource(R.string.frame_rate_info_30_pros),
+                    stringResource(R.string.frame_rate_info_30_cons),
+                ),
+                InfoSection(
+                    frameRateLabel(resources, 60),
+                    stringResource(R.string.frame_rate_info_60_use),
+                    stringResource(R.string.frame_rate_info_60_pros),
+                    stringResource(R.string.frame_rate_info_60_cons),
+                ),
+                InfoSection(
+                    frameRateLabel(resources, 0),
+                    stringResource(R.string.frame_rate_info_unlimited_use),
+                    stringResource(R.string.frame_rate_info_unlimited_pros),
+                    stringResource(R.string.frame_rate_info_unlimited_cons),
+                ),
+            ),
+            footer = stringResource(R.string.frame_rate_info_footer),
+        ),
     )
 }
 
@@ -294,6 +327,31 @@ fun RendererDialog(selected: Renderer, defaultRenderer: Renderer?, onSelect: (Re
         onSelect = onSelect,
         onDismiss = onDismiss,
         note = stringResource(R.string.renderer_note),
+        info = InfoContent(
+            title = stringResource(R.string.renderer_info_title),
+            intro = stringResource(R.string.renderer_info_intro),
+            sections = listOf(
+                InfoSection(
+                    rendererLabel(resources, Renderer.WEBGL),
+                    stringResource(R.string.renderer_info_webgl_use),
+                    stringResource(R.string.renderer_info_webgl_pros),
+                    stringResource(R.string.renderer_info_webgl_cons),
+                ),
+                InfoSection(
+                    rendererLabel(resources, Renderer.CANVAS),
+                    stringResource(R.string.renderer_info_canvas_use),
+                    stringResource(R.string.renderer_info_canvas_pros),
+                    stringResource(R.string.renderer_info_canvas_cons),
+                ),
+                InfoSection(
+                    rendererLabel(resources, Renderer.WEBGL2),
+                    stringResource(R.string.renderer_info_webgl2_use),
+                    stringResource(R.string.renderer_info_webgl2_pros),
+                    stringResource(R.string.renderer_info_webgl2_cons),
+                ),
+            ),
+            footer = stringResource(R.string.renderer_info_footer),
+        ),
     )
 }
 

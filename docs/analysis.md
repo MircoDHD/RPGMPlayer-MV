@@ -226,10 +226,18 @@ overridden (see part 1).
 
 - MV runs its game logic at 60 steps per second but renders once per display refresh and
   counts rendered frames as play time (`Graphics.frameCount`, also stored in saves). On a
-  120 Hz display the play time ran twice as fast (16 min 31 s shown after 8 min 20 s).
-- The player asks Android for 60 Hz (`preferredRefreshRate`) and `mv/framerate.js` gates
-  `requestAnimationFrame` to a 60 fps cadence (quarter-interval tolerance). This also
-  halves the GPU work.
+  120 Hz display the play time ran twice as fast (16 min 31 s shown after 8 min 20 s); at
+  30 fps it would run at half speed.
+- `mv/framerate.js` gates `requestAnimationFrame` to the chosen cap (30, 60 or none, with a
+  quarter-interval tolerance) and the host asks Android for a matching refresh rate
+  (`preferredRefreshRate`). MV's own accumulator keeps the logic at 60 steps per second.
+- Play time: each `Graphics.render` adds the number of logic steps of the running scene
+  since the previous render instead of 1 (1 at 60 fps, 2 at 30 fps, 1 or 0 at 120 Hz).
+  `frameCount` still changes at most once per render, because code uses it as a "once
+  per frame" marker (`Game_Interpreter.checkFreeze`, VE_BasicModule). Measured in the
+  emulator: 15 s of play time in 15 s at 30, 60 and a simulated uncapped 120 Hz.
+- 30 fps halves the GPU work; uncapped rendering above 60 draws repeated images unless a
+  plugin interpolates between logic steps.
 
 ## Lifecycle pitfalls
 

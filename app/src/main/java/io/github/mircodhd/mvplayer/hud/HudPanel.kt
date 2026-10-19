@@ -178,7 +178,11 @@ fun HudPanel(
                     for (module in modules) {
                         Text(module.value(snapshot, res) ?: "…", style = style)
                         if (module.graph) {
-                            FrameGraph(snapshot.frameHistory, Modifier.padding(vertical = 2.dp).size((150 * scale).dp, graphHeight))
+                            FrameGraph(
+                                snapshot.frameHistory,
+                                snapshot.js?.frameIntervalMs ?: 0.0,
+                                Modifier.padding(vertical = 2.dp).size((150 * scale).dp, graphHeight),
+                            )
                         }
                     }
                 }
@@ -193,16 +197,19 @@ fun HudPanel(
 }
 
 /**
- * Frame times as a line, newest on the right. The scale starts at 50 ms (three 60 Hz
- * frames); dashes mark 16.7 ms and 33.3 ms, frames slower than two refreshes turn orange.
+ * Frame times as a line, newest on the right. Dashes mark the target frame time of the
+ * current cap (16.7 ms when uncapped) and twice that; frames slower than twice the
+ * target turn orange. The scale shows at least three target frames.
  */
 @Composable
-private fun FrameGraph(history: List<Float>, modifier: Modifier) {
+private fun FrameGraph(history: List<Float>, targetMs: Double, modifier: Modifier) {
+    val target = if (targetMs > 0) targetMs.toFloat() else 1000f / 60
+    val slow = 2 * target
     Canvas(modifier) {
         if (history.isEmpty()) return@Canvas
-        val top = maxOf(50f, history.max())
+        val top = maxOf(3 * target, history.max())
         fun y(ms: Float) = size.height * (1 - ms / top)
-        for (ref in listOf(1000f / 60, 2000f / 60)) {
+        for (ref in listOf(target, slow)) {
             drawLine(HudDim.copy(alpha = 0.35f), Offset(0f, y(ref)), Offset(size.width, y(ref)), strokeWidth = 1f)
         }
         val step = size.width / (HISTORY_POINTS - 1)
@@ -215,7 +222,7 @@ private fun FrameGraph(history: List<Float>, modifier: Modifier) {
         }
         drawPath(path, GraphLine, style = Stroke(width = 1.5.dp.toPx()))
         points.forEachIndexed { i, ms ->
-            if (ms > 2000f / 60) drawCircle(GraphSlow, 1.8.dp.toPx(), Offset(offset + i * step, y(ms)))
+            if (ms > slow) drawCircle(GraphSlow, 1.8.dp.toPx(), Offset(offset + i * step, y(ms)))
         }
     }
 }

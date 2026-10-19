@@ -51,11 +51,13 @@ import androidx.compose.ui.unit.dp
 import io.github.mircodhd.mvplayer.R
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
 import io.github.mircodhd.mvplayer.settings.Renderer
+import io.github.mircodhd.mvplayer.ui.settings.FrameRateDialog
 import io.github.mircodhd.mvplayer.ui.settings.OptionBadge
 import io.github.mircodhd.mvplayer.ui.settings.RendererDialog
 import io.github.mircodhd.mvplayer.ui.settings.SectionHeader
 import io.github.mircodhd.mvplayer.ui.settings.SwitchRow
 import io.github.mircodhd.mvplayer.ui.settings.ValueRow
+import io.github.mircodhd.mvplayer.ui.settings.frameRateLabel
 import io.github.mircodhd.mvplayer.ui.settings.overlayModeLabel
 import io.github.mircodhd.mvplayer.ui.settings.rendererLabel
 
@@ -73,7 +75,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenController: () -> Unit,
     onOpenOverlay: () -> Unit,
-    onFrameRateCapChange: (Boolean) -> Unit,
+    onFrameRateCapChange: (Int) -> Unit,
     onRendererChange: (Renderer) -> Unit,
     onOpenHud: () -> Unit,
     onLogToFileChange: (Boolean) -> Unit,
@@ -90,6 +92,7 @@ fun SettingsScreen(
     var thanks by remember { mutableStateOf(false) }
     var editTitle by remember { mutableStateOf(false) }
     var chooseRenderer by remember { mutableStateOf(false) }
+    var chooseFrameRate by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -126,12 +129,13 @@ fun SettingsScreen(
 
             item { SectionHeader(stringResource(R.string.set_section_game)) }
             item {
-                SwitchRow(
+                ValueRow(
                     icon = Icons.Filled.PlayArrow,
-                    title = stringResource(R.string.set_frame_cap),
-                    summary = stringResource(R.string.set_frame_cap_summary),
-                    checked = global.frameRateCap > 0,
-                    onCheckedChange = onFrameRateCapChange,
+                    title = stringResource(R.string.frame_rate_title),
+                    value = frameRateLabel(resources, global.frameRateCap),
+                    summary = stringResource(R.string.frame_rate_summary),
+                    badges = if (global.frameRateCap == 0) listOf(OptionBadge.EXPERIMENTAL) else emptyList(),
+                    onClick = { chooseFrameRate = true },
                 )
             }
             item {
@@ -286,6 +290,15 @@ fun SettingsScreen(
                     if (!global.titleEditUnlocked) onUnlockTitle()
                 }) { Text(stringResource(R.string.egg_ok)) }
             },
+        )
+    }
+
+    if (chooseFrameRate) {
+        FrameRateDialog(
+            selected = global.frameRateCap,
+            defaultCap = null,
+            onSelect = onFrameRateCapChange,
+            onDismiss = { chooseFrameRate = false },
         )
     }
 

@@ -24,6 +24,8 @@ data class JsStats(
     val gpu: String?,
     val rendererFallback: Boolean,
     val paused: Boolean,
+    /** Target gap between frames at the current frame rate cap; 0 = uncapped. */
+    val frameIntervalMs: Double,
     /** Gaps between rendered frames in this sample, in ms. */
     val frameGaps: List<Float>,
 ) {
@@ -51,6 +53,7 @@ data class JsStats(
                 gpu = renderer?.optStringOrNull("gpu"),
                 rendererFallback = renderer?.optStringOrNull("fallback") != null,
                 paused = json.optBoolean("paused", false),
+                frameIntervalMs = json.optDoubleOrNull("frameIntervalMs") ?: 0.0,
                 frameGaps = gaps?.let { a -> (0 until a.length()).map { a.optDouble(it).toFloat() }.filter { it > 0 } }.orEmpty(),
             )
         }

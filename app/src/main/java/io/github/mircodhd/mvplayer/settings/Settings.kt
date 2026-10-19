@@ -88,6 +88,8 @@ data class GlobalSettings(
 ) {
     companion object {
         const val DEFAULT_FRAME_RATE_CAP = 60
+        /** Offered caps: battery saver, MV's own rate, the display rate (0). */
+        val FRAME_RATE_CAPS = listOf(30, 60, 0)
         const val MAX_TITLE_LENGTH = 40
     }
 }

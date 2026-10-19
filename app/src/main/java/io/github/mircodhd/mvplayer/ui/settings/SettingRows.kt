@@ -17,6 +17,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +32,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,6 +40,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import io.github.mircodhd.mvplayer.R
@@ -192,14 +198,26 @@ fun <T> ChoiceDialog(
     onSelect: (T) -> Unit,
     onDismiss: () -> Unit,
     note: String? = null,
+    /** Shows an ⓘ button next to the title that explains the choices. */
+    info: InfoContent? = null,
 ) {
+    var showInfo by remember { mutableStateOf(false) }
     // Wider than the platform default, so descriptions fit on one line and all choices stay
     // visible in landscape (games run in landscape, where dialogs have little height).
     AlertDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
         modifier = Modifier.padding(horizontal = 24.dp),
-        title = { Text(title) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, modifier = Modifier.weight(1f))
+                if (info != null) {
+                    IconButton(onClick = { showInfo = true }) {
+                        Icon(Icons.Outlined.Info, contentDescription = info.title)
+                    }
+                }
+            }
+        },
         text = {
             // Choices first, the note below: a long note must not push them out of view.
             Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -234,6 +252,52 @@ fun <T> ChoiceDialog(
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
+    )
+    if (showInfo && info != null) InfoDialog(info) { showInfo = false }
+}
+
+/** Plain-language help for a set of options: when each is useful, its pros and cons. */
+data class InfoContent(val title: String, val intro: String, val sections: List<InfoSection>, val footer: String? = null)
+
+data class InfoSection(val name: String, val useCase: String, val pros: String, val cons: String)
+
+@Composable
+fun InfoDialog(content: InfoContent, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier.padding(horizontal = 24.dp),
+        title = { Text(content.title) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(content.intro, style = MaterialTheme.typography.bodyMedium)
+                for (section in content.sections) {
+                    Spacer(Modifier.height(14.dp))
+                    Text(section.name, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    InfoLine(stringResource(R.string.info_use_case), section.useCase)
+                    InfoLine(stringResource(R.string.info_pros), section.pros)
+                    InfoLine(stringResource(R.string.info_cons), section.cons)
+                }
+                content.footer?.let {
+                    Spacer(Modifier.height(14.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_ok)) } },
+    )
+}
+
+@Composable
+private fun InfoLine(label: String, text: String) {
+    Text(
+        buildAnnotatedString {
+            withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(label) }
+            append(" ")
+            append(text)
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(top = 2.dp),
     )
 }
 
