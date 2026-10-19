@@ -38,9 +38,10 @@ import io.github.mircodhd.mvplayer.settings.GameSettings
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
 import io.github.mircodhd.mvplayer.settings.OverlayMode
 import io.github.mircodhd.mvplayer.settings.OverlaySettings
+import io.github.mircodhd.mvplayer.settings.Renderer
 import io.github.mircodhd.mvplayer.settings.SettingsResolver
 
-private enum class GameDialog { OVERLAY_MODE, LAYOUT, OPACITY, SIZE, HAPTICS, MIRROR, FRAME_RATE }
+private enum class GameDialog { OVERLAY_MODE, LAYOUT, OPACITY, SIZE, HAPTICS, MIRROR, FRAME_RATE, RENDERER }
 
 /** Per-game overrides of the global settings (reachable from the info sheet and in game). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -162,6 +163,16 @@ fun GameSettingsScreen(
                     onClick = { dialog = GameDialog.FRAME_RATE },
                 )
             }
+            item {
+                ValueRow(
+                    title = stringResource(R.string.renderer_title),
+                    value = rendererLabel(resources, effective.renderer),
+                    summary = stringResource(R.string.renderer_summary),
+                    badges = defaultBadge(game.renderer) +
+                        if (effective.renderer == Renderer.WEBGL2) listOf(OptionBadge.EXPERIMENTAL) else emptyList(),
+                    onClick = { dialog = GameDialog.RENDERER },
+                )
+            }
         }
     }
 
@@ -216,6 +227,12 @@ fun GameSettingsScreen(
             onSelect = { onChange(game.copy(overlayMirror = overrideOf(it, o.mirror))) },
             onDismiss = { dialog = null },
         )
+        GameDialog.RENDERER -> RendererDialog(
+            selected = effective.renderer,
+            defaultRenderer = global.renderer,
+            onSelect = { onChange(game.copy(renderer = overrideOf(it, global.renderer))) },
+            onDismiss = { dialog = null },
+        )
         GameDialog.FRAME_RATE -> FrameRateDialog(
             selected = effective.frameRateCap,
             defaultCap = global.frameRateCap,
@@ -237,19 +254,56 @@ fun FrameRateDialog(selected: Int, defaultCap: Int?, onSelect: (Int) -> Unit, on
     val resources = LocalResources.current
     val options = listOf(60 to frameRateLabel(resources, 60), 0 to frameRateLabel(resources, 0))
     val experimental = { cap: Int -> if (cap == 0) listOf(OptionBadge.EXPERIMENTAL) else emptyList() }
+    val describe = { cap: Int -> resources.getString(if (cap == 0) R.string.frame_rate_unlimited_warning else R.string.frame_rate_60_description) }
     ChoiceDialog(
         title = stringResource(R.string.frame_rate_title),
         choices = if (defaultCap != null) {
-            overrideChoices(options, defaultCap, experimental)
+            overrideChoices(options, defaultCap, experimental, describe)
         } else {
-            options.map { (cap, label) -> Choice(cap, label, experimental(cap)) }
+            options.map { (cap, label) -> Choice(cap, label, experimental(cap), describe(cap)) }
         },
         selected = selected,
         onSelect = onSelect,
         onDismiss = onDismiss,
-        note = stringResource(R.string.frame_rate_unlimited_warning),
     )
 }
+
+/** [defaultRenderer] marks the global value when choosing for one game; null in the global settings. */
+@Composable
+fun RendererDialog(selected: Renderer, defaultRenderer: Renderer?, onSelect: (Renderer) -> Unit, onDismiss: () -> Unit) {
+    val resources = LocalResources.current
+    val options = Renderer.entries.map { it to rendererLabel(resources, it) }
+    val experimental = { r: Renderer -> if (r == Renderer.WEBGL2) listOf(OptionBadge.EXPERIMENTAL) else emptyList() }
+    val describe = { r: Renderer ->
+        resources.getString(
+            when (r) {
+                Renderer.WEBGL -> R.string.renderer_webgl_description
+                Renderer.CANVAS -> R.string.renderer_canvas_description
+                Renderer.WEBGL2 -> R.string.renderer_webgl2_description
+            },
+        )
+    }
+    ChoiceDialog(
+        title = stringResource(R.string.renderer_title),
+        choices = if (defaultRenderer != null) {
+            overrideChoices(options, defaultRenderer, experimental, describe)
+        } else {
+            options.map { (r, label) -> Choice(r, label, experimental(r), describe(r)) }
+        },
+        selected = selected,
+        onSelect = onSelect,
+        onDismiss = onDismiss,
+        note = stringResource(R.string.renderer_note),
+    )
+}
+
+fun rendererLabel(resources: Resources, renderer: Renderer): String = resources.getString(
+    when (renderer) {
+        Renderer.WEBGL -> R.string.renderer_webgl
+        Renderer.CANVAS -> R.string.renderer_canvas
+        Renderer.WEBGL2 -> R.string.renderer_webgl2
+    },
+)
 
 fun frameRateLabel(resources: Resources, cap: Int): String =
     if (cap <= 0) resources.getString(R.string.frame_rate_unlimited) else resources.getString(R.string.frame_rate_fps, cap)

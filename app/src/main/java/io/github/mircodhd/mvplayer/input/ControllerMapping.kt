@@ -51,6 +51,8 @@ data class ControllerMapping(val bindings: Map<InputAction, List<List<String>>>)
                 InputAction.LEFT to listOf(listOf(k(Controls.KEY_DPAD_LEFT)), listOf(axis("HAT_X", false)), listOf(axis("X", false))),
                 InputAction.RIGHT to listOf(listOf(k(Controls.KEY_DPAD_RIGHT)), listOf(axis("HAT_X", true)), listOf(axis("X", true))),
                 InputAction.QUICK_MENU to listOf(listOf(k(Controls.KEY_BUTTON_SELECT), k(Controls.KEY_BUTTON_START))),
+                // Free for the player to assign; every action has an entry so mappings compare equal.
+                InputAction.TOGGLE_HUD to emptyList(),
             ),
         )
 

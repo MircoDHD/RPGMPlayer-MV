@@ -1,6 +1,6 @@
 # Feature plan: input, display, compatibility, saves (0.3 – 0.6)
 
-Status: approved 2026-10-18. **Phase A implemented in 0.3.0**; B–D pending.
+Status: approved 2026-10-18. **Phase A implemented in 0.3.0**; Phase B split into three releases: B1 renderer + B4 HUD **in 0.4.0**, then B2 frame rates, then B3 scaling and filters; C–D pending.
 Base: version 0.2.0. Architecture: `docs/analysis.md`, part 2.
 
 Size estimates are rough lines of new/changed code (Kotlin + JS + GLSL), excluding tests.

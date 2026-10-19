@@ -19,7 +19,8 @@ enum class InputAction(val id: String, val mvBit: Int?) {
     DOWN("down", 13),
     LEFT("left", 14),
     RIGHT("right", 15),
-    QUICK_MENU("quickmenu", null);
+    QUICK_MENU("quickmenu", null),
+    TOGGLE_HUD("togglehud", null);
 
     val isAppAction: Boolean get() = mvBit == null
 

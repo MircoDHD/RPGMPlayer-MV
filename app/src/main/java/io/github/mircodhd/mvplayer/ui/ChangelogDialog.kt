@@ -24,6 +24,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -90,7 +91,7 @@ private fun ChangelogBlockView(block: ChangelogBlock) {
     }
 }
 
-/** **bold** and `code` spans. */
+/** **bold**, *italic* and `code` spans. */
 private fun inline(text: String): AnnotatedString = buildAnnotatedString {
     var i = 0
     while (i < text.length) {
@@ -99,6 +100,11 @@ private fun inline(text: String): AnnotatedString = buildAnnotatedString {
                 val end = text.indexOf("**", i + 2)
                 withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(text, i + 2, end) }
                 i = end + 2
+            }
+            text[i] == '*' && text.indexOf('*', i + 1) > i + 1 -> {
+                val end = text.indexOf('*', i + 1)
+                withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(text, i + 1, end) }
+                i = end + 1
             }
             text[i] == '`' && text.indexOf('`', i + 1) > 0 -> {
                 val end = text.indexOf('`', i + 1)

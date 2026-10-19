@@ -26,6 +26,7 @@ class PlayerBridge(
     interface Host {
         fun exitGame()
         fun requestTextInput(current: String, maxLength: Int)
+        fun onStats(json: String)
     }
 
     companion object {
@@ -122,6 +123,12 @@ class PlayerBridge(
             ensureListed()
             files[name!!.lowercase()]?.let { node -> node.delete().also { if (it) files.remove(name.lowercase()) } } ?: true
         }.also { DebugLog.d(TAG, "remove $name: $it") }
+    }
+
+    /** Performance sample for the HUD (mv/perf.js), sent at the HUD's update rate. */
+    @JavascriptInterface
+    fun reportStats(json: String?) {
+        if (json != null) host.onStats(json)
     }
 
     @JavascriptInterface

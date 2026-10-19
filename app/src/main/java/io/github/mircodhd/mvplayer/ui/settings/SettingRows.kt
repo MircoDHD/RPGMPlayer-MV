@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import io.github.mircodhd.mvplayer.R
 
 /** Flags shown next to an option; DEFAULT marks the value a game inherits from the global settings. */
@@ -156,14 +157,26 @@ fun ValueRow(
 }
 
 /** One entry of a [ChoiceDialog]. */
-data class Choice<T>(val value: T, val label: String, val badges: List<OptionBadge> = emptyList())
+/** One entry of a [ChoiceDialog]; [description] is a short line under the label. */
+data class Choice<T>(
+    val value: T,
+    val label: String,
+    val badges: List<OptionBadge> = emptyList(),
+    val description: String? = null,
+)
 
 /**
  * Choices for a per-game override: the option equal to the global value [default] carries
  * the DEFAULT badge. Pass the picked value through [overrideOf] to store it.
  */
-fun <T> overrideChoices(options: List<Pair<T, String>>, default: T, extra: (T) -> List<OptionBadge> = { emptyList() }) =
-    options.map { (value, label) -> Choice(value, label, (if (value == default) listOf(OptionBadge.DEFAULT) else emptyList()) + extra(value)) }
+fun <T> overrideChoices(
+    options: List<Pair<T, String>>,
+    default: T,
+    extra: (T) -> List<OptionBadge> = { emptyList() },
+    describe: (T) -> String? = { null },
+) = options.map { (value, label) ->
+    Choice(value, label, (if (value == default) listOf(OptionBadge.DEFAULT) else emptyList()) + extra(value), describe(value))
+}
 
 /** Picking the global value again means "follow the default" (no override). */
 fun <T> overrideOf(picked: T, default: T): T? = picked.takeUnless { it == default }
@@ -180,15 +193,16 @@ fun <T> ChoiceDialog(
     onDismiss: () -> Unit,
     note: String? = null,
 ) {
+    // Wider than the platform default, so descriptions fit on one line and all choices stay
+    // visible in landscape (games run in landscape, where dialogs have little height).
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier.padding(horizontal = 24.dp),
         title = { Text(title) },
         text = {
+            // Choices first, the note below: a long note must not push them out of view.
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                note?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(8.dp))
-                }
                 for (choice in choices) {
                     Row(
                         Modifier
@@ -197,15 +211,25 @@ fun <T> ChoiceDialog(
                                 onSelect(choice.value)
                                 onDismiss()
                             }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(selected = choice.value == selected, onClick = null)
                         Column(Modifier.padding(start = 12.dp)) {
-                            Text(choice.label, style = MaterialTheme.typography.bodyLarge)
-                            Badges(choice.badges)
+                            Row {
+                                Text(choice.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.alignByBaseline())
+                                if (choice.badges.isNotEmpty()) Spacer(Modifier.width(8.dp))
+                                Badges(choice.badges, Modifier.alignByBaseline(), inline = true)
+                            }
+                            choice.description?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
+                }
+                note?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         },

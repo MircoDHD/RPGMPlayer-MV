@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -55,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.mircodhd.mvplayer.R
+import io.github.mircodhd.mvplayer.hud.HudOverlay
+import io.github.mircodhd.mvplayer.hud.HudSnapshot
 import io.github.mircodhd.mvplayer.input.ControllerMapping
 import io.github.mircodhd.mvplayer.input.InputAction
 import io.github.mircodhd.mvplayer.overlay.GamepadLayout
@@ -94,8 +97,12 @@ class GameOverlayState(val gameTitle: String) {
     var editor by mutableStateOf<EditorRequest?>(null)
     var textInput by mutableStateOf<TextInputRequest?>(null)
     var confirmQuit by mutableStateOf(false)
+    /** The renderer setting changed while the game runs; offer to restart it. */
+    var restartPrompt by mutableStateOf(false)
     /** Hides the controls for a moment, e.g. while taking the editor screenshot. */
     var hideControls by mutableStateOf(false)
+    /** Latest performance HUD sample; null while the HUD is off or has no data yet. */
+    var hud by mutableStateOf<HudSnapshot?>(null)
 
     val showGamepad: Boolean
         get() = gameReady && !hideControls && editor == null && when (overlay.mode) {
@@ -104,14 +111,19 @@ class GameOverlayState(val gameTitle: String) {
             OverlayMode.AUTO -> !controllerConnected
         }
 
+    val showHud: Boolean get() = gameReady && global.hud.enabled && editor == null && !hideControls
+
     /** True while something covers the game and it should be paused. */
-    val isModal: Boolean get() = quickMenu || settingsOpen || editor != null || confirmQuit
+    val isModal: Boolean get() = quickMenu || settingsOpen || editor != null || confirmQuit || restartPrompt
 }
 
 interface GameOverlayActions {
     fun onGamepadActions(actions: Set<InputAction>)
     fun onTextResult(text: String?)
     fun onGameSettingsChange(settings: GameSettings)
+    fun onGlobalSettingsChange(settings: GlobalSettings)
+    fun onRestartGame()
+    fun onHudDrawn(nanos: Long)
     fun onCustomizeLayout(layout: GamepadLayout)
     fun onEditorSave(layout: GamepadLayout, forGame: Boolean, asCopy: Boolean)
     fun onQuit()
@@ -119,6 +131,17 @@ interface GameOverlayActions {
 
 @Composable
 fun GameOverlay(state: GameOverlayState, actions: GameOverlayActions) {
+    // The HUD comes first, so on-screen controls drawn on top of it keep their touches; a
+    // tap on the HUD where no control is switches its layout.
+    if (state.showHud) {
+        HudOverlay(
+            snapshot = state.hud ?: HudSnapshot.EMPTY,
+            settings = state.global.hud,
+            onTap = { actions.onGlobalSettingsChange(state.global.copy(hud = state.global.hud.copy(detailed = !state.global.hud.detailed))) },
+            onMove = { x, y -> actions.onGlobalSettingsChange(state.global.copy(hud = state.global.hud.copy(offsetX = x, offsetY = y))) },
+            onDrawNanos = actions::onHudDrawn,
+        )
+    }
     val layout = state.layout
     if (state.showGamepad && layout != null) {
         VirtualGamepad(layout, state.overlay, actions::onGamepadActions)
@@ -148,6 +171,16 @@ fun GameOverlay(state: GameOverlayState, actions: GameOverlayActions) {
             state.textInput = null
             actions.onTextResult(result)
         }
+    }
+
+    if (state.restartPrompt) {
+        AlertDialog(
+            onDismissRequest = { state.restartPrompt = false },
+            title = { Text(stringResource(R.string.renderer_restart_title)) },
+            text = { Text(stringResource(R.string.renderer_restart_text)) },
+            confirmButton = { TextButton(onClick = actions::onRestartGame) { Text(stringResource(R.string.renderer_restart_now)) } },
+            dismissButton = { TextButton(onClick = { state.restartPrompt = false }) { Text(stringResource(R.string.renderer_restart_later)) } },
+        )
     }
 
     if (state.confirmQuit) {
@@ -194,6 +227,15 @@ private fun QuickMenu(state: GameOverlayState, actions: GameOverlayActions) {
                 },
                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 modifier = Modifier.clickable { actions.onGameSettingsChange(state.game.withOverlay(!state.showGamepadSetting())) },
+            )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.quick_hud)) },
+                leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
+                trailingContent = {
+                    Switch(checked = state.global.hud.enabled, onCheckedChange = { actions.onGlobalSettingsChange(state.global.withHud(it)) })
+                },
+                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                modifier = Modifier.clickable { actions.onGlobalSettingsChange(state.global.withHud(!state.global.hud.enabled)) },
             )
             MenuItem(
                 Icons.AutoMirrored.Filled.List,
@@ -244,6 +286,8 @@ private fun GameOverlayState.showGamepadSetting(): Boolean = when (overlay.mode)
     OverlayMode.NEVER -> false
     OverlayMode.AUTO -> !controllerConnected
 }
+
+private fun GlobalSettings.withHud(enabled: Boolean) = copy(hud = hud.copy(enabled = enabled))
 
 private fun GameSettings.withOverlay(visible: Boolean) = copy(overlayMode = if (visible) OverlayMode.ALWAYS else OverlayMode.NEVER)
 

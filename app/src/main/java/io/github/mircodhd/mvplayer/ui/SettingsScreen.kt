@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
@@ -48,10 +50,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.mircodhd.mvplayer.R
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
+import io.github.mircodhd.mvplayer.settings.Renderer
+import io.github.mircodhd.mvplayer.ui.settings.OptionBadge
+import io.github.mircodhd.mvplayer.ui.settings.RendererDialog
 import io.github.mircodhd.mvplayer.ui.settings.SectionHeader
 import io.github.mircodhd.mvplayer.ui.settings.SwitchRow
 import io.github.mircodhd.mvplayer.ui.settings.ValueRow
 import io.github.mircodhd.mvplayer.ui.settings.overlayModeLabel
+import io.github.mircodhd.mvplayer.ui.settings.rendererLabel
 
 const val GITHUB_PROFILE_URL = "https://github.com/MircoDHD"
 const val LICENSE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
@@ -68,6 +74,8 @@ fun SettingsScreen(
     onOpenController: () -> Unit,
     onOpenOverlay: () -> Unit,
     onFrameRateCapChange: (Boolean) -> Unit,
+    onRendererChange: (Renderer) -> Unit,
+    onOpenHud: () -> Unit,
     onLogToFileChange: (Boolean) -> Unit,
     onShareLogs: () -> Unit,
     onOpenUrl: (String) -> Unit,
@@ -81,6 +89,7 @@ fun SettingsScreen(
     var versionTaps by remember { mutableIntStateOf(0) }
     var thanks by remember { mutableStateOf(false) }
     var editTitle by remember { mutableStateOf(false) }
+    var chooseRenderer by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -123,6 +132,25 @@ fun SettingsScreen(
                     summary = stringResource(R.string.set_frame_cap_summary),
                     checked = global.frameRateCap > 0,
                     onCheckedChange = onFrameRateCapChange,
+                )
+            }
+            item {
+                ValueRow(
+                    icon = Icons.Filled.Create,
+                    title = stringResource(R.string.renderer_title),
+                    value = rendererLabel(resources, global.renderer),
+                    summary = stringResource(R.string.renderer_summary),
+                    badges = if (global.renderer == Renderer.WEBGL2) listOf(OptionBadge.EXPERIMENTAL) else emptyList(),
+                    onClick = { chooseRenderer = true },
+                )
+            }
+            item {
+                ValueRow(
+                    icon = Icons.AutoMirrored.Filled.List,
+                    title = stringResource(R.string.hud_title),
+                    value = resources.getString(if (global.hud.enabled) R.string.value_on else R.string.value_off),
+                    summary = stringResource(R.string.hud_summary),
+                    onClick = onOpenHud,
                 )
             }
 
@@ -258,6 +286,15 @@ fun SettingsScreen(
                     if (!global.titleEditUnlocked) onUnlockTitle()
                 }) { Text(stringResource(R.string.egg_ok)) }
             },
+        )
+    }
+
+    if (chooseRenderer) {
+        RendererDialog(
+            selected = global.renderer,
+            defaultRenderer = null,
+            onSelect = onRendererChange,
+            onDismiss = { chooseRenderer = false },
         )
     }
 

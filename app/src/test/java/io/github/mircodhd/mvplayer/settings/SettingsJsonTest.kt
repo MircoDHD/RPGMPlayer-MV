@@ -20,6 +20,11 @@ class SettingsJsonTest {
             frameRateCap = 0,
             mapping = mapping,
             overlay = OverlaySettings(OverlayMode.NEVER, 0.3f, 1.2f, haptics = false, mirror = true, layoutId = "minimal"),
+            renderer = Renderer.WEBGL2,
+            hud = HudSettings(
+                enabled = true, corner = HudCorner.BOTTOM_END, size = HudSize.LARGE, opacity = 0.4f,
+                detailed = false, shortLabels = true, intervalMs = 250, modules = listOf("clock", "fps"), widthPercent = 50, offsetX = 12.5f, offsetY = -40f,
+            ),
             titleEditUnlocked = true,
             libraryTitle = "My games",
         )
@@ -29,7 +34,7 @@ class SettingsJsonTest {
 
     @Test
     fun gameRoundTripKeepsNullsAsDefault() {
-        val settings = GameSettings(frameRateCap = 60, overlayMirror = false)
+        val settings = GameSettings(frameRateCap = 60, renderer = Renderer.CANVAS, overlayMirror = false)
         val parsed = SettingsJson.gameFromJson(JSONObject(SettingsJson.gameToJson(settings).toString()))
         assertEquals(settings, parsed)
         assertNull(parsed.mapping)
@@ -64,5 +69,17 @@ class SettingsJsonTest {
         val parsed = ControllerMapping.fromJson(JSONObject("""{"ok":[["k99"]]}"""))
         assertEquals(listOf(listOf("k99")), parsed.bindingsFor(InputAction.OK))
         assertEquals(ControllerMapping.DEFAULT.bindingsFor(InputAction.CANCEL), parsed.bindingsFor(InputAction.CANCEL))
+    }
+
+    @Test
+    fun invalidHudValuesFallBackToDefaults() {
+        val parsed = SettingsJson.globalFromJson(
+            JSONObject("""{"renderer":"vulkan","hud":{"corner":"MIDDLE","intervalMs":123,"opacity":5,"modules":["fps","fps",""]}}"""),
+        )
+        assertEquals(Renderer.WEBGL, parsed.renderer)
+        assertEquals(HudCorner.TOP_START, parsed.hud.corner)
+        assertEquals(HudSettings.DEFAULT_INTERVAL_MS, parsed.hud.intervalMs)
+        assertEquals(1f, parsed.hud.opacity)
+        assertEquals(listOf("fps"), parsed.hud.modules)
     }
 }

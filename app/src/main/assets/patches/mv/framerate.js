@@ -3,7 +3,7 @@
 
 /*
  * RPGM Player: frame rate cap. Runs after rpg_*.js, before plugins.
- * Patch version: 2
+ * Patch version: 3
  *
  * MV runs its game logic at a fixed 60 steps per second, but renders once per display
  * refresh and counts rendered frames as play time (Graphics.frameCount). On a 120 Hz
@@ -42,7 +42,9 @@
                 // Keep a steady cadence; resynchronise after a stall instead of catching up.
                 nextFrame = now - nextFrame > interval ? now + interval : nextFrame + interval;
             }
+            var start = performance.now();
             self.update();
+            if (MvPlayer.perf) MvPlayer.perf.recordWork(performance.now() - start);
         });
     };
 

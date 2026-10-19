@@ -59,8 +59,13 @@ import io.github.mircodhd.mvplayer.overlay.GamepadLayout
 import io.github.mircodhd.mvplayer.overlay.LayoutNames
 import io.github.mircodhd.mvplayer.overlay.LayoutRepository
 import io.github.mircodhd.mvplayer.patch.PatchProfiles
+import io.github.mircodhd.mvplayer.hud.HudDataHub
 import io.github.mircodhd.mvplayer.settings.GameSettings
+import io.github.mircodhd.mvplayer.settings.GlobalSettings
+import io.github.mircodhd.mvplayer.settings.HudSettings
+import io.github.mircodhd.mvplayer.settings.Renderer
 import io.github.mircodhd.mvplayer.settings.SettingsStore
+import io.github.mircodhd.mvplayer.storage.DocumentNode
 import io.github.mircodhd.mvplayer.ui.game.EditorRequest
 import io.github.mircodhd.mvplayer.ui.game.GameOverlay
 import io.github.mircodhd.mvplayer.ui.game.GameOverlayActions
@@ -72,7 +77,6 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
-import io.github.mircodhd.mvplayer.storage.DocumentNode
 import java.util.concurrent.Executors
 
 /** Fullscreen WebView that runs one game, with a Compose overlay for controls and menus. */
@@ -92,7 +96,17 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
     private var gameId: String? = null
     /** Start of the current foreground stretch, for the library's play time. */
     private var resumedAt = 0L
+    /** Foreground time of this session before the current stretch, for the HUD. */
+    private var sessionPlayedMs = 0L
     private var appliedFrameRateCap = -1
+    /** Renderer the running page was started with; changing it needs a restart. */
+    private var runningRenderer: Renderer? = null
+    private var promptedRenderer: Renderer? = null
+    private var appliedHudInterval = 0
+    private val hudHubDelegate = lazy {
+        HudDataHub(this, sessionMs = ::sessionPlayTime, displayHz = { display?.refreshRate })
+    }
+    private val hudHub by hudHubDelegate
 
     private val settingsStore by lazy { SettingsStore.get(this) }
     private val layoutRepository by lazy { LayoutRepository(this) }
@@ -220,7 +234,50 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
             applyFrameRateCap(effective.frameRateCap)
             webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.setFrameRateCap&&MvPlayer.setFrameRateCap(${effective.frameRateCap})", null)
         }
+        applyHud(overlayState.global.hud)
+        val running = runningRenderer
+        if (running != null && effective.renderer != running && effective.renderer != promptedRenderer) {
+            promptedRenderer = effective.renderer
+            DebugLog.i(TAG, "Renderer changed to ${effective.renderer} while running ${running}; offering a restart")
+            overlayState.restartPrompt = true
+        }
         DebugLog.d(TAG, "Effective settings: $effective")
+    }
+
+    /** Starts or stops the stats reporting in the page to match the HUD settings. */
+    private fun applyHud(hud: HudSettings) {
+        val interval = if (hud.enabled) hud.intervalMs else 0
+        if (interval == appliedHudInterval) return
+        appliedHudInterval = interval
+        if (interval == 0) {
+            overlayState.hud = null
+            hudHub.reset()
+        }
+        DebugLog.i("Hud", if (interval > 0) "Performance HUD on, every $interval ms" else "Performance HUD off")
+        webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.perf&&MvPlayer.perf.setReporting($interval)", null)
+    }
+
+    override fun onStats(json: String) {
+        runOnUiThread {
+            if (appliedHudInterval > 0 && !isDestroyed) overlayState.hud = hudHub.onJsStats(json)
+        }
+    }
+
+    override fun onHudDrawn(nanos: Long) = hudHub.reportDrawNanos(nanos)
+
+    private fun sessionPlayTime(): Long =
+        sessionPlayedMs + if (resumedAt > 0) SystemClock.elapsedRealtime() - resumedAt else 0
+
+    override fun onGlobalSettingsChange(settings: GlobalSettings) {
+        settingsStore.setGlobal(settings)
+        overlayState.global = settings
+        applySettings()
+    }
+
+    override fun onRestartGame() {
+        DebugLog.i(TAG, "Restarting the game to switch the renderer")
+        overlayState.restartPrompt = false
+        recreate()
     }
 
     override fun onGameSettingsChange(settings: GameSettings) {
@@ -237,6 +294,10 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         val (profileIds, patches) = PatchProfiles.select(info)
         DebugLog.i(TAG, "Patch profiles: $profileIds")
         val debugSettings = DebugLog.settings
+        val effective = settingsStore.effective(gameId)
+        runningRenderer = effective.renderer
+        promptedRenderer = effective.renderer
+        appliedHudInterval = if (effective.hud.enabled) effective.hud.intervalMs else 0
         val config = JSONObject()
             .put("title", info.title)
             .put("engineVersion", info.engineVersion ?: JSONObject.NULL)
@@ -244,6 +305,8 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
             .put("videoExt", info.videoExt)
             .put("profiles", JSONArray(profileIds))
             .put("frameRateCap", appliedFrameRateCap.coerceAtLeast(0))
+            .put("renderer", effective.renderer.id)
+            .put("hud", JSONObject().put("intervalMs", appliedHudInterval))
             .put("debug", JSONObject()
                 .put("verbose", debugSettings.verbose)
                 .put("statsIntervalSeconds", debugSettings.statsIntervalSeconds))
@@ -340,9 +403,17 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
     }
 
     private fun onAppAction(action: InputAction) {
-        if (action == InputAction.QUICK_MENU && !overlayState.isModal) {
-            DebugLog.i(TAG, "Quick menu opened by controller")
-            overlayState.quickMenu = true
+        if (overlayState.isModal) return
+        when (action) {
+            InputAction.QUICK_MENU -> {
+                DebugLog.i(TAG, "Quick menu opened by controller")
+                overlayState.quickMenu = true
+            }
+            InputAction.TOGGLE_HUD -> {
+                val global = overlayState.global
+                onGlobalSettingsChange(global.copy(hud = global.hud.copy(enabled = !global.hud.enabled)))
+            }
+            else -> Unit
         }
     }
 
@@ -524,6 +595,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
         powerManager.removeThermalStatusListener(thermalListener)
         executor.shutdownNow()
+        if (hudHubDelegate.isInitialized()) hudHub.close()
         webView?.run {
             // Undo the process-wide pauseTimers() from onPause, or the next game started in
             // this process hangs while loading.
@@ -563,6 +635,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         if (resumedAt == 0L) return
         val played = SystemClock.elapsedRealtime() - resumedAt
         resumedAt = 0L
+        sessionPlayedMs += played
         GameLibrary.get(this).recordPlay(id, played)
         DebugLog.d(TAG, "Recorded ${played / 1000} s of play time")
     }

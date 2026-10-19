@@ -3,11 +3,11 @@
 
 /*
  * RPGM Player: engine behaviour on Android. Runs after rpg_*.js, before plugins.
- * Patch version: 1
+ * Patch version: 2
  *
  * Utils.isMobileDevice() stays true on purpose (stretch-to-fit, mute while hidden), but
- * it also makes MV request .m4a/.mp4 files that PC builds do not ship and forces the
- * Canvas renderer. Only those decisions are overridden here.
+ * it also makes MV request .m4a/.mp4 files that PC builds do not ship. Only that decision
+ * is overridden here; the renderer is chosen in renderer.js.
  */
 (function () {
     'use strict';
@@ -20,11 +20,6 @@
 
     Game_Interpreter.prototype.videoFileExt = function () {
         return config.videoExt || '.webm';
-    };
-
-    // WebGL is needed for filters, lighting and Mode 7 plugins, and is fast on current phones.
-    SceneManager.shouldUseCanvasRenderer = function () {
-        return false;
     };
 
     // On mobile MV waits for a touch before it lets videos play. The WebView allows

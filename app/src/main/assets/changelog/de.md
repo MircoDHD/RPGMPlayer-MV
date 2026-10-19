@@ -3,6 +3,30 @@
 Deutsche Fassung von CHANGELOG.md für die "Was ist neu"-Box der App. Bei jeder Version
 zusammen mit CHANGELOG.md aktualisieren.
 
+## 0.4.0 – 19.10.2026 (Phase B, Teil 1: Renderer und Performance-HUD)
+### Neu
+- **Renderer-Wahl**, global und pro Spiel: WebGL (Standard), Canvas oder WebGL 2
+  (*experimentell*; weicht auf WebGL aus, wenn es nicht startet). Eine Änderung während
+  des Spiels bietet einen Neustart an, weil der Renderer beim Spielstart festgelegt wird.
+- **Performance-HUD** über dem Spiel, einschaltbar in den Einstellungen, im Schnellmenü
+  oder per zugewiesener Controller-Taste. Module: FPS, Frame-Zeit mit Graph, 1 %-Low und
+  langsame Bilder, Logik-Schritte und Bildwiederholrate, JavaScript-Zeit pro Bild,
+  JS-Heap, Bilder-Cache, App-Speicher, Akku (Ladestand, Laden, Temperatur), thermischer
+  Status, Renderer und Grafikchip, Uhr und Sitzungszeit sowie die Kosten des HUD selbst.
+- HUD-Einstellungen: Vorlagen (Minimal, Standard, Voll), Module zum Anhaken und
+  Umsortieren per Ziehen, Ecke, Größe, Deckkraft, kompakte oder ausführliche Darstellung,
+  Breite, bei der die kompakte Zeile umbricht (50, 75 oder 100 % des Bildschirms),
+  ausgeschriebene oder abgekürzte Beschriftung (FPS, HEAP, BATT … wie bei verbreiteten
+  PC-Overlays), Aktualisierungsrate, mit Live-Vorschau. Das ⓘ-Symbol erklärt jeden Wert. Im Spiel wechselt ein Tipp aufs HUD zwischen
+  kompakt und ausführlich, und per Ziehen lässt es sich dorthin schieben, wo es am wenigsten
+  stört; die Bildschirmsteuerung darüber behält Vorrang.
+### Geändert
+- Auswahldialoge zeigen eine kurze Beschreibung unter jeder Option und bleiben im
+  Querformat vollständig sichtbar.
+### Behoben
+- Die Renderer-Einstellung des Spiels selbst (zum Beispiel im Plugin Community_Basic)
+  konnte die Wahl des Spielers überschreiben.
+
 ## 0.3.3 – 18.10.2026
 ### Geändert
 - **Neue Package-ID** `io.github.mircodhd.rpgmplayermv`: Diese Version installiert sich als

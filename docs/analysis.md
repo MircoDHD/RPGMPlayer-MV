@@ -133,9 +133,11 @@ matters.
 | File | Position | Purpose |
 |---|---|---|
 | `common/player.js` | before engine | `window.MvPlayer` namespace, logging through the bridge, global error hooks |
-| `mv/debug.js` | before plugins | diagnostics: scenes and load times, errors, audio, video, map transfers, plugin commands, saves, decryption time, periodic stats |
-| `mv/engine.js` | before plugins | audio/video extension from config; WebGL instead of the mobile canvas default; video unlocked; `window.close` exits the game |
-| `mv/framerate.js` | before plugins | frame rate cap (see below) |
+| `mv/perf.js` | before plugins, first | frame timing shared by the HUD and the log stats: measurement windows count rendered frames, animation frames and logic steps; reports samples to the host |
+| `mv/renderer.js` | before plugins, before debug.js | renderer choice (see below) |
+| `mv/debug.js` | before plugins | diagnostics: scenes and load times, errors, audio, video, map transfers, plugin commands, saves, decryption time, periodic stats (read from perf.js) |
+| `mv/engine.js` | before plugins | audio/video extension from config; video unlocked; `window.close` exits the game |
+| `mv/framerate.js` | before plugins | frame rate cap (see below); also times each main-loop iteration for the HUD |
 | `mv/storage.js` | before plugins | `StorageManager` local mode through the save bridge |
 | `mv/input.js` | before plugins | `Input._pollGamepads` fed by `MvPlayer.setPad(bitmask)` (standard gamepad layout) |
 | `mv/lifecycle.js` | before plugins, after framerate.js | pause/resume with reasons (app paused, menu open): stops updates, suspends audio, pauses video, restores master gain |
@@ -144,6 +146,46 @@ matters.
 
 `Utils.isMobileDevice()` is deliberately not faked; only the decisions it drives are
 overridden (see part 1).
+
+## Renderer (`mv/renderer.js`)
+
+- WebGL (default) keeps PIXI's auto detection, i.e. WebGL with a Canvas fallback; on
+  mobile MV itself would pick Canvas. Canvas forces PIXI's Canvas renderer. WebGL 2
+  (experimental) gives the game canvas a WebGL 2 context: PIXI 4 is a WebGL 1 renderer,
+  but WebGL 2 runs its GLSL ES 1.0 shaders. If no WebGL 2 renderer comes up, the canvas is
+  replaced (a canvas that has one context type cannot get another) and WebGL 1 is used.
+- The choice is enforced in `Graphics._createRenderer`, not only in
+  `SceneManager.preferableRendererType`: plugins such as Community_Basic (shipped with MV)
+  replace that function with the game's own setting.
+- The renderer is fixed when the page starts; changing it during a game restarts the
+  activity. The log records the requested and the created context, the GPU and GL errors
+  after 30 frames. Fear & Hunger raises one `INVALID_OPERATION` (0x502) early on both
+  WebGL 1 and 2, so that error alone says nothing about WebGL 2.
+
+## Performance HUD (`hud/`)
+
+- `mv/perf.js` sends a sample every 250/500/1000 ms through `MvPlayerHost.reportStats`
+  while the HUD is on (nothing is measured or sent while it is off): fps, display
+  refresh (animation frames), logic steps, average and maximum frame gap, 1 % low,
+  slow frames (gap above two 60 Hz frames), JavaScript time per loop iteration, JS heap,
+  image cache, renderer.
+- Gaps longer than one second (pauses, loading) are ignored; after a pause the timing is
+  reset so resuming does not count as a slow frame.
+- JavaScript time per frame is measured in `framerate.js`'s loop, not by hooking
+  `SceneManager.updateMain`: plugins such as TDDP_FluidTimestep replace that function.
+- `HudDataHub` adds Android values at their own pace: battery from the sticky
+  `ACTION_BATTERY_CHANGED` broadcast every sample, thermal status and headroom every 2 s
+  (Android rate-limits the headroom), process memory (`Debug.getPss`) every 5 s on a
+  background thread. App memory excludes the WebView renderer process, where the game runs.
+- `HudRegistry` lists the modules; a module is one class (title, short tag, summary,
+  detailed and compact text, optional graph). Labels are written out or abbreviated
+  (upper-case tags as in MangoHud or the Steam Deck overlay; frame time follows fps
+  without a tag); the settings show both forms per module and an info dialog explains
+  every value. The panel is a Compose overlay above the game: it
+  recomposes only when a sample arrives and is never part of game screenshots. A tap on
+  the panel switches compact/detailed, dragging moves it (offset from the chosen corner,
+  clamped so it stays on screen when its size changes). It is drawn below the on-screen
+  controls, so they keep their touches. It measures its own update and draw time.
 
 ## Saves (`bridge/PlayerBridge.kt`)
 

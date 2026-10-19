@@ -3,7 +3,7 @@
 
 /*
  * RPGM Player: diagnostics. Runs after rpg_*.js, before plugins.
- * Patch version: 2
+ * Patch version: 3
  *
  * Logs engine events through MvPlayer.log into the host's session log. Hooks wrap the
  * vanilla functions, so plugins that alias them later still pass through here. Events
@@ -241,7 +241,11 @@
     wrap(Graphics, '_createRenderer', function (original) {
         return function () {
             original.apply(this, arguments);
-            var info = { renderer: this.isWebGL() ? 'webgl' : 'canvas', size: this._width + 'x' + this._height };
+            var info = { size: this._width + 'x' + this._height };
+            var chosen = MvPlayer.renderer || {};
+            info.requested = chosen.requested;
+            info.context = chosen.type || (this.isWebGL() ? 'webgl' : 'canvas');
+            if (chosen.fallback) info.fallback = chosen.fallback;
             var gl = this._renderer && this._renderer.gl;
             if (gl) {
                 var ext = gl.getExtension('WEBGL_debug_renderer_info');
@@ -293,89 +297,23 @@
 
     // --- Periodic stats ---------------------------------------------------------------------
 
+    // Frame timing comes from perf.js (shared with the performance HUD).
     var interval = (debug.statsIntervalSeconds || 0) * 1000;
-    if (interval > 0) {
-        // displayHz: animation frame callbacks; fps: images actually rendered (lower with a
-        // frame rate cap); logicUps: game logic steps (60 in MV).
-        var rafFrames = 0;
-        var renders = 0;
-        var logicSteps = 0;
-        var slowFrames = 0;
-        var maxGap = 0;
-        var lastRender = 0;
-        var tick = function () {
-            rafFrames++;
-            requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-
-        wrap(Graphics, 'render', function (original) {
-            return function () {
-                var now = performance.now();
-                if (lastRender) {
-                    var gap = now - lastRender;
-                    if (gap > maxGap) maxGap = gap;
-                    if (gap > 34) slowFrames++; // longer than two 60 Hz frames
-                }
-                lastRender = now;
-                renders++;
-                return original.apply(this, arguments);
-            };
-        });
-
-        wrap(SceneManager, 'updateScene', function (original) {
-            return function () {
-                logicSteps++;
-                return original.apply(this, arguments);
-            };
-        });
-
-        var lastTime = performance.now();
-
-        var imageCacheStats = function () {
-            var cache = ImageManager._imageCache;
-            if (!cache || !cache._items) return null;
-            var keys = Object.keys(cache._items);
-            var pixels = 0;
-            keys.forEach(function (key) {
-                var bitmap = cache._items[key].bitmap;
-                if (bitmap && bitmap.isReady()) pixels += bitmap.width * bitmap.height;
-            });
-            return { items: keys.length, megapixels: +(pixels / 1e6).toFixed(1) };
-        };
-
+    if (interval > 0 && MvPlayer.perf) {
+        var statsWindow = MvPlayer.perf.open(false);
         setInterval(function () {
-            var now = performance.now();
-            var seconds = (now - lastTime) / 1000;
-            var stats = {
-                fps: +(renders / seconds).toFixed(1),
-                displayHz: +(rafFrames / seconds).toFixed(1),
-                logicUps: +(logicSteps / seconds).toFixed(1),
-                slowFrames: slowFrames,
-                maxFrameMs: Math.round(maxGap),
-                scene: sceneName(SceneManager._scene),
-                map: typeof $gameMap !== 'undefined' && $gameMap ? $gameMap.mapId() : null,
-                playtime: typeof $gameSystem !== 'undefined' && $gameSystem ? $gameSystem.playtimeText() : null,
-                images: imageCacheStats(),
-                visibility: document.visibilityState,
-                decryption: describeCounter(decryptInterval)
-            };
-            if (performance.memory) {
-                stats.heapMb = {
-                    used: Math.round(performance.memory.usedJSHeapSize / 1048576),
-                    total: Math.round(performance.memory.totalJSHeapSize / 1048576),
-                    limit: Math.round(performance.memory.jsHeapSizeLimit / 1048576)
-                };
-            }
+            var stats = MvPlayer.perf.read(statsWindow);
+            var env = MvPlayer.perf.environment();
+            stats.scene = sceneName(SceneManager._scene);
+            stats.map = typeof $gameMap !== 'undefined' && $gameMap ? $gameMap.mapId() : null;
+            stats.playtime = typeof $gameSystem !== 'undefined' && $gameSystem ? $gameSystem.playtimeText() : null;
+            stats.images = env.images;
+            if (env.heapMb) stats.heapMb = env.heapMb;
+            stats.visibility = document.visibilityState;
+            stats.decryption = describeCounter(decryptInterval);
             if (MvPlayer.audioReport) stats.audio = MvPlayer.audioReport();
             log('i', 'Stats', stats);
-            rafFrames = 0;
-            renders = 0;
-            logicSteps = 0;
             decryptInterval = newCounter();
-            slowFrames = 0;
-            maxGap = 0;
-            lastTime = now;
         }, interval);
     }
 })();

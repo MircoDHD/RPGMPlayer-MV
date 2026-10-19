@@ -36,6 +36,9 @@ No games are included. You need your own copy of a game.
 - **Android keyboard** support.
 - **60 fps limit** by default: MV counts drawn frames as play time, on higher Hz
   screens the in-game play time would run too fast.
+- **Renderer choice** (WebGL, Canvas, WebGL 2) globally or per game.
+- **Performance HUD**: frame rate, frame times with graph, memory, battery, temperature and
+  more above the game, with modules you choose and arrange.
 - **Per-game settings** and **export/import** of all settings.
 - **Private**: no internet permission, no ads, no tracking, no telemetry. Diagnostic logs
   stay on the device and can be switched off.
@@ -84,7 +87,7 @@ phone, and the other way round.
 | Basic player | 0.1 | Player, local file serving, compatibility patches, PC saves, controller | Done |
 | Library | 0.2 | Material 3 library, info sheet, settings, play time | Done |
 | Input | 0.3 | Controller remapping, on-screen gamepad + editor, quick menu, keyboard | Done |
-| Display & performance | 0.4 | Renderer choice, 30/60/unlimited fps, scaling and image filters (CRT, scanlines, LCD, sharpening, colour-blind modes, …), modular performance HUD | Planned |
+| Display & performance | 0.4 | Renderer choice and modular performance HUD (done in 0.4.0); 30/60/unlimited fps; scaling and image filters (CRT, scanlines, LCD, sharpening, colour-blind modes, …) | In progress |
 | Compatibility | 0.5 | Patch profiles and user patches, robust file names and JSON, error handling options, font override | Planned |
 | Saves & convenience | 0.6 | Resume points (app-side quick saves to stop anywhere), save backups and export, continue button | Planned |
 | Release | – | CI builds, F-Droid / IzzyOnDroid | Planned |

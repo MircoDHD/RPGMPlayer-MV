@@ -3,7 +3,7 @@
 
 /*
  * RPGM Player: pause and resume with the Android activity. Runs after rpg_*.js, before plugins.
- * Patch version: 3
+ * Patch version: 4
  *
  * The host calls MvPlayer.onPause()/onResume() for the activity and
  * MvPlayer.pause('menu')/resume('menu') while a menu covers the game. The game runs only
@@ -125,12 +125,17 @@
         // Vanilla MV and frame-timing plugins like TDDP_FluidTimestep both use performance.now().
         SceneManager._currentTime = performance.now();
         SceneManager._accumulator = 0;
+        if (MvPlayer.perf) MvPlayer.perf.resetTiming();
         if (updatePending) {
             updatePending = false;
             SceneManager.requestUpdate();
         }
         logAudio('resume');
     }
+
+    MvPlayer.isPaused = function () {
+        return paused;
+    };
 
     /** reason: 'activity' (app in background) or 'menu' (overlay menu open). */
     MvPlayer.pause = function (reason) {

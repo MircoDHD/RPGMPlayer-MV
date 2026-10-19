@@ -4,6 +4,29 @@ All notable changes to RobustPlainGameMaker Player - MyVersion ("RPGM Player - M
 Versions follow `major.minor.patch`: the minor digit for new features, the patch digit for
 fixes. Dates are build dates.
 
+## 0.4.0 – 2026-10-19 (Phase B, part 1: renderer and performance HUD)
+### Added
+- **Renderer choice**, globally and per game: WebGL (default), Canvas, or WebGL 2
+  (*experimental*; falls back to WebGL when it cannot start). Changing it during a game
+  offers to restart the game, because the renderer is chosen when the game starts.
+- **Performance HUD** above the game, switched on in Settings, in the quick menu or with a
+  controller button you assign. Modules: FPS, frame time with graph, 1 % low and slow
+  frames, logic steps and display refresh, JavaScript time per frame, JS heap, image
+  cache, app memory, battery (level, charging, temperature), thermal status, renderer and
+  graphics chip, clock and session time, and the HUD's own cost.
+- HUD settings: presets (Minimal, Standard, Full), modules to tick and reorder by
+  dragging, corner, size, opacity, compact or detailed layout, width at which the compact
+  line wraps (50, 75 or 100 % of the screen), written-out or abbreviated labels (FPS,
+  HEAP, BATT … as in common PC overlays), update rate, with a live preview. The ⓘ button
+  explains every value. In a game, tap the HUD to switch between compact and detailed, and drag it
+  wherever it is in the way least; on-screen controls on top of it keep priority.
+### Changed
+- Choice dialogs show a short description under each option and stay fully visible in
+  landscape.
+### Fixed
+- The game's own renderer setting (for example in the Community_Basic plugin) could
+  override the renderer the player chose.
+
 ## 0.3.3 – 2026-10-18
 ### Changed
 - **New package id** `io.github.mircodhd.rpgmplayermv`: this version installs as a new app.

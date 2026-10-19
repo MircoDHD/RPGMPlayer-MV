@@ -261,6 +261,7 @@ fun actionName(action: InputAction, plain: Boolean = false): String {
             InputAction.LEFT -> R.string.action_left
             InputAction.RIGHT -> R.string.action_right
             InputAction.QUICK_MENU -> R.string.action_quickmenu
+            InputAction.TOGGLE_HUD -> R.string.action_togglehud
         },
     )
     return if (plain) name.substringBefore(" (") else name

@@ -36,6 +36,7 @@ import io.github.mircodhd.mvplayer.ui.LibraryViewModel
 import io.github.mircodhd.mvplayer.ui.SettingsScreen
 import io.github.mircodhd.mvplayer.ui.settings.ControllerScreen
 import io.github.mircodhd.mvplayer.ui.settings.GameSettingsScreen
+import io.github.mircodhd.mvplayer.ui.settings.HudSettingsScreen
 import io.github.mircodhd.mvplayer.ui.settings.OverlaySettingsScreen
 import io.github.mircodhd.mvplayer.ui.theme.MvPlayerTheme
 
@@ -96,12 +97,13 @@ private object Routes {
     const val SETTINGS = "settings"
     const val CONTROLLER = "controller"
     const val OVERLAY = "overlay"
+    const val HUD = "hud"
     const val GAME = "game/"
     const val GAME_CONTROLLER = "game-controller/"
 
     fun parent(route: String): String = when {
         route.startsWith(GAME_CONTROLLER) -> GAME + route.removePrefix(GAME_CONTROLLER)
-        route == CONTROLLER || route == OVERLAY -> SETTINGS
+        route == CONTROLLER || route == OVERLAY || route == HUD -> SETTINGS
         else -> LIBRARY
     }
 }
@@ -154,6 +156,8 @@ private fun PlayerHome(
             onOpenController = { route = Routes.CONTROLLER },
             onOpenOverlay = { route = Routes.OVERLAY },
             onFrameRateCapChange = viewModel::setFrameRateCapEnabled,
+            onRendererChange = { viewModel.updateGlobal(viewModel.global.copy(renderer = it)) },
+            onOpenHud = { route = Routes.HUD },
             onLogToFileChange = viewModel::setLogToFileEnabled,
             onShareLogs = { viewModel.exportLogs(onStartIntent) },
             onOpenUrl = onOpenUrl,
@@ -170,6 +174,11 @@ private fun PlayerHome(
             perGame = false,
             onChange = { viewModel.updateGlobal(viewModel.global.copy(mapping = it)) },
             onReset = { viewModel.updateGlobal(viewModel.global.copy(mapping = ControllerMapping.DEFAULT)) },
+            onBack = back,
+        )
+        route == Routes.HUD -> HudSettingsScreen(
+            settings = viewModel.global.hud,
+            onChange = { viewModel.updateGlobal(viewModel.global.copy(hud = it)) },
             onBack = back,
         )
         route == Routes.OVERLAY -> OverlaySettingsScreen(
