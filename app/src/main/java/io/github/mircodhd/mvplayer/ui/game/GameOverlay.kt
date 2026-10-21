@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -68,6 +69,8 @@ import io.github.mircodhd.mvplayer.settings.GameSettings
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
 import io.github.mircodhd.mvplayer.settings.OverlayMode
 import io.github.mircodhd.mvplayer.settings.OverlaySettings
+import io.github.mircodhd.mvplayer.settings.PictureOverrides
+import io.github.mircodhd.mvplayer.settings.Renderer
 import io.github.mircodhd.mvplayer.settings.SettingsResolver
 import io.github.mircodhd.mvplayer.ui.settings.ChoiceDialog
 import io.github.mircodhd.mvplayer.ui.settings.ControllerScreen
@@ -75,6 +78,8 @@ import io.github.mircodhd.mvplayer.ui.settings.FrameRateDialog
 import io.github.mircodhd.mvplayer.ui.settings.overrideChoices
 import io.github.mircodhd.mvplayer.ui.settings.overrideOf
 import io.github.mircodhd.mvplayer.ui.settings.GameSettingsScreen
+import io.github.mircodhd.mvplayer.ui.settings.PicturePanel
+import io.github.mircodhd.mvplayer.ui.settings.pictureSummary
 import io.github.mircodhd.mvplayer.ui.settings.frameRateLabel
 
 data class TextInputRequest(val current: String, val maxLength: Int)
@@ -94,6 +99,8 @@ class GameOverlayState(val gameTitle: String) {
 
     var quickMenu by mutableStateOf(false)
     var settingsOpen by mutableStateOf(false)
+    /** Picture panel beside the game, which keeps showing behind it. */
+    var pictureOpen by mutableStateOf(false)
     var editor by mutableStateOf<EditorRequest?>(null)
     var textInput by mutableStateOf<TextInputRequest?>(null)
     var confirmQuit by mutableStateOf(false)
@@ -114,7 +121,7 @@ class GameOverlayState(val gameTitle: String) {
     val showHud: Boolean get() = gameReady && global.hud.enabled && editor == null && !hideControls
 
     /** True while something covers the game and it should be paused. */
-    val isModal: Boolean get() = quickMenu || settingsOpen || editor != null || confirmQuit || restartPrompt
+    val isModal: Boolean get() = quickMenu || settingsOpen || pictureOpen || editor != null || confirmQuit || restartPrompt
 }
 
 interface GameOverlayActions {
@@ -150,6 +157,17 @@ fun GameOverlay(state: GameOverlayState, actions: GameOverlayActions) {
     if (state.quickMenu) QuickMenu(state, actions)
 
     if (state.settingsOpen) InGameSettings(state, actions)
+
+    if (state.pictureOpen) {
+        val effective = SettingsResolver.resolve(state.global, state.game)
+        PicturePanel(
+            global = state.global.picture,
+            overrides = state.game.picture,
+            canvas = effective.renderer == Renderer.CANVAS,
+            onChange = { actions.onGameSettingsChange(state.game.copy(picture = PictureOverrides.of(it, state.global.picture))) },
+            onClose = { state.pictureOpen = false },
+        )
+    }
 
     state.editor?.let { request ->
         LayoutEditor(
@@ -250,6 +268,14 @@ private fun QuickMenu(state: GameOverlayState, actions: GameOverlayActions) {
                 stringResource(R.string.frame_rate_title),
                 supporting = frameRateLabel(LocalResources.current, effective.frameRateCap),
             ) { dialog = QuickDialog.FRAME_RATE }
+            MenuItem(
+                Icons.Filled.Search,
+                stringResource(R.string.picture_title),
+                supporting = pictureSummary(LocalResources.current, effective.picture),
+            ) {
+                state.quickMenu = false
+                state.pictureOpen = true
+            }
             MenuItem(Icons.Filled.Settings, stringResource(R.string.quick_game_settings)) {
                 state.quickMenu = false
                 state.settingsOpen = true
@@ -333,6 +359,10 @@ private fun InGameSettings(state: GameOverlayState, actions: GameOverlayActions)
                     layouts = state.layouts,
                     onChange = actions::onGameSettingsChange,
                     onOpenController = { controllerOpen = true },
+                    onOpenPicture = {
+                        state.settingsOpen = false
+                        state.pictureOpen = true
+                    },
                     onCustomizeLayout = { layout ->
                         state.settingsOpen = false
                         actions.onCustomizeLayout(layout)

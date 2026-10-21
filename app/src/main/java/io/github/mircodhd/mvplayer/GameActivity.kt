@@ -65,6 +65,7 @@ import io.github.mircodhd.mvplayer.hud.HudDataHub
 import io.github.mircodhd.mvplayer.settings.GameSettings
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
 import io.github.mircodhd.mvplayer.settings.HudSettings
+import io.github.mircodhd.mvplayer.settings.PictureSettings
 import io.github.mircodhd.mvplayer.settings.Renderer
 import io.github.mircodhd.mvplayer.settings.SettingsStore
 import io.github.mircodhd.mvplayer.storage.DocumentNode
@@ -105,6 +106,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
     private var runningRenderer: Renderer? = null
     private var promptedRenderer: Renderer? = null
     private var appliedHudInterval = 0
+    private var appliedPicture: PictureSettings? = null
     private val deviceSamplerDelegate = lazy { DeviceSampler(this, displayHz = { display?.refreshRate }) }
     private val deviceSampler by deviceSamplerDelegate
     private val hudHub by lazy { HudDataHub(deviceSampler, sessionMs = ::sessionPlayTime) }
@@ -257,6 +259,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
             webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.setFrameRateCap&&MvPlayer.setFrameRateCap(${effective.frameRateCap})", null)
         }
         applyHud(overlayState.global.hud)
+        applyPicture(effective.picture)
         val running = runningRenderer
         if (running != null && effective.renderer != running && effective.renderer != promptedRenderer) {
             promptedRenderer = effective.renderer
@@ -264,6 +267,13 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
             overlayState.restartPrompt = true
         }
         DebugLog.d(TAG, "Effective settings: $effective")
+    }
+
+    /** Sends changed scaling and filter settings to the page, which redraws even while paused. */
+    private fun applyPicture(picture: PictureSettings) {
+        if (picture == appliedPicture) return
+        appliedPicture = picture
+        webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.picture&&MvPlayer.picture.configure(${picture.toJson()})", null)
     }
 
     /** Starts or stops the stats reporting in the page to match the HUD settings. */
@@ -319,6 +329,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         val effective = settingsStore.effective(gameId)
         runningRenderer = effective.renderer
         promptedRenderer = effective.renderer
+        appliedPicture = effective.picture
         appliedHudInterval = if (effective.hud.enabled) effective.hud.intervalMs else 0
         val config = JSONObject()
             .put("title", info.title)
@@ -328,6 +339,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
             .put("profiles", JSONArray(profileIds))
             .put("frameRateCap", appliedFrameRateCap.coerceAtLeast(0))
             .put("renderer", effective.renderer.id)
+            .put("picture", effective.picture.toJson())
             .put("hud", JSONObject().put("intervalMs", appliedHudInterval))
             .put("debug", JSONObject()
                 .put("verbose", debugSettings.verbose)

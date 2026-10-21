@@ -1,6 +1,6 @@
 # Feature plan: input, display, compatibility, saves (0.3 – 0.6)
 
-Status: approved 2026-10-18. **Phase A implemented in 0.3.0**; Phase B split into three releases: B1 renderer + B4 HUD **in 0.4.0**, B2 frame rates **in 0.4.1**, fixes from device tests in 0.4.2–0.4.3, then B3 scaling and filters; C–D pending.
+Status: approved 2026-10-18. **Phase A implemented in 0.3.0**; **Phase B done in 0.4.4**, released in parts: B1 renderer + B4 HUD **in 0.4.0**, B2 frame rates **in 0.4.1**, fixes from device tests in 0.4.2–0.4.3, B3 core set (scaling and filters) **in 0.4.4**, B5 evaluated and deferred; C–D pending.
 Base: version 0.2.0. Architecture: `docs/analysis.md`, part 2.
 
 Size estimates are rough lines of new/changed code (Kotlin + JS + GLSL), excluding tests.
@@ -202,6 +202,15 @@ are half; the patch adds the skipped frames to `Graphics.frameCount`), Unlimited
 **Size:** ~100.
 
 ### B3. Scaling, filters and post-processing
+**Status (0.4.4): core set implemented** in `assets/patches/mv/picture.js`, all own code:
+scaling (fit, integer, stretch), enlargement (smooth, sharp bilinear, pixel), scanlines,
+sharpening (4-neighbour unsharp mask) and colour (brightness, contrast, saturation) in one
+shader pass that is only installed when needed; Canvas renderer: CSS scaling, pixelated
+and CSS colour filter. Settings globally and per game, live panel in the quick menu.
+Deferred (not planned now): bicubic, Lanczos, xBR, ScaleFX, FXAA/SMAA, CAS, CRT, LCD grid,
+vignette, grain, colour-blind modes, letterbox colour, filter benchmark. The plan below is
+kept as reference for them.
+
 **Architecture** — one module `assets/patches/mv/postfx.js` + `assets/shaders/*.glsl`:
 1. Patch `Graphics.render`: PIXI renders the stage into a `PIXI.RenderTexture` at the
    internal resolution (e.g. 816×624).
@@ -297,6 +306,10 @@ not every frame).
 **Size:** ~900.
 
 ### B5. Native decryption (evaluate first)
+**Status (0.4.4): evaluated, not implemented.** Tablet logs (Mali-G57, one hour of F&H)
+show JS decryption of 85 ms median and 240 ms at most per scene start (88 starts); map
+loading stayed stable. Too little to justify the change; revisit if load times become a
+problem.
 1. Instrument in `mv/debug.js`: wrap `Decrypter.decryptArrayBuffer` and the image/audio
    decrypt paths to sum time per scene change/map transfer; log totals.
 2. You send a log (map transfers in F&H/Termina); I report numbers.

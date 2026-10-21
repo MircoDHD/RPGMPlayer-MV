@@ -3,6 +3,13 @@
 Deutsche Fassung von CHANGELOG.md für die "Was ist neu"-Box der App. Bei jeder Version
 zusammen mit CHANGELOG.md aktualisieren.
 
+## 0.4.4 – 21.10.2026 (Phase B, Teil 3: Bild)
+### Neu
+- **Bild und Filter**, global und pro Spiel: Skalierung (einpassen, ganzzahlig, strecken),
+  Vergrößerung (weich, scharf, Pixel), Scanlines, Nachschärfen, Helligkeit, Kontrast und
+  Sättigung.
+- Im Spiel öffnet das Schnellmenü sie neben dem Spiel, das jede Änderung sofort zeigt.
+
 ## 0.4.3 – 21.10.2026
 ### Behoben
 - **Dünne Linien zwischen Kartenkacheln** auf manchen Grafikchips (Mali, wie in vielen

@@ -38,6 +38,9 @@ import io.github.mircodhd.mvplayer.ui.settings.ControllerScreen
 import io.github.mircodhd.mvplayer.ui.settings.GameSettingsScreen
 import io.github.mircodhd.mvplayer.ui.settings.HudSettingsScreen
 import io.github.mircodhd.mvplayer.ui.settings.OverlaySettingsScreen
+import io.github.mircodhd.mvplayer.ui.settings.PictureSettingsScreen
+import io.github.mircodhd.mvplayer.settings.PictureOverrides
+import io.github.mircodhd.mvplayer.settings.Renderer
 import io.github.mircodhd.mvplayer.ui.theme.MvPlayerTheme
 
 /** Start screen: the game library and the settings. */
@@ -98,12 +101,15 @@ private object Routes {
     const val CONTROLLER = "controller"
     const val OVERLAY = "overlay"
     const val HUD = "hud"
+    const val PICTURE = "picture"
     const val GAME = "game/"
     const val GAME_CONTROLLER = "game-controller/"
+    const val GAME_PICTURE = "game-picture/"
 
     fun parent(route: String): String = when {
         route.startsWith(GAME_CONTROLLER) -> GAME + route.removePrefix(GAME_CONTROLLER)
-        route == CONTROLLER || route == OVERLAY || route == HUD -> SETTINGS
+        route.startsWith(GAME_PICTURE) -> GAME + route.removePrefix(GAME_PICTURE)
+        route == CONTROLLER || route == OVERLAY || route == HUD || route == PICTURE -> SETTINGS
         else -> LIBRARY
     }
 }
@@ -158,6 +164,7 @@ private fun PlayerHome(
             onFrameRateCapChange = viewModel::setFrameRateCap,
             onRendererChange = { viewModel.updateGlobal(viewModel.global.copy(renderer = it)) },
             onOpenHud = { route = Routes.HUD },
+            onOpenPicture = { route = Routes.PICTURE },
             onLogToFileChange = viewModel::setLogToFileEnabled,
             onShareLogs = { viewModel.exportLogs(onStartIntent) },
             onOpenUrl = onOpenUrl,
@@ -181,6 +188,30 @@ private fun PlayerHome(
             onChange = { viewModel.updateGlobal(viewModel.global.copy(hud = it)) },
             onBack = back,
         )
+        route == Routes.PICTURE -> PictureSettingsScreen(
+            title = stringResource(R.string.picture_title),
+            global = viewModel.global.picture,
+            overrides = null,
+            canvas = viewModel.global.renderer == Renderer.CANVAS,
+            onChange = { viewModel.updateGlobal(viewModel.global.copy(picture = it)) },
+            onBack = back,
+        )
+        route.startsWith(Routes.GAME_PICTURE) -> {
+            val id = route.removePrefix(Routes.GAME_PICTURE)
+            val game = viewModel.games.firstOrNull { it.id == id }
+            val settings = viewModel.gameSettings(id)
+            val global = viewModel.global
+            PictureSettingsScreen(
+                title = stringResource(R.string.picture_title_game, game?.title.orEmpty()),
+                global = global.picture,
+                overrides = settings.picture,
+                canvas = (settings.renderer ?: global.renderer) == Renderer.CANVAS,
+                onChange = {
+                    viewModel.setGameSettings(id, viewModel.gameSettings(id).copy(picture = PictureOverrides.of(it, global.picture)))
+                },
+                onBack = back,
+            )
+        }
         route == Routes.OVERLAY -> OverlaySettingsScreen(
             settings = viewModel.global.overlay,
             layouts = viewModel.layouts,
@@ -216,6 +247,7 @@ private fun PlayerHome(
                     layouts = viewModel.layouts,
                     onChange = { viewModel.setGameSettings(id, it) },
                     onOpenController = { route = Routes.GAME_CONTROLLER + id },
+                    onOpenPicture = { route = Routes.GAME_PICTURE + id },
                     onCustomizeLayout = { onCustomizeLayout(it, id) },
                     onBack = back,
                 )

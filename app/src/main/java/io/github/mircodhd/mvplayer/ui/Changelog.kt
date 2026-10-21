@@ -52,10 +52,16 @@ object Changelog {
     fun between(entries: List<ChangelogEntry>, lastSeen: String, current: String): List<ChangelogEntry> =
         entries.filter { compareVersions(it.version, lastSeen) > 0 && compareVersions(it.version, current) <= 0 }
 
-    /** Compares "major.minor.patch" numerically; missing or non-numeric parts count as 0. */
+    /** The released version a build belongs to: test builds "0.4.4-2" are listed as "0.4.4". */
+    fun baseVersion(version: String): String = version.substringBefore('-')
+
+    /**
+     * Compares "major.minor.patch" numerically, ignoring a test build suffix; missing or
+     * non-numeric parts count as 0.
+     */
     fun compareVersions(a: String, b: String): Int {
-        val pa = a.split('.').map { it.toIntOrNull() ?: 0 }
-        val pb = b.split('.').map { it.toIntOrNull() ?: 0 }
+        val pa = baseVersion(a).split('.').map { it.toIntOrNull() ?: 0 }
+        val pb = baseVersion(b).split('.').map { it.toIntOrNull() ?: 0 }
         for (i in 0 until maxOf(pa.size, pb.size)) {
             val diff = pa.getOrElse(i) { 0 } - pb.getOrElse(i) { 0 }
             if (diff != 0) return diff

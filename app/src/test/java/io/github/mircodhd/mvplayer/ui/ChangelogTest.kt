@@ -50,6 +50,14 @@ class ChangelogTest {
         assertTrue(Changelog.compareVersions("0.10.0", "0.9.9") > 0)
     }
 
+    @Test
+    fun testBuildsShowTheirReleaseEntry() {
+        val entries = Changelog.parse(sample)
+        assertEquals(listOf("0.3.3"), Changelog.between(entries, "0.3.2", "0.3.3-1").map { it.version })
+        assertEquals(emptyList<String>(), Changelog.between(entries, "0.3.3-1", "0.3.3-2").map { it.version })
+        assertEquals(emptyList<String>(), Changelog.between(entries, "0.3.3-2", "0.3.3").map { it.version })
+    }
+
     /** The German box must list the same versions as CHANGELOG.md. */
     @Test
     fun germanChangelogCoversEveryVersion() {

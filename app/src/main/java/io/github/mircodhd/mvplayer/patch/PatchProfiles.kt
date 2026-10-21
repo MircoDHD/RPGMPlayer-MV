@@ -29,7 +29,7 @@ object PatchProfiles {
             // perf.js and renderer.js come before debug.js, which reads the first and wraps the
             // second; lifecycle.js must come after framerate.js: it wraps the capped requestUpdate.
             beforePlugins = listOf(
-                "mv/perf.js", "mv/renderer.js", "mv/debug.js", "mv/engine.js", "mv/framerate.js", "mv/storage.js",
+                "mv/perf.js", "mv/renderer.js", "mv/debug.js", "mv/engine.js", "mv/framerate.js", "mv/picture.js", "mv/storage.js",
                 "mv/input.js", "mv/lifecycle.js", "mv/textinput.js",
             ),
         ),

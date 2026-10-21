@@ -320,7 +320,7 @@ private fun Labeled(title: String, content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun <T> Segmented(
+internal fun <T> Segmented(
     options: List<T>,
     selected: T,
     label: @Composable (T) -> String,

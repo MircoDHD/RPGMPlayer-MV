@@ -17,6 +17,107 @@ enum class Renderer(val id: String) {
     WEBGL2("webgl2"),
 }
 
+/** How the game image fills the screen; [id] is what `mv/picture.js` reads. */
+enum class ScalingMode(val id: String) {
+    /** As large as possible, keeping the aspect ratio. */
+    FIT("fit"),
+    /** Whole multiples of the game's pixels, so every pixel has the same size. */
+    INTEGER("integer"),
+    /** Fills the screen, distorting the aspect ratio. */
+    STRETCH("stretch"),
+}
+
+/** How game pixels are enlarged. */
+enum class Scaler(val id: String) {
+    /** Bilinear, MV's own look. */
+    SMOOTH("smooth"),
+    /** Bilinear only at pixel edges: crisp without the uneven pixels of [PIXEL]. */
+    SHARP("sharp"),
+    /** Nearest neighbour. */
+    PIXEL("pixel"),
+}
+
+/** Scaling and image filters; the defaults leave the picture as MV draws it. */
+data class PictureSettings(
+    val scaling: ScalingMode = ScalingMode.FIT,
+    val scaler: Scaler = Scaler.SMOOTH,
+    /** 0 = off. */
+    val sharpen: Float = 0f,
+    /** 0 = off. */
+    val scanlines: Float = 0f,
+    val brightness: Float = 1f,
+    val contrast: Float = 1f,
+    val saturation: Float = 1f,
+) {
+    fun toJson(): JSONObject = JSONObject()
+        .put("scaling", scaling.id)
+        .put("scaler", scaler.id)
+        .put("sharpen", rounded(sharpen))
+        .put("scanlines", rounded(scanlines))
+        .put("brightness", rounded(brightness))
+        .put("contrast", rounded(contrast))
+        .put("saturation", rounded(saturation))
+
+    companion object {
+        val EFFECT_RANGE = 0f..1f
+        val BRIGHTNESS_RANGE = 0.5f..1.5f
+        val CONTRAST_RANGE = 0.5f..1.5f
+        val SATURATION_RANGE = 0f..2f
+
+        /** Two decimals, so 0.55f is written as 0.55 and not 0.550000011920929. */
+        internal fun rounded(value: Float): Double = Math.round(value * 100.0) / 100.0
+
+        fun fromJson(json: JSONObject, d: PictureSettings = PictureSettings()) = PictureSettings(
+            scaling = ScalingMode.entries.firstOrNull { it.id == json.optString("scaling") } ?: d.scaling,
+            scaler = Scaler.entries.firstOrNull { it.id == json.optString("scaler") } ?: d.scaler,
+            sharpen = json.float("sharpen", d.sharpen, EFFECT_RANGE),
+            scanlines = json.float("scanlines", d.scanlines, EFFECT_RANGE),
+            brightness = json.float("brightness", d.brightness, BRIGHTNESS_RANGE),
+            contrast = json.float("contrast", d.contrast, CONTRAST_RANGE),
+            saturation = json.float("saturation", d.saturation, SATURATION_RANGE),
+        )
+
+        private fun JSONObject.float(key: String, default: Float, range: ClosedFloatingPointRange<Float>): Float =
+            optDouble(key, default.toDouble()).toFloat().takeUnless { it.isNaN() }?.coerceIn(range) ?: default
+    }
+}
+
+/** Per-game picture overrides; null fields follow the global [PictureSettings]. */
+data class PictureOverrides(
+    val scaling: ScalingMode? = null,
+    val scaler: Scaler? = null,
+    val sharpen: Float? = null,
+    val scanlines: Float? = null,
+    val brightness: Float? = null,
+    val contrast: Float? = null,
+    val saturation: Float? = null,
+) {
+    val isEmpty: Boolean get() = this == PictureOverrides()
+
+    fun resolve(global: PictureSettings) = PictureSettings(
+        scaling = scaling ?: global.scaling,
+        scaler = scaler ?: global.scaler,
+        sharpen = sharpen ?: global.sharpen,
+        scanlines = scanlines ?: global.scanlines,
+        brightness = brightness ?: global.brightness,
+        contrast = contrast ?: global.contrast,
+        saturation = saturation ?: global.saturation,
+    )
+
+    companion object {
+        /** Overrides that turn [global] into [picked]; values equal to the global one are dropped. */
+        fun of(picked: PictureSettings, global: PictureSettings) = PictureOverrides(
+            scaling = picked.scaling.takeUnless { it == global.scaling },
+            scaler = picked.scaler.takeUnless { it == global.scaler },
+            sharpen = picked.sharpen.takeUnless { it == global.sharpen },
+            scanlines = picked.scanlines.takeUnless { it == global.scanlines },
+            brightness = picked.brightness.takeUnless { it == global.brightness },
+            contrast = picked.contrast.takeUnless { it == global.contrast },
+            saturation = picked.saturation.takeUnless { it == global.saturation },
+        )
+    }
+}
+
 enum class HudCorner { TOP_START, TOP_END, BOTTOM_START, BOTTOM_END }
 
 enum class HudSize(val scale: Float) { SMALL(0.85f), MEDIUM(1f), LARGE(1.25f) }
@@ -81,6 +182,7 @@ data class GlobalSettings(
     val overlay: OverlaySettings = OverlaySettings(),
     val renderer: Renderer = Renderer.WEBGL,
     val hud: HudSettings = HudSettings(),
+    val picture: PictureSettings = PictureSettings(),
     /** Unlocked by tapping the version ten times; allows [libraryTitle]. */
     val titleEditUnlocked: Boolean = false,
     /** Own name shown at the top of the library instead of the app name; null = app name. */
@@ -105,6 +207,7 @@ data class GameSettings(
     val overlayHaptics: Boolean? = null,
     val overlayMirror: Boolean? = null,
     val overlayLayoutId: String? = null,
+    val picture: PictureOverrides = PictureOverrides(),
 ) {
     val isEmpty: Boolean get() = this == GameSettings()
 }
@@ -116,6 +219,7 @@ data class EffectiveSettings(
     val hud: HudSettings,
     val mapping: ControllerMapping,
     val overlay: OverlaySettings,
+    val picture: PictureSettings,
 )
 
 object SettingsResolver {
@@ -132,6 +236,7 @@ object SettingsResolver {
             mirror = game.overlayMirror ?: global.overlay.mirror,
             layoutId = game.overlayLayoutId ?: global.overlay.layoutId,
         ),
+        picture = game.picture.resolve(global.picture),
     )
 }
 
@@ -162,6 +267,7 @@ object SettingsJson {
             .put("widthPercent", s.hud.widthPercent)
             .put("offsetX", s.hud.offsetX.toDouble())
             .put("offsetY", s.hud.offsetY.toDouble()))
+        .put("picture", s.picture.toJson())
         .put("titleEditUnlocked", s.titleEditUnlocked)
         .apply { s.libraryTitle?.let { put("libraryTitle", it) } }
 
@@ -198,6 +304,7 @@ object SettingsJson {
                 offsetX = h.optDouble("offsetX", 0.0).toFloat().takeUnless { it.isNaN() } ?: 0f,
                 offsetY = h.optDouble("offsetY", 0.0).toFloat().takeUnless { it.isNaN() } ?: 0f,
             ),
+            picture = json.optJSONObject("picture")?.let { PictureSettings.fromJson(it) } ?: defaults.picture,
             titleEditUnlocked = json.optBoolean("titleEditUnlocked", false),
             libraryTitle = json.optString("libraryTitle").trim().take(GlobalSettings.MAX_TITLE_LENGTH).ifBlank { null },
         )
@@ -214,6 +321,7 @@ object SettingsJson {
         s.overlayHaptics?.let { put("overlayHaptics", it) }
         s.overlayMirror?.let { put("overlayMirror", it) }
         s.overlayLayoutId?.let { put("overlayLayoutId", it) }
+        if (!s.picture.isEmpty) put("picture", pictureToJson(s.picture))
     }
 
     fun gameFromJson(json: JSONObject) = GameSettings(
@@ -226,6 +334,27 @@ object SettingsJson {
         overlayHaptics = if (json.has("overlayHaptics")) json.optBoolean("overlayHaptics") else null,
         overlayMirror = if (json.has("overlayMirror")) json.optBoolean("overlayMirror") else null,
         overlayLayoutId = json.optString("overlayLayoutId").ifBlank { null },
+        picture = json.optJSONObject("picture")?.let(::pictureFromJson) ?: PictureOverrides(),
+    )
+
+    private fun pictureToJson(p: PictureOverrides) = JSONObject().apply {
+        p.scaling?.let { put("scaling", it.id) }
+        p.scaler?.let { put("scaler", it.id) }
+        p.sharpen?.let { put("sharpen", PictureSettings.rounded(it)) }
+        p.scanlines?.let { put("scanlines", PictureSettings.rounded(it)) }
+        p.brightness?.let { put("brightness", PictureSettings.rounded(it)) }
+        p.contrast?.let { put("contrast", PictureSettings.rounded(it)) }
+        p.saturation?.let { put("saturation", PictureSettings.rounded(it)) }
+    }
+
+    private fun pictureFromJson(json: JSONObject) = PictureOverrides(
+        scaling = ScalingMode.entries.firstOrNull { it.id == json.optString("scaling") },
+        scaler = Scaler.entries.firstOrNull { it.id == json.optString("scaler") },
+        sharpen = json.optDoubleOrNull("sharpen")?.toFloat()?.coerceIn(PictureSettings.EFFECT_RANGE),
+        scanlines = json.optDoubleOrNull("scanlines")?.toFloat()?.coerceIn(PictureSettings.EFFECT_RANGE),
+        brightness = json.optDoubleOrNull("brightness")?.toFloat()?.coerceIn(PictureSettings.BRIGHTNESS_RANGE),
+        contrast = json.optDoubleOrNull("contrast")?.toFloat()?.coerceIn(PictureSettings.CONTRAST_RANGE),
+        saturation = json.optDoubleOrNull("saturation")?.toFloat()?.coerceIn(PictureSettings.SATURATION_RANGE),
     )
 
     /** Before modules version 2 the frame time module drew the graph; keep showing it. */

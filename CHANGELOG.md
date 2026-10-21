@@ -4,6 +4,13 @@ All notable changes to RobustPlainGameMaker Player - MyVersion ("RPGM Player - M
 Versions follow `major.minor.patch`: the minor digit for new features, the patch digit for
 fixes. Dates are build dates.
 
+## 0.4.4 – 2026-10-21 (Phase B, part 3: picture)
+### Added
+- **Picture and filters**, globally and per game: scaling (fit, integer, stretch),
+  enlargement (smooth, sharp, pixel), scanlines, sharpening, brightness, contrast and
+  saturation.
+- In game, the quick menu opens them beside the game, which shows every change at once.
+
 ## 0.4.3 – 2026-10-21
 ### Fixed
 - **Thin lines between map tiles** on some GPUs (Mali, as in many MediaTek and Exynos

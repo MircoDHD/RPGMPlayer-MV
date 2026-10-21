@@ -90,7 +90,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     /** "What's new" from the settings: the notes of the installed version. */
     fun openChangelog() {
         val entries = loadChangelog(getApplication())
-        changelog = entries.filter { it.version == versionName }.ifEmpty { entries.take(1) }
+        changelog = entries.filter { it.version == Changelog.baseVersion(versionName) }.ifEmpty { entries.take(1) }
     }
 
     fun closeChangelog() {

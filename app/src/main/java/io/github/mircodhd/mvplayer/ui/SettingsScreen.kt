@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
@@ -59,6 +60,7 @@ import io.github.mircodhd.mvplayer.ui.settings.SwitchRow
 import io.github.mircodhd.mvplayer.ui.settings.ValueRow
 import io.github.mircodhd.mvplayer.ui.settings.frameRateLabel
 import io.github.mircodhd.mvplayer.ui.settings.overlayModeLabel
+import io.github.mircodhd.mvplayer.ui.settings.pictureSummary
 import io.github.mircodhd.mvplayer.ui.settings.rendererLabel
 
 const val GITHUB_PROFILE_URL = "https://github.com/MircoDHD"
@@ -78,6 +80,7 @@ fun SettingsScreen(
     onFrameRateCapChange: (Int) -> Unit,
     onRendererChange: (Renderer) -> Unit,
     onOpenHud: () -> Unit,
+    onOpenPicture: () -> Unit,
     onLogToFileChange: (Boolean) -> Unit,
     onShareLogs: () -> Unit,
     onOpenUrl: (String) -> Unit,
@@ -146,6 +149,15 @@ fun SettingsScreen(
                     summary = stringResource(R.string.renderer_summary),
                     badges = if (global.renderer == Renderer.WEBGL2) listOf(OptionBadge.EXPERIMENTAL) else emptyList(),
                     onClick = { chooseRenderer = true },
+                )
+            }
+            item {
+                ValueRow(
+                    icon = Icons.Filled.Search,
+                    title = stringResource(R.string.picture_title),
+                    value = pictureSummary(resources, global.picture),
+                    summary = stringResource(R.string.picture_summary),
+                    onClick = onOpenPicture,
                 )
             }
             item {

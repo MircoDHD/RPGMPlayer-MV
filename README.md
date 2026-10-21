@@ -38,6 +38,8 @@ No games are included. You need your own copy of a game.
   correct at every setting (MV counts drawn frames as play time, so it used to run too
   fast on 90/120 Hz screens).
 - **Renderer choice** (WebGL, Canvas, WebGL 2) globally or per game.
+- **Picture**: fit, integer or stretched scaling; smooth, sharp or pixel enlargement;
+  scanlines, sharpening, brightness, contrast and saturation, with a live preview in game.
 - **Performance HUD**: frame rate, frame times with graph, memory, battery, temperature and
   more above the game, with modules you choose and arrange.
 - **Per-game settings** and **export/import** of all settings.
@@ -88,7 +90,7 @@ phone, and the other way round.
 | Basic player | 0.1 | Player, local file serving, compatibility patches, PC saves, controller | Done |
 | Library | 0.2 | Material 3 library, info sheet, settings, play time | Done |
 | Input | 0.3 | Controller remapping, on-screen gamepad + editor, quick menu, keyboard | Done |
-| Display & performance | 0.4 | Renderer choice and modular performance HUD (0.4.0); 30/60/unlimited fps with correct play time (0.4.1); scaling and image filters (CRT, scanlines, LCD, sharpening, colour-blind modes, …) | In progress |
+| Display & performance | 0.4 | Renderer choice and modular performance HUD (0.4.0); 30/60/unlimited fps with correct play time (0.4.1); scaling and picture filters (0.4.4) | Done |
 | Compatibility | 0.5 | Patch profiles and user patches, robust file names and JSON, error handling options, font override | Planned |
 | Saves & convenience | 0.6 | Resume points (app-side quick saves to stop anywhere), save backups and export, continue button | Planned |
 | Release | – | CI builds, F-Droid / IzzyOnDroid | Planned |

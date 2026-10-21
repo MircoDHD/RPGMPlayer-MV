@@ -25,6 +25,7 @@ class SettingsJsonTest {
                 enabled = true, corner = HudCorner.BOTTOM_END, size = HudSize.LARGE, opacity = 0.4f,
                 detailed = false, shortLabels = true, intervalMs = 250, modules = listOf("clock", "fps"), widthPercent = 50, offsetX = 12.5f, offsetY = -40f,
             ),
+            picture = PictureSettings(ScalingMode.INTEGER, Scaler.SHARP, sharpen = 0.3f, scanlines = 0.5f, brightness = 1.1f, contrast = 0.9f, saturation = 1.4f),
             titleEditUnlocked = true,
             libraryTitle = "My games",
         )
@@ -39,6 +40,18 @@ class SettingsJsonTest {
         assertEquals(settings, parsed)
         assertNull(parsed.mapping)
         assertNull(parsed.overlayHaptics)
+    }
+
+    @Test
+    fun pictureOverridesFollowTheGlobalValues() {
+        val global = PictureSettings(scaler = Scaler.PIXEL, scanlines = 0.4f)
+        val picked = global.copy(scaling = ScalingMode.STRETCH, scanlines = 0f)
+        val overrides = PictureOverrides.of(picked, global)
+        assertEquals(PictureOverrides(scaling = ScalingMode.STRETCH, scanlines = 0f), overrides)
+        assertEquals(picked, overrides.resolve(global))
+        val game = GameSettings(picture = overrides)
+        assertEquals(game, SettingsJson.gameFromJson(JSONObject(SettingsJson.gameToJson(game).toString())))
+        assertTrue(GameSettings(picture = PictureOverrides.of(global, global)).isEmpty)
     }
 
     @Test

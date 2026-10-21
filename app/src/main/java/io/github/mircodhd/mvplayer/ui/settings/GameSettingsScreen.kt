@@ -53,6 +53,7 @@ fun GameSettingsScreen(
     layouts: List<GamepadLayout>,
     onChange: (GameSettings) -> Unit,
     onOpenController: () -> Unit,
+    onOpenPicture: () -> Unit,
     onCustomizeLayout: (GamepadLayout) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -171,6 +172,15 @@ fun GameSettingsScreen(
                     badges = defaultBadge(game.renderer) +
                         if (effective.renderer == Renderer.WEBGL2) listOf(OptionBadge.EXPERIMENTAL) else emptyList(),
                     onClick = { dialog = GameDialog.RENDERER },
+                )
+            }
+            item {
+                ValueRow(
+                    title = stringResource(R.string.picture_title),
+                    value = pictureSummary(resources, effective.picture),
+                    summary = stringResource(R.string.picture_summary),
+                    badges = defaultBadge(game.picture.takeUnless { it.isEmpty }),
+                    onClick = onOpenPicture,
                 )
             }
         }
