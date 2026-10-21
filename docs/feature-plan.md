@@ -1,6 +1,6 @@
 # Feature plan: input, display, compatibility, saves (0.3 – 0.6)
 
-Status: approved 2026-10-18. **Phase A implemented in 0.3.0**; Phase B split into three releases: B1 renderer + B4 HUD **in 0.4.0**, B2 frame rates **in 0.4.1**, then B3 scaling and filters; C–D pending.
+Status: approved 2026-10-18. **Phase A implemented in 0.3.0**; Phase B split into three releases: B1 renderer + B4 HUD **in 0.4.0**, B2 frame rates **in 0.4.1**, fixes from device tests in 0.4.2–0.4.3, then B3 scaling and filters; C–D pending.
 Base: version 0.2.0. Architecture: `docs/analysis.md`, part 2.
 
 Size estimates are rough lines of new/changed code (Kotlin + JS + GLSL), excluding tests.
@@ -365,7 +365,19 @@ alternative app-documents location is possible).
 override and calls `Graphics.loadFont`. Per-game setting with preview text.
 **Size:** ~250.
 
-**Phase C total:** ~1550.
+### C6. App language (decide at this step)
+Let the user choose the app's language (English, German) independently of the system.
+Two ways, to be decided when this step starts:
+- **Android's per-app language page** (Settings → Apps → RPGM Player → Language): needs a
+  `locales_config.xml` plus `android:localeConfig`; the page exists only on Android 13
+  (API 33) and newer. Using only this would mean raising `minSdk` from 30 to 33 (dropping
+  Android 11 and 12), or leaving those devices without a choice.
+- **A language option in the player's settings** via `LocaleManager` /
+  `AppCompatDelegate.setApplicationLocales`: works on every supported version (minSdk 30
+  stays) and also fills the system page on Android 13+.
+**Size:** ~100.
+
+**Phase C total:** ~1650.
 
 ---
 
@@ -427,7 +439,7 @@ Fast-forward, debug panel, mod overlay folder, haptics on screen shake.
 |---|---|
 | 0.3.0 | Phase A: settings model, overlay host, input refactor, A1–A4, decryption timing instrumentation |
 | 0.4.0 | Phase B: renderer, frame rates, post-processing + benchmark, HUD, B5 decision |
-| 0.5.0 | Phase C: profiles v2 + user patches, path/JSON robustness, error options, font override |
+| 0.5.0 | Phase C: profiles v2 + user patches, path/JSON robustness, error options, font override, app language |
 | 0.6.0 | Phase D: save manager with resume points and backups (app storage), continue button |
 | 0.x.y | Bug-fix deliveries in between (patch digit) |
 

@@ -175,25 +175,26 @@ fun HudPanel(
             .padding(horizontal = (6 * scale).dp, vertical = (4 * scale).dp),
     ) {
         if (paused) Text(stringResource(R.string.hud_paused), style = style.copy(color = HudDim))
+        val graphHeight = (26 * scale).dp
+        val graphModifier = Modifier.padding(vertical = 2.dp).size((150 * scale).dp, graphHeight)
         if (settings.detailed) {
             // Two columns, so values line up whatever the longest label is in this language.
-            val graphHeight = (26 * scale).dp
+            // The graph module's row is as tall as the graph; its label sits at the top.
+            val graphRow = graphHeight + 4.dp
+            val lineHeight = with(LocalDensity.current) { style.lineHeight.toDp() }
             Row(horizontalArrangement = Arrangement.spacedBy((8 * scale).dp)) {
                 Column {
                     for (module in modules) {
                         Text(module.label(res, settings.shortLabels), style = style.copy(color = HudDim))
-                        if (module.graph) Spacer(Modifier.height(graphHeight + 4.dp))
+                        if (module.graph) Spacer(Modifier.height((graphRow - lineHeight).coerceAtLeast(0.dp)))
                     }
                 }
                 Column {
                     for (module in modules) {
-                        Text(module.value(snapshot, res) ?: "…", style = style.copy(color = module.level(snapshot).color()))
                         if (module.graph) {
-                            FrameGraph(
-                                snapshot.frameHistory,
-                                snapshot.js?.frameIntervalMs ?: 0.0,
-                                Modifier.padding(vertical = 2.dp).size((150 * scale).dp, graphHeight),
-                            )
+                            FrameGraph(snapshot.frameHistory, snapshot.js?.frameIntervalMs ?: 0.0, graphModifier)
+                        } else {
+                            Text(module.value(snapshot, res) ?: "…", style = style.copy(color = module.level(snapshot).color()))
                         }
                     }
                 }
@@ -212,7 +213,9 @@ fun HudPanel(
                     if (level == null) append(text) else withStyle(SpanStyle(color = level.color())) { append(text) }
                 }
             }
-            Text(if (parts.isEmpty()) AnnotatedString("…") else line, style = style)
+            val showGraph = modules.any { it.graph }
+            if (parts.isNotEmpty() || !showGraph) Text(if (parts.isEmpty()) AnnotatedString("…") else line, style = style)
+            if (showGraph) FrameGraph(snapshot.frameHistory, snapshot.js?.frameIntervalMs ?: 0.0, graphModifier)
         }
     }
 }

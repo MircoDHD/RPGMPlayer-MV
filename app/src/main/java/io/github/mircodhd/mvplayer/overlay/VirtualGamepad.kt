@@ -3,7 +3,6 @@
 
 package io.github.mircodhd.mvplayer.overlay
 
-import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
@@ -70,7 +69,7 @@ fun VirtualGamepad(
                 trackControl(control) { actions, knob ->
                     val before = pressed[control.id].orEmpty()
                     if (settings.haptics && (actions - before).isNotEmpty()) {
-                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        Haptics.click(view.context)
                     }
                     pressed[control.id] = actions
                     knobs[control.id] = knob

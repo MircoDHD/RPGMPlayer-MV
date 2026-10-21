@@ -46,7 +46,7 @@ data class HudSettings(
         val INTERVALS = listOf(250, 500, 1000)
         val WIDTHS = listOf(50, 75, 100)
         val OPACITY_RANGE = 0.2f..1f
-        val DEFAULT_MODULES = listOf("fps", "frametime", "lows", "battery", "thermal")
+        val DEFAULT_MODULES = listOf("fps", "frametime", "framegraph", "lows", "battery", "thermal")
     }
 }
 
@@ -158,6 +158,7 @@ object SettingsJson {
             .put("shortLabels", s.hud.shortLabels)
             .put("intervalMs", s.hud.intervalMs)
             .put("modules", JSONArray(s.hud.modules))
+            .put("modulesVersion", HUD_MODULES_VERSION)
             .put("widthPercent", s.hud.widthPercent)
             .put("offsetX", s.hud.offsetX.toDouble())
             .put("offsetY", s.hud.offsetY.toDouble()))
@@ -191,6 +192,7 @@ object SettingsJson {
                 shortLabels = h.optBoolean("shortLabels", dh.shortLabels),
                 intervalMs = h.optInt("intervalMs", dh.intervalMs).takeIf { it in HudSettings.INTERVALS } ?: dh.intervalMs,
                 modules = h.optJSONArray("modules")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() }.distinct() }
+                    ?.let { if (h.optInt("modulesVersion", 1) < 2) withSeparateGraph(it) else it }
                     ?: dh.modules,
                 widthPercent = h.optInt("widthPercent", dh.widthPercent).takeIf { it in HudSettings.WIDTHS } ?: dh.widthPercent,
                 offsetX = h.optDouble("offsetX", 0.0).toFloat().takeUnless { it.isNaN() } ?: 0f,
@@ -225,6 +227,14 @@ object SettingsJson {
         overlayMirror = if (json.has("overlayMirror")) json.optBoolean("overlayMirror") else null,
         overlayLayoutId = json.optString("overlayLayoutId").ifBlank { null },
     )
+
+    /** Before modules version 2 the frame time module drew the graph; keep showing it. */
+    private const val HUD_MODULES_VERSION = 2
+
+    private fun withSeparateGraph(modules: List<String>): List<String> {
+        val i = modules.indexOf("frametime")
+        return if (i < 0 || "framegraph" in modules) modules else modules.toMutableList().apply { add(i + 1, "framegraph") }
+    }
 
     private fun rendererOrNull(id: String): Renderer? = Renderer.entries.firstOrNull { it.id == id }
 

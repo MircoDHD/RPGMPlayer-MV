@@ -9,8 +9,8 @@ plugins {
 }
 
 // Bump both for every APK that is handed out or released (see CHANGELOG.md).
-val appVersionCode = 13
-val appVersionName = "0.4.2"
+val appVersionCode = 14
+val appVersionName = "0.4.3"
 
 // Release signing from keystore.properties (not committed). Without it, release builds
 // are left unsigned.

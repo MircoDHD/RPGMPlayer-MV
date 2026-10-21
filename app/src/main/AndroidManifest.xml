@@ -5,7 +5,9 @@
     <!-- No storage permission: the user shares each game folder through the system folder
          picker (read/write, for PC-compatible saves next to the game), and session logs go to
          the app's own files in Documents/.
-         No INTERNET permission: games are served locally and never reach the network. -->
+         No INTERNET permission: games are served locally and never reach the network.
+         VIBRATE (granted without asking): haptic feedback of the on-screen controls. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <uses-feature
         android:name="android.hardware.gamepad"

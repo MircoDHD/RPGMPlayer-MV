@@ -4,6 +4,24 @@ All notable changes to RobustPlainGameMaker Player - MyVersion ("RPGM Player - M
 Versions follow `major.minor.patch`: the minor digit for new features, the patch digit for
 fixes. Dates are build dates.
 
+## 0.4.3 – 2026-10-21
+### Fixed
+- **Thin lines between map tiles** on some GPUs (Mali, as in many MediaTek and Exynos
+  devices): shaders now use high precision where the GPU supports it.
+- **Haptic feedback** did nothing when Android's own touch vibration was switched off. It
+  now drives the vibration motor directly, both for the on-screen controls and for the
+  short pulse when you switch it on.
+- **The save and load menus open much faster** on slow storage: save files that were just
+  read or written are kept in memory instead of being read again for every slot. Saving
+  is faster too.
+- Text drawn with an invalid alignment no longer floods the log with browser warnings.
+### Changed
+- **The frame graph is its own HUD module**, so the frame time can be shown without it.
+  Existing HUD setups keep the graph.
+- Starting a game right after the library scanned it skips the second scan.
+- Diagnostic logs record frame rate and device state (battery, heat, memory) once a
+  minute, to find slowdowns in long sessions.
+
 ## 0.4.2 – 2026-10-19
 ### Added
 - HUD colours: frame rate, frame time (graph included) and 1 % low turn green, yellow or

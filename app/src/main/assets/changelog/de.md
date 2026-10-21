@@ -3,6 +3,25 @@
 Deutsche Fassung von CHANGELOG.md für die "Was ist neu"-Box der App. Bei jeder Version
 zusammen mit CHANGELOG.md aktualisieren.
 
+## 0.4.3 – 21.10.2026
+### Behoben
+- **Dünne Linien zwischen Kartenkacheln** auf manchen Grafikchips (Mali, wie in vielen
+  MediaTek- und Exynos-Geräten): Shader rechnen jetzt mit hoher Genauigkeit, wo der Chip
+  das kann.
+- **Haptisches Feedback** blieb stumm, wenn die Touch-Vibration von Android aus war. Es
+  steuert jetzt direkt den Vibrationsmotor an, für die Bildschirmsteuerung und für den
+  kurzen Impuls beim Einschalten.
+- **Speichern- und Laden-Menü öffnen viel schneller** auf langsamem Speicher: Gerade
+  gelesene oder geschriebene Spielstände bleiben im Speicher, statt für jeden Slot neu
+  gelesen zu werden. Auch das Speichern geht schneller.
+- Text mit ungültiger Ausrichtung füllt das Log nicht mehr mit Browser-Warnungen.
+### Geändert
+- **Der Frame-Graph ist ein eigenes HUD-Modul**, damit die Frame-Zeit auch ohne ihn
+  angezeigt werden kann. Bestehende HUD-Einstellungen behalten den Graph.
+- Ein Spiel direkt nach dem Scan der Bibliothek zu starten, überspringt den zweiten Scan.
+- Diagnose-Logs halten einmal pro Minute Bildrate und Gerätezustand fest (Akku, Wärme,
+  Speicher), um Einbrüche in langen Sitzungen zu finden.
+
 ## 0.4.2 – 19.10.2026
 ### Neu
 - HUD-Farben: Bildrate, Frame-Zeit (auch der Graph) und 1 %-Low werden grün, gelb oder

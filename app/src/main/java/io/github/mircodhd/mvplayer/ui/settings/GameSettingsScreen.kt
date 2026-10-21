@@ -4,7 +4,6 @@
 package io.github.mircodhd.mvplayer.ui.settings
 
 import android.content.res.Resources
-import android.view.HapticFeedbackConstants
 import android.view.View
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.mircodhd.mvplayer.R
 import io.github.mircodhd.mvplayer.overlay.GamepadLayout
+import io.github.mircodhd.mvplayer.overlay.Haptics
 import io.github.mircodhd.mvplayer.overlay.LayoutNames
 import io.github.mircodhd.mvplayer.settings.GameSettings
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
@@ -245,7 +245,7 @@ fun GameSettingsScreen(
 
 /** The same short pulse a touch control gives (VirtualGamepad), as a preview in the settings. */
 fun previewHaptics(view: View) {
-    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+    Haptics.click(view.context)
 }
 
 /** [defaultCap] marks the global value when choosing for one game; null in the global settings. */

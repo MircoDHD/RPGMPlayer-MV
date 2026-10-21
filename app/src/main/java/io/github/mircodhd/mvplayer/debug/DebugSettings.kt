@@ -16,13 +16,18 @@ data class DebugSettings(
     val logToFile: Boolean,
     /** Log every served file, raw controller events, sound effects and periodic stats. */
     val verbose: Boolean,
-    /** Seconds between JS stats snapshots (FPS, heap, audio); 0 disables them. */
+    /**
+     * Seconds between performance snapshots in the log (frame rate, frame times, memory,
+     * battery, thermal); 0 disables them. One minute in release builds, so a log shows when
+     * and why a game slowed down.
+     */
     val statsIntervalSeconds: Int,
     /** Allow attaching chrome://inspect to the game WebView. */
     val remoteDebugging: Boolean,
 ) {
     companion object {
         private const val PREFS = "debug"
+        private const val KEY_STATS = "stats_interval_2"
 
         fun load(context: Context): DebugSettings {
             val debuggable = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
@@ -30,7 +35,8 @@ data class DebugSettings(
             return DebugSettings(
                 logToFile = prefs.getBoolean("log_to_file", true),
                 verbose = prefs.getBoolean("verbose", debuggable),
-                statsIntervalSeconds = prefs.getInt("stats_interval", if (debuggable) 10 else 0),
+                // New key: older versions stored 0 here whenever another switch was saved.
+                statsIntervalSeconds = prefs.getInt(KEY_STATS, if (debuggable) 10 else 60),
                 remoteDebugging = prefs.getBoolean("remote_debugging", debuggable),
             )
         }
@@ -39,7 +45,7 @@ data class DebugSettings(
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit {
                 putBoolean("log_to_file", settings.logToFile)
                 putBoolean("verbose", settings.verbose)
-                putInt("stats_interval", settings.statsIntervalSeconds)
+                putInt(KEY_STATS, settings.statsIntervalSeconds)
                 putBoolean("remote_debugging", settings.remoteDebugging)
             }
         }

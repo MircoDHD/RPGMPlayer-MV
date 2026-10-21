@@ -16,7 +16,9 @@ import java.io.IOException
  * Saves are stored exactly like the PC version does (www/save/<name>.rpgsave, content as
  * produced by the engine), so save folders can be copied between PC and Android.
  * The save folder is listed once; afterwards only this bridge changes it while the game
- * runs, so lookups use the cached listing instead of asking the documents provider.
+ * runs, so lookups use the cached listing instead of asking the documents provider, and
+ * file contents are kept after the first read (MV reads global.rpgsave once per save slot
+ * when a save menu opens; through the documents provider each read costs ~85 ms).
  */
 class PlayerBridge(
     private val webRoot: GameNode,
@@ -40,6 +42,8 @@ class PlayerBridge(
     private var saveDir: GameNode? = null
     /** Files in the save folder by lowercase name (Windows saves may differ in case). */
     private val files = HashMap<String, GameNode>()
+    /** Contents read or written in this session, by lowercase name. */
+    private val contents = HashMap<String, String>()
     private var listed = false
 
     private fun ensureListed() {
@@ -68,14 +72,19 @@ class PlayerBridge(
         val start = SystemClock.elapsedRealtime()
         return synchronized(lock) {
             ensureListed()
+            val key = name!!.lowercase()
+            contents[key]?.let { cached ->
+                DebugLog.v(TAG, "read $name: ${cached.length} chars from memory")
+                return@synchronized cached
+            }
             try {
-                files[name!!.lowercase()]?.readText()
+                files[key]?.readText()?.also { contents[key] = it }
             } catch (e: Exception) {
                 DebugLog.e(TAG, "Reading $name failed", e)
                 null
+            }.also {
+                DebugLog.d(TAG, "read $name: ${it?.length ?: "missing"} chars in ${SystemClock.elapsedRealtime() - start} ms")
             }
-        }.also {
-            DebugLog.d(TAG, "read $name: ${it?.length ?: "missing"} chars in ${SystemClock.elapsedRealtime() - start} ms")
         }
     }
 
@@ -98,9 +107,12 @@ class PlayerBridge(
                 }
                 val saved = tmp.renameTo(name) ?: throw IOException("cannot rename $tmpName")
                 files[name.lowercase()] = saved
+                contents[name.lowercase()] = data
                 DebugLog.i(TAG, "wrote $name: ${data.length} chars in ${SystemClock.elapsedRealtime() - start} ms")
                 true
             } catch (e: Exception) {
+                // The disk may hold the old or no file now; read it again next time.
+                contents.remove(name!!.lowercase())
                 DebugLog.e(TAG, "Writing $name failed", e)
                 false
             }
@@ -121,7 +133,9 @@ class PlayerBridge(
         if (!isSafe(name)) return false
         return synchronized(lock) {
             ensureListed()
-            files[name!!.lowercase()]?.let { node -> node.delete().also { if (it) files.remove(name.lowercase()) } } ?: true
+            val key = name!!.lowercase()
+            contents.remove(key)
+            files[key]?.let { node -> node.delete().also { if (it) files.remove(key) } } ?: true
         }.also { DebugLog.d(TAG, "remove $name: $it") }
     }
 

@@ -74,7 +74,7 @@ class DocumentNode private constructor(
         val created = DocumentsContract.createDocument(resolver, uri, mime, childName) ?: return null
         val node = DocumentNode(resolver, treeUri, DocumentsContract.getDocumentId(created), childName, mime, 0)
         // Providers add " (1)" or an extension when the name is taken or unusual; callers need the exact name.
-        if (queryName(created) == childName) {
+        if (hasName(created, childName)) {
             node
         } else {
             DocumentsContract.deleteDocument(resolver, created)
@@ -96,10 +96,21 @@ class DocumentNode private constructor(
     override fun renameTo(name: String): GameNode? = try {
         val renamed = DocumentsContract.renameDocument(resolver, uri, name) ?: uri
         DocumentNode(resolver, treeUri, DocumentsContract.getDocumentId(renamed), name, mimeType, length)
-            .takeIf { queryName(renamed) == name }
+            .takeIf { hasName(renamed, name) }
     } catch (e: Exception) {
         DebugLog.w(TAG, "Cannot rename ${this.name} to $name", e)
         null
+    }
+
+    /**
+     * Whether the document is called [name]. The local storage provider puts the path in the
+     * document id ("primary:Games/x/save/file1.rpgsave"), which saves a query (~100 ms on slow
+     * devices); other providers are asked.
+     */
+    private fun hasName(documentUri: Uri, name: String): Boolean {
+        val id = DocumentsContract.getDocumentId(documentUri)
+        if (documentUri.authority == EXTERNAL_STORAGE && (id.endsWith("/$name") || id.endsWith(":$name"))) return true
+        return queryName(documentUri) == name
     }
 
     private fun queryName(documentUri: Uri): String? =
@@ -110,6 +121,7 @@ class DocumentNode private constructor(
     companion object {
         private const val TAG = "Storage"
         private const val OCTET_STREAM = "application/octet-stream"
+        private const val EXTERNAL_STORAGE = "com.android.externalstorage.documents"
         private val PROJECTION = arrayOf(
             Document.COLUMN_DOCUMENT_ID,
             Document.COLUMN_DISPLAY_NAME,
@@ -147,7 +159,7 @@ class DocumentNode private constructor(
             val volume = id.substringBefore(':', "")
             val path = id.substringAfter(':')
             return when {
-                treeUri.authority != "com.android.externalstorage.documents" -> id
+                treeUri.authority != EXTERNAL_STORAGE -> id
                 volume.equals("primary", ignoreCase = true) || volume.isEmpty() -> path.ifEmpty { "/" }
                 volume.equals("home", ignoreCase = true) -> "Documents/$path".trimEnd('/')
                 else -> "$volume: $path"

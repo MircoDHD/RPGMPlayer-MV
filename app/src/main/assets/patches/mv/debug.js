@@ -3,7 +3,7 @@
 
 /*
  * RPGM Player: diagnostics. Runs after rpg_*.js, before plugins.
- * Patch version: 3
+ * Patch version: 4
  *
  * Logs engine events through MvPlayer.log into the host's session log. Hooks wrap the
  * vanilla functions, so plugins that alias them later still pass through here. Events
@@ -300,9 +300,11 @@
     // Frame timing comes from perf.js (shared with the performance HUD).
     var interval = (debug.statsIntervalSeconds || 0) * 1000;
     if (interval > 0 && MvPlayer.perf) {
-        var statsWindow = MvPlayer.perf.open(false);
+        // Keeps frame gaps for the 1 % low; the gaps themselves are not logged.
+        var statsWindow = MvPlayer.perf.open(true);
         setInterval(function () {
             var stats = MvPlayer.perf.read(statsWindow);
+            delete stats.gaps;
             var env = MvPlayer.perf.environment();
             stats.scene = sceneName(SceneManager._scene);
             stats.map = typeof $gameMap !== 'undefined' && $gameMap ? $gameMap.mapId() : null;

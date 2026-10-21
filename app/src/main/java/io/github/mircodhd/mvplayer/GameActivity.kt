@@ -50,6 +50,7 @@ import androidx.lifecycle.lifecycleScope
 import io.github.mircodhd.mvplayer.bridge.PlayerBridge
 import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.game.GameInfo
+import io.github.mircodhd.mvplayer.game.GameInfoCache
 import io.github.mircodhd.mvplayer.game.GameInspector
 import io.github.mircodhd.mvplayer.input.GamepadInput
 import io.github.mircodhd.mvplayer.input.InputAction
@@ -59,6 +60,7 @@ import io.github.mircodhd.mvplayer.overlay.GamepadLayout
 import io.github.mircodhd.mvplayer.overlay.LayoutNames
 import io.github.mircodhd.mvplayer.overlay.LayoutRepository
 import io.github.mircodhd.mvplayer.patch.PatchProfiles
+import io.github.mircodhd.mvplayer.hud.DeviceSampler
 import io.github.mircodhd.mvplayer.hud.HudDataHub
 import io.github.mircodhd.mvplayer.settings.GameSettings
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
@@ -103,10 +105,26 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
     private var runningRenderer: Renderer? = null
     private var promptedRenderer: Renderer? = null
     private var appliedHudInterval = 0
-    private val hudHubDelegate = lazy {
-        HudDataHub(this, sessionMs = ::sessionPlayTime, displayHz = { display?.refreshRate })
+    private val deviceSamplerDelegate = lazy { DeviceSampler(this, displayHz = { display?.refreshRate }) }
+    private val deviceSampler by deviceSamplerDelegate
+    private val hudHub by lazy { HudDataHub(deviceSampler, sessionMs = ::sessionPlayTime) }
+
+    /** Android-side half of the periodic performance line (the game logs its own half). */
+    private val deviceLog = object : Runnable {
+        override fun run() {
+            val seconds = DebugLog.settings.statsIntervalSeconds
+            if (seconds <= 0 || isDestroyed) return
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                val d = deviceSampler.sample()
+                DebugLog.i("Stats", "Device: battery ${d.batteryPercent ?: "?"} %" +
+                    (if (d.charging == true) " charging" else "") +
+                    ", ${d.batteryTempC ?: "?"} °C, thermal status ${d.thermalStatus ?: "?"}, " +
+                    "headroom ${d.thermalHeadroom?.let { "%.2f".format(java.util.Locale.ROOT, it) } ?: "?"}, " +
+                    "app memory ${d.appPssMb ?: "?"} MB, display ${d.displayHz?.let { "%.0f".format(java.util.Locale.ROOT, it) } ?: "?"} Hz")
+            }
+            container.postDelayed(this, seconds * 1000L)
+        }
     }
-    private val hudHub by hudHubDelegate
 
     private val settingsStore by lazy { SettingsStore.get(this) }
     private val layoutRepository by lazy { LayoutRepository(this) }
@@ -202,9 +220,13 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         DebugLog.i(TAG, "Opening game in ${entry.location} (library id $gameId)")
         executor.execute {
             val result = runCatching {
+                GameInfoCache.get(entry.uri)?.let { (info, age) ->
+                    DebugLog.i(TAG, "Using the library's scan of the game (${age / 1000} s old)")
+                    return@runCatching info
+                }
                 val dir = DocumentNode.root(this, entry.treeUri) ?: error("No access to ${entry.location}")
                 val webRoot = GameInspector.detect(dir).webRoot ?: error("No MV game in ${entry.location}")
-                GameInspector.inspectMv(webRoot, dir.name)
+                GameInspector.inspectMv(webRoot, dir.name).also { GameInfoCache.put(entry.uri, it) }
             }
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
@@ -394,6 +416,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) view.resumeTimers()
         logMediaVolume()
         view.loadUrl(GameRequestHandler.START_URL)
+        DebugLog.settings.statsIntervalSeconds.takeIf { it > 0 }?.let { container.postDelayed(deviceLog, it * 1000L) }
     }
 
     // --- Input ------------------------------------------------------------------------------
@@ -595,7 +618,8 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
         powerManager.removeThermalStatusListener(thermalListener)
         executor.shutdownNow()
-        if (hudHubDelegate.isInitialized()) hudHub.close()
+        container.removeCallbacks(deviceLog)
+        if (deviceSamplerDelegate.isInitialized()) deviceSampler.close()
         webView?.run {
             // Undo the process-wide pauseTimers() from onPause, or the next game started in
             // this process hangs while loading.

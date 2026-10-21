@@ -70,12 +70,17 @@ object HudRegistry {
         },
         object : HudModule("frametime", R.string.hud_mod_frametime, R.string.hud_mod_frametime_summary, "FT") {
             override fun level(data: HudSnapshot) = data.js?.frameMs?.let { HudLevels.frameTime(it, HudLevels.targetMs(data.js?.frameIntervalMs)) }
-            override val graph get() = true
             // Abbreviated: "60 fps 16,7 ms", as overlays show fps and frame time together.
             override val shortLabelInCompact get() = false
             override fun value(data: HudSnapshot, res: Resources) =
                 data.js?.frameMs?.let { "${f1(it)} ms · max ${f1(data.js.maxFrameMs ?: it)}" }
             override fun compactValue(data: HudSnapshot, res: Resources) = data.js?.frameMs?.let { "${f1(it)} ms" }
+        },
+        // The graph is its own module, so the frame time can be shown without it.
+        object : HudModule("framegraph", R.string.hud_mod_framegraph, R.string.hud_mod_framegraph_summary, "GRAPH") {
+            override val graph get() = true
+            override fun value(data: HudSnapshot, res: Resources): String? = null
+            override fun compactValue(data: HudSnapshot, res: Resources): String? = null
         },
         object : HudModule("lows", R.string.hud_mod_lows, R.string.hud_mod_lows_summary, "1%") {
             override fun level(data: HudSnapshot) = data.js?.low1Fps?.let { HudLevels.fps(it, HudLevels.targetMs(data.js?.frameIntervalMs)) }
@@ -176,7 +181,7 @@ object HudRegistry {
 
     fun modulesOf(preset: HudPreset): List<String> = when (preset) {
         HudPreset.MINIMAL -> listOf("fps")
-        HudPreset.STANDARD -> listOf("fps", "frametime", "lows", "battery", "thermal")
+        HudPreset.STANDARD -> listOf("fps", "frametime", "framegraph", "lows", "battery", "thermal")
         HudPreset.FULL -> modules.map { it.id }
     }
 

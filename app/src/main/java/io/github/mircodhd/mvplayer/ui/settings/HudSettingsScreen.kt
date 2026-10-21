@@ -230,8 +230,8 @@ private fun HudInfoDialog(onDismiss: () -> Unit) {
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    val full = module.compact(PreviewData, resources) ?: "…"
-                    val short = module.compact(PreviewData, resources, short = true) ?: "…"
+                    val full = if (module.graph) stringResource(R.string.hud_graph_example) else module.compact(PreviewData, resources) ?: "…"
+                    val short = if (module.graph) full else module.compact(PreviewData, resources, short = true) ?: "…"
                     Text(
                         if (full == short) stringResource(R.string.hud_example_same, full) else stringResource(R.string.hud_example, full, short),
                         style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
@@ -248,6 +248,7 @@ private fun HudInfoDialog(onDismiss: () -> Unit) {
 private fun infoText(id: String) = when (id) {
     "fps" -> R.string.hud_info_fps
     "frametime" -> R.string.hud_info_frametime
+    "framegraph" -> R.string.hud_info_framegraph
     "lows" -> R.string.hud_info_lows
     "timing" -> R.string.hud_info_timing
     "jswork" -> R.string.hud_info_jswork
@@ -413,8 +414,8 @@ private fun ModuleList(modules: List<String>, onChange: (List<String>) -> Unit) 
                         Column {
                             Text(stringResource(module.summary))
                             // How the module reads in the HUD, so each label maps to its setting.
-                            val full = module.compact(PreviewData, resources) ?: "…"
-                            val short = module.compact(PreviewData, resources, short = true) ?: "…"
+                            val full = if (module.graph) stringResource(R.string.hud_graph_example) else module.compact(PreviewData, resources) ?: "…"
+                            val short = if (module.graph) full else module.compact(PreviewData, resources, short = true) ?: "…"
                             Text(
                                 if (full == short) stringResource(R.string.hud_example_same, full) else stringResource(R.string.hud_example, full, short),
                                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),

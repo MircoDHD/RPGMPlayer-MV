@@ -21,6 +21,7 @@ import io.github.mircodhd.mvplayer.R
 import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.debug.LogExporter
 import io.github.mircodhd.mvplayer.game.Engine
+import io.github.mircodhd.mvplayer.game.GameInfoCache
 import io.github.mircodhd.mvplayer.game.GameInspector
 import io.github.mircodhd.mvplayer.library.GameEntry
 import io.github.mircodhd.mvplayer.library.GameLibrary
@@ -200,6 +201,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         val placeholder = library.add(uri.toString(), dir.name) ?: return null
         val cover = library.coverFile(placeholder.id)
         val (info, details) = GameScanner.scan(dir, cover) ?: return string(R.string.engine_unknown)
+        GameInfoCache.put(uri.toString(), info)
         library.update(placeholder.id) { it.copy(title = info.title, details = details) }
         main.post { loadCover(placeholder) }
         return null
@@ -210,6 +212,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
             // Hand the folder grant back; the files themselves stay untouched.
             runCatching { getApplication<Application>().contentResolver.releasePersistableUriPermission(entry.treeUri, DocumentNode.GRANT_FLAGS) }
         }
+        library.find(id)?.let { GameInfoCache.remove(it.uri) }
         library.remove(id)
         settingsStore.removeGame(id)
         gameSettings.remove(id)
@@ -236,6 +239,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         val result = runCatching { GameScanner.scan(folder, library.coverFile(entry.id)) }
             .onFailure { DebugLog.w(TAG, "Scanning ${entry.location} failed", it) }
             .getOrNull() ?: return
+        GameInfoCache.put(entry.uri, result.first)
         library.update(entry.id) { it.copy(details = result.second) }
         main.post {
             missing = missing - entry.id

@@ -4,7 +4,7 @@
 /*
  * RPGM Player: renderer choice. Runs after rpg_*.js, before plugins (and before debug.js,
  * whose renderer log wraps this one).
- * Patch version: 1
+ * Patch version: 2
  *
  * config.renderer:
  *   'webgl'  (default) PIXI's auto detection, i.e. WebGL with a Canvas fallback. On mobile
@@ -15,6 +15,11 @@
  *            extensions are core there. If the renderer cannot be created, the canvas is
  *            replaced and WebGL 1 is used instead.
  * MvPlayer.renderer = { requested, type: 'webgl2' | 'webgl' | 'canvas', gpu, fallback }.
+ *
+ * Shader precision: PIXI compiles fragment shaders with mediump by default. On Mali GPUs
+ * mediump is a 16-bit float, too coarse for the pixel coordinates of large tileset
+ * images, so the tilemap samples the neighbouring texel and thin lines appear between
+ * tiles. When the GPU supports highp in fragment shaders (almost all do), PIXI uses it.
  */
 (function () {
     'use strict';
@@ -69,9 +74,33 @@
         Graphics._updateCanvas();
     }
 
+    /** Fragment shader precision support, read from a throwaway WebGL context. */
+    function fragmentPrecision() {
+        var canvas = document.createElement('canvas');
+        var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (!gl) return null;
+        var high = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
+        var medium = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.MEDIUM_FLOAT);
+        var info = { highp: !!(high && high.precision > 0), mediumBits: medium ? medium.precision : null };
+        var lose = gl.getExtension('WEBGL_lose_context');
+        if (lose) lose.loseContext();
+        return info;
+    }
+
+    function useHighPrecision() {
+        if (requested === 'canvas' || !window.PIXI || !PIXI.settings) return;
+        var info = fragmentPrecision();
+        if (!info) return;
+        if (info.highp) PIXI.settings.PRECISION_FRAGMENT = 'highp';
+        MvPlayer.log('i', 'Renderer', 'Fragment precision: highp ' + (info.highp ? 'used' : 'not supported') +
+            ', mediump has ' + info.mediumBits + ' bits');
+    }
+
     var _createRenderer = Graphics._createRenderer;
     Graphics._createRenderer = function () {
         var fallback = null;
+        // Before the renderer exists: its plugins (the tilemap) compile shaders on creation.
+        useHighPrecision();
         var gameType = this._rendererType;
         this._rendererType = rendererType(gameType);
         if (this._rendererType !== gameType) {

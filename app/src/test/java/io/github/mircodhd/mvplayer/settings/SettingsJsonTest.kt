@@ -82,4 +82,13 @@ class SettingsJsonTest {
         assertEquals(1f, parsed.hud.opacity)
         assertEquals(listOf("fps"), parsed.hud.modules)
     }
+
+    @Test
+    fun oldHudSettingsKeepTheFrameGraph() {
+        // Before the graph became its own module, frame time drew it.
+        val parsed = SettingsJson.globalFromJson(JSONObject("""{"hud":{"modules":["fps","frametime","battery"]}}"""))
+        assertEquals(listOf("fps", "frametime", "framegraph", "battery"), parsed.hud.modules)
+        val current = SettingsJson.globalFromJson(SettingsJson.globalToJson(GlobalSettings(hud = HudSettings(modules = listOf("frametime")))))
+        assertEquals(listOf("frametime"), current.hud.modules)
+    }
 }
