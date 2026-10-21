@@ -6,13 +6,19 @@ package io.github.mircodhd.mvplayer.ui.theme
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import io.github.mircodhd.mvplayer.fonts.FontLibrary
 
 // Fallback palette (Android 11, no dynamic color): muted crimson on warm dark greys.
 private val DarkColors = darkColorScheme(
@@ -57,9 +63,12 @@ private val LightColors = lightColorScheme(
     outline = Color(0xFF857370),
 )
 
-/** Material 3 theme; uses the wallpaper-based dynamic palette on Android 12+. */
+/**
+ * Material 3 theme; uses the wallpaper-based dynamic palette on Android 12+. [appFont] is
+ * a FontLibrary id for every text style, or "system" (or an unknown id) for Android's font.
+ */
 @Composable
-fun MvPlayerTheme(content: @Composable () -> Unit) {
+fun MvPlayerTheme(appFont: String = "system", content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
     val context = LocalContext.current
     val colors = when {
@@ -68,5 +77,31 @@ fun MvPlayerTheme(content: @Composable () -> Unit) {
         dark -> DarkColors
         else -> LightColors
     }
-    MaterialTheme(colorScheme = colors, content = content)
+    val typography = remember(appFont) {
+        val family = fontFamily(context, appFont)
+        if (family == null) Typography() else Typography().withFont(family)
+    }
+    MaterialTheme(colorScheme = colors, typography = typography, content = content)
+}
+
+private fun fontFamily(context: android.content.Context, id: String): FontFamily? {
+    val font = FontLibrary.find(context, id) ?: return null
+    return runCatching {
+        when {
+            font.asset != null -> FontFamily(Font(font.asset, context.assets))
+            font.file != null -> FontFamily(Font(font.file))
+            else -> null
+        }
+    }.getOrNull()
+}
+
+private fun Typography.withFont(family: FontFamily): Typography {
+    fun TextStyle.f() = copy(fontFamily = family)
+    return copy(
+        displayLarge = displayLarge.f(), displayMedium = displayMedium.f(), displaySmall = displaySmall.f(),
+        headlineLarge = headlineLarge.f(), headlineMedium = headlineMedium.f(), headlineSmall = headlineSmall.f(),
+        titleLarge = titleLarge.f(), titleMedium = titleMedium.f(), titleSmall = titleSmall.f(),
+        bodyLarge = bodyLarge.f(), bodyMedium = bodyMedium.f(), bodySmall = bodySmall.f(),
+        labelLarge = labelLarge.f(), labelMedium = labelMedium.f(), labelSmall = labelSmall.f(),
+    )
 }

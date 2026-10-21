@@ -9,8 +9,8 @@ plugins {
 }
 
 // Bump both for every APK that is handed out or released (see CHANGELOG.md).
-val appVersionCode = 16
-val appVersionName = "0.4.4"
+val appVersionCode = 21
+val appVersionName = "0.5.0"
 
 // Release signing from keystore.properties (not committed). Without it, release builds
 // are left unsigned.
@@ -50,6 +50,11 @@ androidComponents {
 }
 
 android {
+    // Logging calls android.util.Log and SystemClock; unit tests get default values instead.
+    testOptions.unitTests.isReturnDefaultValues = true
+    // The language can be switched in the app, so a bundle must keep every language.
+    bundle.language.enableSplit = false
+
     namespace = "io.github.mircodhd.mvplayer"
     compileSdk = 37
 

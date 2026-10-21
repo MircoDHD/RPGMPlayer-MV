@@ -41,7 +41,7 @@ import io.github.mircodhd.mvplayer.settings.OverlaySettings
 import io.github.mircodhd.mvplayer.settings.Renderer
 import io.github.mircodhd.mvplayer.settings.SettingsResolver
 
-private enum class GameDialog { OVERLAY_MODE, LAYOUT, OPACITY, SIZE, HAPTICS, MIRROR, FRAME_RATE, RENDERER }
+private enum class GameDialog { OVERLAY_MODE, LAYOUT, OPACITY, SIZE, HAPTICS, MIRROR, FRAME_RATE, RENDERER, CONTINUE_ERRORS }
 
 /** Per-game overrides of the global settings (reachable from the info sheet and in game). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +54,7 @@ fun GameSettingsScreen(
     onChange: (GameSettings) -> Unit,
     onOpenController: () -> Unit,
     onOpenPicture: () -> Unit,
+    onOpenFont: () -> Unit,
     onCustomizeLayout: (GamepadLayout) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -183,6 +184,25 @@ fun GameSettingsScreen(
                     onClick = onOpenPicture,
                 )
             }
+            item {
+                ValueRow(
+                    title = stringResource(R.string.font_title),
+                    value = fontLabel(context, effective.font),
+                    summary = stringResource(R.string.font_summary),
+                    badges = defaultBadge(game.fontId ?: game.fontScale),
+                    onClick = onOpenFont,
+                )
+            }
+            item { SectionHeader(stringResource(R.string.set_section_compat)) }
+            item {
+                ValueRow(
+                    title = stringResource(R.string.continue_errors_title),
+                    value = onOff(effective.continueAfterErrors),
+                    summary = stringResource(R.string.continue_errors_summary),
+                    badges = defaultBadge(game.continueAfterErrors),
+                    onClick = { dialog = GameDialog.CONTINUE_ERRORS },
+                )
+            }
         }
     }
 
@@ -229,6 +249,14 @@ fun GameSettingsScreen(
                 onChange(game.copy(overlayHaptics = overrideOf(it, o.haptics)))
             },
             onDismiss = { dialog = null },
+        )
+        GameDialog.CONTINUE_ERRORS -> ChoiceDialog(
+            title = stringResource(R.string.continue_errors_title),
+            choices = overrideChoices(listOf(true to onOff(true), false to onOff(false)), global.continueAfterErrors),
+            selected = effective.continueAfterErrors,
+            onSelect = { onChange(game.copy(continueAfterErrors = overrideOf(it, global.continueAfterErrors))) },
+            onDismiss = { dialog = null },
+            note = stringResource(R.string.continue_errors_summary),
         )
         GameDialog.MIRROR -> ChoiceDialog(
             title = stringResource(R.string.overlay_mirror),

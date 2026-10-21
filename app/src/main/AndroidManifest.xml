@@ -18,6 +18,7 @@
 
     <application
         android:name=".PlayerApp"
+        android:localeConfig="@xml/locales_config"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/launcher_label"

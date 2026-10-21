@@ -40,9 +40,49 @@ class GameFilesTest {
     }
 
     @Test
+    fun encryptedPlainFilesDecryptAgain() {
+        val key = MvDecrypter.parseKey("00112233445566778899aabbccddeeff")!!
+        val plain = ByteArray(100) { (it * 7).toByte() }
+        assertArrayEquals(plain, MvDecrypter.decrypt(MvDecrypter.encrypt(plain, key), key))
+        assertArrayEquals(ByteArray(3) { 1 }, MvDecrypter.decrypt(MvDecrypter.encrypt(ByteArray(3) { 1 }, key), key))
+    }
+
+    @Test
+    fun fontFilesAreRecognisedBySignature() {
+        val ttf = byteArrayOf(0, 1, 0, 0) + ByteArray(20)
+        assertEquals(true, io.github.mircodhd.mvplayer.fonts.FontLibrary.isFont(ttf))
+        assertEquals(true, io.github.mircodhd.mvplayer.fonts.FontLibrary.isFont("wOF2".toByteArray() + ByteArray(20)))
+        assertEquals(false, io.github.mircodhd.mvplayer.fonts.FontLibrary.isFont("PK\u0003\u0004".toByteArray() + ByteArray(20)))
+    }
+
+    @Test
     fun decrypterRejectsWrongHeader() {
         val key = MvDecrypter.parseKey("000102030405060708090a0b0c0d0e0f")!!
         assertNull(MvDecrypter.decrypt(ByteArray(32), key))
         assertNull(MvDecrypter.parseKey("abc"))
+    }
+
+    @Test
+    fun fileIndexFindsDecomposedAndGarbledNames() {
+        val root = temp.newFolder("www")
+        File(root, "img/pictures").mkdirs()
+        // macOS archive: "ä" stored as "a" + combining diaeresis
+        File(root, "img/pictures/Ka\u0308fer.png").writeText("x")
+        // UTF-8 "Ölfass" unpacked as Windows-1252
+        File(root, "img/pictures/Ã–lfass.png").writeText("x")
+        // Shift-JIS "タイトル" unpacked as CP437
+        val garbled = String("タイトル.png".toByteArray(charset("Shift_JIS")), charset("IBM437"))
+        File(root, "img/pictures/$garbled").writeText("x")
+        val index = FileIndex.build(FileNode(root))
+        assertEquals("Ka\u0308fer.png", index.resolve("img/pictures/Käfer.png")?.name)
+        assertEquals("Ã–lfass.png", index.resolve("img/pictures/Ölfass.png")?.name)
+        assertEquals(garbled, index.resolve("img/pictures/タイトル.png")?.name)
+        assertNull(index.resolve("img/pictures/Missing.png"))
+    }
+
+    @Test
+    fun mojibakeRepairNeedsAStrictRoundTrip() {
+        assertEquals(emptySet<String>(), MojibakeNames.repairs("plain.png"))
+        assertEquals(true, "Ölfass.png" in MojibakeNames.repairs("Ã–lfass.png"))
     }
 }

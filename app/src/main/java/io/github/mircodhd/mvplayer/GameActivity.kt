@@ -3,6 +3,7 @@
 
 package io.github.mircodhd.mvplayer
 
+import android.content.Context
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.res.Configuration
@@ -12,6 +13,7 @@ import android.hardware.input.InputManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -27,6 +29,7 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.view.WindowManager
 import android.webkit.ConsoleMessage
+import android.webkit.JsResult
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -36,6 +39,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.compose.runtime.snapshotFlow
@@ -62,14 +66,18 @@ import io.github.mircodhd.mvplayer.overlay.LayoutRepository
 import io.github.mircodhd.mvplayer.patch.PatchProfiles
 import io.github.mircodhd.mvplayer.hud.DeviceSampler
 import io.github.mircodhd.mvplayer.hud.HudDataHub
+import io.github.mircodhd.mvplayer.settings.AppLanguage
 import io.github.mircodhd.mvplayer.settings.GameSettings
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
+import io.github.mircodhd.mvplayer.fonts.FontLibrary
+import io.github.mircodhd.mvplayer.settings.FontSettings
 import io.github.mircodhd.mvplayer.settings.HudSettings
 import io.github.mircodhd.mvplayer.settings.PictureSettings
 import io.github.mircodhd.mvplayer.settings.Renderer
 import io.github.mircodhd.mvplayer.settings.SettingsStore
 import io.github.mircodhd.mvplayer.storage.DocumentNode
 import io.github.mircodhd.mvplayer.ui.game.EditorRequest
+import io.github.mircodhd.mvplayer.ui.game.GameAlert
 import io.github.mircodhd.mvplayer.ui.game.GameOverlay
 import io.github.mircodhd.mvplayer.ui.game.GameOverlayActions
 import io.github.mircodhd.mvplayer.ui.game.GameOverlayState
@@ -84,6 +92,10 @@ import java.util.concurrent.Executors
 
 /** Fullscreen WebView that runs one game, with a Compose overlay for controls and menus. */
 class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
+
     companion object {
         const val EXTRA_GAME_ID = "game_id"
         private const val TAG = "Game"
@@ -107,6 +119,8 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
     private var promptedRenderer: Renderer? = null
     private var appliedHudInterval = 0
     private var appliedPicture: PictureSettings? = null
+    private var appliedContinueAfterErrors = false
+    private var appliedFont: FontSettings? = null
     private val deviceSamplerDelegate = lazy { DeviceSampler(this, displayHz = { display?.refreshRate }) }
     private val deviceSampler by deviceSamplerDelegate
     private val hudHub by lazy { HudDataHub(deviceSampler, sessionMs = ::sessionPlayTime) }
@@ -193,7 +207,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         }
         container.addView(loading, FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER))
         val overlayView = ComposeView(this).apply {
-            setContent { MvPlayerTheme { GameOverlay(overlayState, this@GameActivity) } }
+            setContent { MvPlayerTheme(appFont = overlayState.global.appFont) { GameOverlay(overlayState, this@GameActivity) } }
         }
         container.addView(overlayView, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         setContentView(container)
@@ -260,6 +274,14 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         }
         applyHud(overlayState.global.hud)
         applyPicture(effective.picture)
+        if (effective.continueAfterErrors != appliedContinueAfterErrors) {
+            appliedContinueAfterErrors = effective.continueAfterErrors
+            webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.errors&&MvPlayer.errors.setContinue(${effective.continueAfterErrors})", null)
+        }
+        if (effective.font != appliedFont) {
+            appliedFont = effective.font
+            webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.fonts&&MvPlayer.fonts.configure(${fontConfig(effective.font) ?: "null"})", null)
+        }
         val running = runningRenderer
         if (running != null && effective.renderer != running && effective.renderer != promptedRenderer) {
             promptedRenderer = effective.renderer
@@ -267,6 +289,15 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
             overlayState.restartPrompt = true
         }
         DebugLog.d(TAG, "Effective settings: $effective")
+    }
+
+    /** What mv/fonts.js gets: null keeps the game font at its size. */
+    private fun fontConfig(font: FontSettings): JSONObject? {
+        val known = !font.isGameFont && FontLibrary.find(this, font.id) != null
+        if (!known && font.scale == 1f) return null
+        return JSONObject()
+            .put("url", if (known) "/${GameRequestHandler.FONT_PREFIX}${Uri.encode(font.id, "/")}" else JSONObject.NULL)
+            .put("scale", PictureSettings.rounded(font.scale))
     }
 
     /** Sends changed scaling and filter settings to the page, which redraws even while paused. */
@@ -323,28 +354,35 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun startGame(info: GameInfo) {
-        val (profileIds, patches) = PatchProfiles.select(info)
-        DebugLog.i(TAG, "Patch profiles: $profileIds")
+        val selection = PatchProfiles.select(info)
+        val patches = selection.patches
+        DebugLog.i(TAG, "Patch profiles: ${selection.profileIds}" +
+            if (selection.userPatches.isEmpty()) "" else ", game patches: ${selection.userPatches.joinToString { "${it.file} (${it.position.id})" }}")
         val debugSettings = DebugLog.settings
         val effective = settingsStore.effective(gameId)
         runningRenderer = effective.renderer
         promptedRenderer = effective.renderer
         appliedPicture = effective.picture
+        appliedContinueAfterErrors = effective.continueAfterErrors
+        appliedFont = effective.font
         appliedHudInterval = if (effective.hud.enabled) effective.hud.intervalMs else 0
         val config = JSONObject()
             .put("title", info.title)
             .put("engineVersion", info.engineVersion ?: JSONObject.NULL)
             .put("audioExt", info.audioExt)
             .put("videoExt", info.videoExt)
-            .put("profiles", JSONArray(profileIds))
+            .put("profiles", JSONArray(selection.profileIds))
+            .put("afterPlugins", JSONArray(patches.afterPlugins))
             .put("frameRateCap", appliedFrameRateCap.coerceAtLeast(0))
             .put("renderer", effective.renderer.id)
             .put("picture", effective.picture.toJson())
+            .put("continueAfterErrors", effective.continueAfterErrors)
+            .put("font", fontConfig(effective.font) ?: JSONObject.NULL)
             .put("hud", JSONObject().put("intervalMs", appliedHudInterval))
             .put("debug", JSONObject()
                 .put("verbose", debugSettings.verbose)
                 .put("statsIntervalSeconds", debugSettings.statsIntervalSeconds))
-        val handler = GameRequestHandler(assets, info, patches, config.toString())
+        val handler = GameRequestHandler(assets, info, patches, config.toString()) { FontLibrary.open(this, it) }
         requestHandler = handler
         val bridge = PlayerBridge(info.webRoot, this)
 
@@ -416,6 +454,13 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
                     }
                     val source = message.sourceId().substringAfter(GameRequestHandler.HOST)
                     DebugLog.log(level, "Console", "${message.message()} ($source:${message.lineNumber()})")
+                    return true
+                }
+
+                // Shown as the app's own dialog instead of WebView's "The page at … says".
+                override fun onJsAlert(view: WebView, url: String, message: String, result: JsResult): Boolean {
+                    DebugLog.i(TAG, "Game alert: $message")
+                    overlayState.alert = GameAlert(message) { result.confirm() }
                     return true
                 }
             }
@@ -503,6 +548,26 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
 
     override fun requestTextInput(current: String, maxLength: Int) {
         runOnUiThread { overlayState.textInput = TextInputRequest(current, maxLength) }
+    }
+
+    override fun onGameError(json: String) {
+        val error = runCatching { JSONObject(json) }.getOrNull() ?: return
+        val message = error.optString("name", "Error") + ": " + error.optString("message")
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            if (error.optBoolean("stopped")) {
+                overlayState.gameError = message
+            } else {
+                Toast.makeText(this, getString(R.string.error_skipped, message.take(120)), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onErrorContinue(always: Boolean) {
+        DebugLog.i(TAG, "Continuing after a game error" + if (always) ", and from now on for this game" else "")
+        overlayState.gameError = null
+        if (always) onGameSettingsChange(overlayState.game.copy(continueAfterErrors = true))
+        webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.errors&&MvPlayer.errors.resume()", null)
     }
 
     override fun onTextResult(text: String?) {

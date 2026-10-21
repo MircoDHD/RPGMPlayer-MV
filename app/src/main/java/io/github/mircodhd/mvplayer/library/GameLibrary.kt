@@ -26,6 +26,8 @@ data class GameDetails(
     val encrypted: Boolean,
     val usesGreenworks: Boolean,
     val profiles: List<String>,
+    /** The game's own patches, "file (position)". */
+    val userPatches: List<String> = emptyList(),
 )
 
 data class GameEntry(
@@ -143,6 +145,7 @@ class GameLibrary private constructor(private val context: Context) {
                 .put("encrypted", d.encrypted)
                 .put("usesGreenworks", d.usesGreenworks)
                 .put("profiles", JSONArray(d.profiles))
+                .put("userPatches", JSONArray(d.userPatches))
         })
 
     private fun fromJson(json: JSONObject) = GameEntry(
@@ -163,6 +166,7 @@ class GameLibrary private constructor(private val context: Context) {
                 encrypted = d.optBoolean("encrypted"),
                 usesGreenworks = d.optBoolean("usesGreenworks"),
                 profiles = d.optJSONArray("profiles")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty(),
+                userPatches = d.optJSONArray("userPatches")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty(),
             )
         },
     )

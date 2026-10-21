@@ -42,10 +42,16 @@ No games are included. You need your own copy of a game.
   scanlines, sharpening, brightness, contrast and saturation, with a live preview in game.
 - **Performance HUD**: frame rate, frame times with graph, memory, battery, temperature and
   more above the game, with modules you choose and arrange.
+- **Fonts**: pixel fonts, a very readable font or your own font file for the game's text,
+  and separately for the app; adjustable text size.
+- **Robust**: finds garbled file names, repairs data files, loads plain mod files in
+  encrypted games, offers to continue after errors, and keeps PC-only plugins running.
+- **Game patches**: your own scripts in a game's `mvplayer-patches` folder
+  ([format](docs/patches.md)).
 - **Per-game settings** and **export/import** of all settings.
 - **Private**: no internet permission, no ads, no tracking, no telemetry. Diagnostic logs
   stay on the device and can be switched off.
-- Material 3 design with dynamic colours, English and German.
+- Material 3 design with dynamic colours, English and German (selectable in the app).
 
 ## Status
 
@@ -91,7 +97,7 @@ phone, and the other way round.
 | Library | 0.2 | Material 3 library, info sheet, settings, play time | Done |
 | Input | 0.3 | Controller remapping, on-screen gamepad + editor, quick menu, keyboard | Done |
 | Display & performance | 0.4 | Renderer choice and modular performance HUD (0.4.0); 30/60/unlimited fps with correct play time (0.4.1); scaling and picture filters (0.4.4) | Done |
-| Compatibility | 0.5 | Patch profiles and user patches, robust file names and JSON, error handling options, font override | Planned |
+| Compatibility | 0.5 | Robust file names and JSON, error handling, plain mod files in encrypted games, fonts for games and the app, app language, patch profiles and game patches, stand-ins for PC-only plugins (0.5.0) | Done |
 | Saves & convenience | 0.6 | Resume points (app-side quick saves to stop anywhere), save backups and export, continue button | Planned |
 | Release | – | CI builds, F-Droid / IzzyOnDroid | Planned |
 | Later | – | RPG Maker MZ support, optional Linux launcher | Ideas |

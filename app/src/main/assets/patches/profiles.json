@@ -1,0 +1,20 @@
+{
+  "comment": "Patch profiles: every profile whose 'match' rules all hold is applied. Paths are relative to assets/patches/. Positions: beforeEngine (before any game script), beforePlugins (after rpg_*.js, before the plugins), afterPlugins (after the last plugin, before the game starts). Order inside mv-base matters: perf.js and renderer.js before debug.js, which reads the first and wraps the second; lifecycle.js after framerate.js, whose requestUpdate it wraps; nwjs.js before stubs that register modules with it. Match rules: title (regular expression, case-insensitive), plugins (enabled plugin names), pluginSha256 (plugin name to SHA-256 of js/plugins/<name>.js), engine ({min, max} MV versions), usesGreenworks (true or false).",
+  "profiles": [
+    {
+      "id": "mv-base",
+      "beforeEngine": ["common/player.js"],
+      "beforePlugins": [
+        "mv/perf.js", "mv/renderer.js", "mv/debug.js", "mv/engine.js", "mv/framerate.js",
+        "mv/picture.js", "mv/errors.js", "mv/fonts.js", "mv/storage.js", "mv/input.js",
+        "mv/lifecycle.js", "mv/textinput.js", "mv/nwjs.js", "mv/afterplugins.js"
+      ]
+    },
+    {
+      "id": "greenworks-stub",
+      "comment": "Steam builds load greenworks through require(); give them a no-op module.",
+      "match": { "usesGreenworks": true },
+      "beforePlugins": ["stubs/greenworks.js"]
+    }
+  ]
+}

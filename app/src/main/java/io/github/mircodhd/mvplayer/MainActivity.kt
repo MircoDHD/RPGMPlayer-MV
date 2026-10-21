@@ -3,6 +3,7 @@
 
 package io.github.mircodhd.mvplayer
 
+import android.content.Context
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
@@ -39,19 +40,26 @@ import io.github.mircodhd.mvplayer.ui.settings.GameSettingsScreen
 import io.github.mircodhd.mvplayer.ui.settings.HudSettingsScreen
 import io.github.mircodhd.mvplayer.ui.settings.OverlaySettingsScreen
 import io.github.mircodhd.mvplayer.ui.settings.PictureSettingsScreen
+import io.github.mircodhd.mvplayer.ui.settings.FontSettingsScreen
+import io.github.mircodhd.mvplayer.settings.AppLanguage
+import io.github.mircodhd.mvplayer.settings.FontSettings
 import io.github.mircodhd.mvplayer.settings.PictureOverrides
 import io.github.mircodhd.mvplayer.settings.Renderer
 import io.github.mircodhd.mvplayer.ui.theme.MvPlayerTheme
 
 /** Start screen: the game library and the settings. */
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
+
     private val viewModel: LibraryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            MvPlayerTheme {
+            MvPlayerTheme(appFont = viewModel.global.appFont) {
                 PlayerHome(
                     viewModel = viewModel,
                     onPlay = ::launchGame,
@@ -102,14 +110,18 @@ private object Routes {
     const val OVERLAY = "overlay"
     const val HUD = "hud"
     const val PICTURE = "picture"
+    const val FONT = "font"
+    const val APP_FONT = "app-font"
     const val GAME = "game/"
     const val GAME_CONTROLLER = "game-controller/"
     const val GAME_PICTURE = "game-picture/"
+    const val GAME_FONT = "game-font/"
 
     fun parent(route: String): String = when {
         route.startsWith(GAME_CONTROLLER) -> GAME + route.removePrefix(GAME_CONTROLLER)
         route.startsWith(GAME_PICTURE) -> GAME + route.removePrefix(GAME_PICTURE)
-        route == CONTROLLER || route == OVERLAY || route == HUD || route == PICTURE -> SETTINGS
+        route.startsWith(GAME_FONT) -> GAME + route.removePrefix(GAME_FONT)
+        route == CONTROLLER || route == OVERLAY || route == HUD || route == PICTURE || route == FONT || route == APP_FONT -> SETTINGS
         else -> LIBRARY
     }
 }
@@ -165,6 +177,10 @@ private fun PlayerHome(
             onRendererChange = { viewModel.updateGlobal(viewModel.global.copy(renderer = it)) },
             onOpenHud = { route = Routes.HUD },
             onOpenPicture = { route = Routes.PICTURE },
+            onOpenFont = { route = Routes.FONT },
+            onOpenAppFont = { route = Routes.APP_FONT },
+            onLanguageChange = { tag -> (context as? android.app.Activity)?.let { AppLanguage.set(it, tag) } },
+            onGlobalChange = viewModel::updateGlobal,
             onLogToFileChange = viewModel::setLogToFileEnabled,
             onShareLogs = { viewModel.exportLogs(onStartIntent) },
             onOpenUrl = onOpenUrl,
@@ -196,6 +212,41 @@ private fun PlayerHome(
             onChange = { viewModel.updateGlobal(viewModel.global.copy(picture = it)) },
             onBack = back,
         )
+        route == Routes.FONT -> FontSettingsScreen(
+            title = stringResource(R.string.font_title),
+            global = viewModel.global.font,
+            perGame = false,
+            overrideId = viewModel.global.font.id,
+            overrideScale = viewModel.global.font.scale,
+            onChange = { id, scale ->
+                viewModel.updateGlobal(viewModel.global.copy(font = FontSettings(id ?: FontSettings.GAME_FONT, scale ?: 1f)))
+            },
+            onBack = back,
+        )
+        route == Routes.APP_FONT -> FontSettingsScreen(
+            title = stringResource(R.string.app_font_title),
+            global = FontSettings(viewModel.global.appFont),
+            perGame = false,
+            overrideId = viewModel.global.appFont,
+            overrideScale = null,
+            onChange = { id, _ -> viewModel.updateGlobal(viewModel.global.copy(appFont = id ?: FontSettings.SYSTEM_FONT)) },
+            onBack = back,
+            forApp = true,
+        )
+        route.startsWith(Routes.GAME_FONT) -> {
+            val id = route.removePrefix(Routes.GAME_FONT)
+            val game = viewModel.games.firstOrNull { it.id == id }
+            val settings = viewModel.gameSettings(id)
+            FontSettingsScreen(
+                title = stringResource(R.string.font_title_game, game?.title.orEmpty()),
+                global = viewModel.global.font,
+                perGame = true,
+                overrideId = settings.fontId,
+                overrideScale = settings.fontScale,
+                onChange = { fontId, scale -> viewModel.setGameSettings(id, viewModel.gameSettings(id).copy(fontId = fontId, fontScale = scale)) },
+                onBack = back,
+            )
+        }
         route.startsWith(Routes.GAME_PICTURE) -> {
             val id = route.removePrefix(Routes.GAME_PICTURE)
             val game = viewModel.games.firstOrNull { it.id == id }
@@ -248,6 +299,7 @@ private fun PlayerHome(
                     onChange = { viewModel.setGameSettings(id, it) },
                     onOpenController = { route = Routes.GAME_CONTROLLER + id },
                     onOpenPicture = { route = Routes.GAME_PICTURE + id },
+                    onOpenFont = { route = Routes.GAME_FONT + id },
                     onCustomizeLayout = { onCustomizeLayout(it, id) },
                     onBack = back,
                 )

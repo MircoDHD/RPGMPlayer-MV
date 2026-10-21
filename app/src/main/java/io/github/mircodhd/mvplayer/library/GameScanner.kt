@@ -26,6 +26,7 @@ object GameScanner {
         val start = SystemClock.elapsedRealtime()
         val webRoot = GameInspector.detect(folder).webRoot ?: return null
         val info = GameInspector.inspectMv(webRoot, folder.name)
+        val selection = PatchProfiles.select(info)
         val details = GameDetails(
             engineVersion = info.engineVersion,
             pixiVersion = info.pixiVersion,
@@ -37,7 +38,8 @@ object GameScanner {
             fileCount = info.index.size,
             encrypted = info.encryptionKey != null,
             usesGreenworks = info.usesGreenworks,
-            profiles = PatchProfiles.select(info).first,
+            profiles = selection.profileIds,
+            userPatches = selection.userPatches.map { "${it.file} (${it.position.id})" },
         )
         if (!coverOut.isFile) extractCover(info, coverOut)
         DebugLog.d(TAG, "Scanned ${info.title} in ${SystemClock.elapsedRealtime() - start} ms: $details")

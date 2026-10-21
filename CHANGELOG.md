@@ -4,6 +4,26 @@ All notable changes to RobustPlainGameMaker Player - MyVersion ("RPGM Player - M
 Versions follow `major.minor.patch`: the minor digit for new features, the patch digit for
 fixes. Dates are build dates.
 
+## 0.5.0 – 2026-10-21 (Phase C: compatibility)
+### Added
+- **Fonts** for the game's text, globally and per game: Pixelify Sans, VT323, Press Start 2P,
+  Atkinson Hyperlegible or your own font file, with an adjustable text size.
+- **App font**, chosen separately from the font in games.
+- **App language** (system, German, English); on Android 13+ also in the system settings.
+- When a game stops on an error, a dialog offers to continue anyway or quit.
+- Option "Continue after errors" (globally and per game): errors and missing files are
+  skipped instead of stopping the game.
+- **Game patches**: scripts in a game's `mvplayer-patches` folder run before or after the
+  plugins (see docs/patches.md); built-in patches are chosen by data-driven profiles.
+- Plugins made for the PC version that call NW.js or Node.js functions no longer break.
+### Fixed
+- A missing game file stopped loading forever; it now shows MV's loading error, as on PC.
+- Files with garbled or differently encoded names (wrong zip code page, macOS archives)
+  are found.
+- Data files with comments, trailing commas or a byte order mark load.
+- Plain images and audio added by mods to encrypted games load.
+- Game messages (`alert`) appear as the app's own dialog.
+
 ## 0.4.4 – 2026-10-21 (Phase B, part 3: picture)
 ### Added
 - **Picture and filters**, globally and per game: scaling (fit, integer, stretch),

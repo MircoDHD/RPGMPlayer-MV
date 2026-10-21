@@ -3,6 +3,7 @@
 
 package io.github.mircodhd.mvplayer
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,6 +15,7 @@ import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.overlay.LayoutEditor
 import io.github.mircodhd.mvplayer.overlay.LayoutNames
 import io.github.mircodhd.mvplayer.overlay.LayoutRepository
+import io.github.mircodhd.mvplayer.settings.AppLanguage
 import io.github.mircodhd.mvplayer.settings.SettingsStore
 import io.github.mircodhd.mvplayer.ui.theme.MvPlayerTheme
 
@@ -22,6 +24,10 @@ import io.github.mircodhd.mvplayer.ui.theme.MvPlayerTheme
  * Saves a custom copy and selects it globally or for one game.
  */
 class LayoutEditorActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
+
     companion object {
         const val EXTRA_LAYOUT_ID = "layout_id"
         const val EXTRA_GAME_ID = "game_id"
@@ -45,7 +51,7 @@ class LayoutEditorActivity : ComponentActivity() {
         val original = if (overlay.mirror) preset.mirrored() else preset
 
         setContent {
-            MvPlayerTheme {
+            MvPlayerTheme(appFont = store.global().appFont) {
                 LayoutEditor(
                     initial = shown,
                     original = original,

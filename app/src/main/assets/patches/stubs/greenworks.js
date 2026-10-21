@@ -3,18 +3,15 @@
 
 /*
  * RPGM Player: no-op Steam (greenworks) module. Runs after rpg_*.js, before plugins.
- * Patch version: 1
+ * Patch version: 2
  *
  * Steam plugins such as Archeia_Steamworks call require('./js/libs/greenworks') at load
- * time, which throws in a browser and leaves the plugin half-initialised. This provides a
- * global require() that only knows greenworks; initAPI() reports that Steam is not
- * running, so the plugins skip achievements and cloud saves. Utils.isNwjs() stays false
- * because `process` is still undefined.
+ * time, which throws in a browser and leaves the plugin half-initialised. This registers
+ * a greenworks module with the require() of mv/nwjs.js; initAPI() reports that Steam is
+ * not running, so the plugins skip achievements and cloud saves.
  */
 (function () {
     'use strict';
-
-    if (typeof window.require !== 'undefined') return;
 
     function no() {
         return false;
@@ -48,13 +45,14 @@
         })
         : greenworks;
 
-    window.require = function (name) {
-        if (/greenworks/i.test(String(name))) {
-            MvPlayer.log('i', 'Steam', 'Providing greenworks stub for', name);
-            return module;
-        }
-        var error = new Error("Cannot find module '" + name + "'");
-        error.code = 'MODULE_NOT_FOUND';
-        throw error;
-    };
+    if (MvPlayer.node) {
+        MvPlayer.node.register(/greenworks/i, module);
+    } else if (typeof window.require === 'undefined') {
+        window.require = function (name) {
+            if (/greenworks/i.test(String(name))) return module;
+            var error = new Error("Cannot find module '" + name + "'");
+            error.code = 'MODULE_NOT_FOUND';
+            throw error;
+        };
+    }
 })();

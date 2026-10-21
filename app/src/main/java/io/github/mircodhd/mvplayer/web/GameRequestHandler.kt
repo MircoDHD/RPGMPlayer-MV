@@ -11,6 +11,7 @@ import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.game.GameInfo
 import io.github.mircodhd.mvplayer.game.MvDecrypter
 import io.github.mircodhd.mvplayer.patch.PatchSet
+import io.github.mircodhd.mvplayer.storage.GameNode
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
@@ -28,11 +29,16 @@ class GameRequestHandler(
     private val info: GameInfo,
     private val patches: PatchSet,
     private val configJson: String,
+    /** Opens a font by FontLibrary id, for the font override (mv/fonts.js). */
+    private val openFont: (String) -> InputStream?,
 ) {
     companion object {
         const val HOST = "game.local"
         const val START_URL = "https://$HOST/index.html"
         private const val PATCH_PREFIX = "__mvplayer/"
+        const val FONT_PREFIX = "__mvplayer/font/"
+        /** Read-only file system queries for the Node.js stand-ins (mv/nwjs.js). */
+        private const val FS_PREFIX = "__mvplayer/fs/"
         private const val TAG = "Request"
         private val NO_CACHE = mapOf("Cache-Control" to "no-store")
     }
@@ -42,16 +48,23 @@ class GameRequestHandler(
     private val requestCount = AtomicInteger()
     private val notFoundCount = AtomicInteger()
     private val decryptedCount = AtomicInteger()
+    private val encryptedCount = AtomicInteger()
+    private val repairedFiles: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private val bytesServed = AtomicLong()
 
     /** Totals since the game started, logged by the activity on pause. */
     fun stats() = "${requestCount.get()} requests, ${bytesServed.get() / 1024} KiB, " +
-        "${notFoundCount.get()} not found, ${decryptedCount.get()} decrypted twins"
+        "${notFoundCount.get()} not found, ${decryptedCount.get()} decrypted and ${encryptedCount.get()} encrypted twins"
 
-    fun handle(request: WebResourceRequest): WebResourceResponse {
+    /** Null for a missing game file: WebView then fails the request (see [missing]). */
+    fun handle(request: WebResourceRequest): WebResourceResponse? {
         val start = SystemClock.elapsedRealtime()
         val response = route(request)
         requestCount.incrementAndGet()
+        if (response == null) {
+            DebugLog.v(TAG, "${request.method} ${request.url.path} -> missing, failed as a network error")
+            return null
+        }
         val length = response.responseHeaders?.get("Content-Length")?.toLongOrNull() ?: 0L
         bytesServed.addAndGet(length)
         if (DebugLog.verbose) {
@@ -62,7 +75,7 @@ class GameRequestHandler(
         return response
     }
 
-    private fun route(request: WebResourceRequest): WebResourceResponse {
+    private fun route(request: WebResourceRequest): WebResourceResponse? {
         val url = request.url
         if (url.scheme != "https" || url.host != HOST) {
             DebugLog.w(TAG, "Blocked request to $url")
@@ -72,6 +85,8 @@ class GameRequestHandler(
         val path = normalize(url.path.orEmpty()) ?: return error(400, "Bad Request")
         return when {
             path.isEmpty() || path.equals("index.html", ignoreCase = true) -> serveIndex()
+            path.startsWith(FONT_PREFIX) -> serveFont(path.removePrefix(FONT_PREFIX))
+            path.startsWith(FS_PREFIX) -> serveFsQuery(path.removePrefix(FS_PREFIX))
             path.startsWith(PATCH_PREFIX) -> servePatch(path.removePrefix(PATCH_PREFIX))
             else -> serveFile(path, request.requestHeaders)
         }
@@ -87,14 +102,46 @@ class GameRequestHandler(
         error(404, "Not Found")
     }
 
-    private fun serveFile(path: String, requestHeaders: Map<String, String>): WebResourceResponse {
+    /** "stat/<path>" → {exists, dir, size}; "list/<path>" → [{name, dir}] or 404. */
+    private fun serveFsQuery(query: String): WebResourceResponse {
+        val kind = query.substringBefore('/')
+        val path = query.substringAfter('/', "")
+        val json = when (kind) {
+            "stat" -> {
+                val file = info.index.resolve(path)
+                val isDir = file == null && info.index.list(path) != null
+                org.json.JSONObject().put("exists", file != null || isDir).put("dir", isDir).put("size", file?.length ?: 0)
+            }
+            "list" -> {
+                val entries = info.index.list(path) ?: return error(404, "Not Found")
+                org.json.JSONArray().apply {
+                    entries.forEach { (name, dir) -> put(org.json.JSONObject().put("name", name).put("dir", dir)) }
+                }
+            }
+            else -> return error(400, "Bad Request")
+        }
+        return inMemory("application/json", json.toString().toByteArray())
+    }
+
+    private fun serveFont(id: String): WebResourceResponse {
+        val bytes = try {
+            openFont(id)?.use { it.readBytes() }
+        } catch (e: java.io.IOException) {
+            null
+        } ?: return error(404, "Not Found").also { DebugLog.w(TAG, "Missing font $id") }
+        return WebResourceResponse("font/ttf", null, 200, "OK", NO_CACHE + ("Content-Length" to bytes.size.toString()), ByteArrayInputStream(bytes))
+    }
+
+    private fun serveFile(path: String, requestHeaders: Map<String, String>): WebResourceResponse? {
         val file = info.index.resolve(path)
         if (file == null) {
             serveDecryptedTwin(path)?.let { return it }
+            serveEncryptedTwin(path)?.let { return it }
             notFoundCount.incrementAndGet()
             DebugLog.w(TAG, "Not found: $path")
-            return error(404, "Not Found")
+            return missing()
         }
+        if (isDataJson(path)) return serveDataJson(path, file)
         val mime = MimeTypes.forPath(file.name)
         val encoding = if (MimeTypes.isText(mime)) "UTF-8" else null
         val length = file.length
@@ -122,11 +169,28 @@ class GameRequestHandler(
         return WebResourceResponse(mime, encoding, 200, "OK", headers, stream)
     }
 
+    private fun isDataJson(path: String) =
+        path.startsWith("data/", ignoreCase = true) && path.endsWith(".json", ignoreCase = true)
+
+    /** Data files are read whole and repaired if MV's strict JSON.parse would reject them. */
+    private fun serveDataJson(path: String, file: GameNode): WebResourceResponse? {
+        val bytes = try {
+            file.readBytes()
+        } catch (e: Exception) {
+            return unreadable(path, e)
+        }
+        val repaired = JsonRepair.repair(bytes)
+        if (repaired != null && repairedFiles.add(path)) {
+            DebugLog.w(TAG, "Repaired $path for JSON.parse: removed ${repaired.changes.joinToString()}")
+        }
+        return inMemory("application/json", repaired?.bytes ?: bytes)
+    }
+
     // Exception, not IOException: a folder grant revoked while the game runs throws SecurityException.
-    private fun unreadable(path: String, e: Exception): WebResourceResponse {
+    private fun unreadable(path: String, e: Exception): WebResourceResponse? {
         notFoundCount.incrementAndGet()
         DebugLog.w(TAG, "Cannot open $path", e)
-        return error(404, "Not Found")
+        return missing()
     }
 
     /**
@@ -146,6 +210,22 @@ class GameRequestHandler(
         return WebResourceResponse(MimeTypes.forPath(path), null, 200, "OK", headers, ByteArrayInputStream(bytes))
     }
 
+    /**
+     * Mods often add plain images or audio to an encrypted game; MV still asks for
+     * "x.rpgmvp". The plain file is encrypted with the game's key, so MV's decrypter reads it.
+     */
+    private fun serveEncryptedTwin(path: String): WebResourceResponse? {
+        val key = info.encryptionKey ?: return null
+        val ext = path.substringAfterLast('.', "").lowercase()
+        val plainExt = MvDecrypter.PLAIN_EXTENSIONS[ext] ?: return null
+        val twin = info.index.resolve(path.dropLast(ext.length) + plainExt) ?: return null
+        val bytes = runCatching { MvDecrypter.encrypt(twin.readBytes(), key) }.getOrNull() ?: return null
+        encryptedCount.incrementAndGet()
+        DebugLog.i(TAG, "Serving plain ${twin.name} encrypted for $path")
+        val headers = mapOf("Cache-Control" to "no-store", "Content-Length" to bytes.size.toString())
+        return WebResourceResponse(MimeTypes.forPath(path), null, 200, "OK", headers, ByteArrayInputStream(bytes))
+    }
+
     private fun buildIndexHtml(): ByteArray {
         val original = info.index.resolve("index.html")?.readText().orEmpty()
         val engineTags = buildString {
@@ -153,6 +233,7 @@ class GameRequestHandler(
             patches.beforeEngine.forEach { append(scriptTag(it)) }
         }
         val pluginTags = patches.beforePlugins.joinToString("") { scriptTag(it) }
+        // afterPlugins scripts are appended by mv/afterplugins.js once MV has queued the plugins.
 
         var html = original
         html = insertBefore(html, Regex("<script", RegexOption.IGNORE_CASE), engineTags)
@@ -168,8 +249,8 @@ class GameRequestHandler(
         return html.toByteArray()
     }
 
-    private fun scriptTag(patch: String) =
-        "<script type=\"text/javascript\" src=\"/$PATCH_PREFIX$patch\"></script>\n"
+    private fun scriptTag(url: String) =
+        "<script type=\"text/javascript\" src=\"$url\"></script>\n"
 
     private fun insertBefore(html: String, pattern: Regex, insert: String): String? =
         pattern.find(html)?.let { html.substring(0, it.range.first) + insert + html.substring(it.range.first) }
@@ -203,6 +284,14 @@ class GameRequestHandler(
     private fun inMemory(mime: String, bytes: ByteArray) = WebResourceResponse(
         mime, "UTF-8", 200, "OK", NO_CACHE + ("Content-Length" to bytes.size.toString()), ByteArrayInputStream(bytes),
     )
+
+    /**
+     * A missing game file fails like on PC, where NW.js reports a network error for a file
+     * that does not exist: MV's loaders only handle the error event and ignore a 404 load,
+     * which left the game waiting forever. Without a response WebView tries the network,
+     * which the app cannot use (no internet permission), so the request fails at once.
+     */
+    private fun missing(): WebResourceResponse? = null
 
     private fun error(status: Int, reason: String) =
         WebResourceResponse("text/plain", "UTF-8", status, reason, NO_CACHE, ByteArrayInputStream(ByteArray(0)))

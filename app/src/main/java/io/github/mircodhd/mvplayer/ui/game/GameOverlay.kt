@@ -4,6 +4,7 @@
 package io.github.mircodhd.mvplayer.ui.game
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -50,6 +53,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -78,11 +82,15 @@ import io.github.mircodhd.mvplayer.ui.settings.FrameRateDialog
 import io.github.mircodhd.mvplayer.ui.settings.overrideChoices
 import io.github.mircodhd.mvplayer.ui.settings.overrideOf
 import io.github.mircodhd.mvplayer.ui.settings.GameSettingsScreen
+import io.github.mircodhd.mvplayer.ui.settings.FontSettingsScreen
 import io.github.mircodhd.mvplayer.ui.settings.PicturePanel
 import io.github.mircodhd.mvplayer.ui.settings.pictureSummary
 import io.github.mircodhd.mvplayer.ui.settings.frameRateLabel
 
 data class TextInputRequest(val current: String, val maxLength: Int)
+
+/** A `window.alert` from the game; [onDone] lets the page continue. */
+data class GameAlert(val message: String, val onDone: () -> Unit)
 
 data class EditorRequest(val layout: GamepadLayout, val original: GamepadLayout, val background: ImageBitmap?)
 
@@ -108,6 +116,9 @@ class GameOverlayState(val gameTitle: String) {
     var restartPrompt by mutableStateOf(false)
     /** Hides the controls for a moment, e.g. while taking the editor screenshot. */
     var hideControls by mutableStateOf(false)
+    /** "Name: message" of an error MV stopped on; offers to continue. */
+    var gameError by mutableStateOf<String?>(null)
+    var alert by mutableStateOf<GameAlert?>(null)
     /** Latest performance HUD sample; null while the HUD is off or has no data yet. */
     var hud by mutableStateOf<HudSnapshot?>(null)
 
@@ -121,7 +132,8 @@ class GameOverlayState(val gameTitle: String) {
     val showHud: Boolean get() = gameReady && global.hud.enabled && editor == null && !hideControls
 
     /** True while something covers the game and it should be paused. */
-    val isModal: Boolean get() = quickMenu || settingsOpen || pictureOpen || editor != null || confirmQuit || restartPrompt
+    val isModal: Boolean get() = quickMenu || settingsOpen || pictureOpen || editor != null || confirmQuit || restartPrompt ||
+        gameError != null || alert != null
 }
 
 interface GameOverlayActions {
@@ -130,6 +142,7 @@ interface GameOverlayActions {
     fun onGameSettingsChange(settings: GameSettings)
     fun onGlobalSettingsChange(settings: GlobalSettings)
     fun onRestartGame()
+    fun onErrorContinue(always: Boolean)
     fun onHudDrawn(nanos: Long)
     fun onCustomizeLayout(layout: GamepadLayout)
     fun onEditorSave(layout: GamepadLayout, forGame: Boolean, asCopy: Boolean)
@@ -198,6 +211,21 @@ fun GameOverlay(state: GameOverlayState, actions: GameOverlayActions) {
             text = { Text(stringResource(R.string.renderer_restart_text)) },
             confirmButton = { TextButton(onClick = actions::onRestartGame) { Text(stringResource(R.string.renderer_restart_now)) } },
             dismissButton = { TextButton(onClick = { state.restartPrompt = false }) { Text(stringResource(R.string.renderer_restart_later)) } },
+        )
+    }
+
+    state.gameError?.let { message -> GameErrorDialog(message, actions) { state.gameError = null } }
+
+    state.alert?.let { alert ->
+        val done = {
+            state.alert = null
+            alert.onDone()
+        }
+        AlertDialog(
+            onDismissRequest = done,
+            title = { Text(stringResource(R.string.alert_title)) },
+            text = { Text(alert.message, modifier = Modifier.verticalScroll(rememberScrollState())) },
+            confirmButton = { TextButton(onClick = done) { Text(stringResource(R.string.dialog_ok)) } },
         )
     }
 
@@ -336,12 +364,29 @@ private fun MenuItem(
 @Composable
 private fun InGameSettings(state: GameOverlayState, actions: GameOverlayActions) {
     var controllerOpen by remember { mutableStateOf(false) }
+    var fontOpen by remember { mutableStateOf(false) }
     Dialog(
-        onDismissRequest = { if (controllerOpen) controllerOpen = false else state.settingsOpen = false },
+        onDismissRequest = {
+            when {
+                controllerOpen -> controllerOpen = false
+                fontOpen -> fontOpen = false
+                else -> state.settingsOpen = false
+            }
+        },
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         Surface(Modifier.fillMaxSize()) {
-            if (controllerOpen) {
+            if (fontOpen) {
+                FontSettingsScreen(
+                    title = stringResource(R.string.font_title_game, state.gameTitle),
+                    global = state.global.font,
+                    perGame = true,
+                    overrideId = state.game.fontId,
+                    overrideScale = state.game.fontScale,
+                    onChange = { id, scale -> actions.onGameSettingsChange(state.game.copy(fontId = id, fontScale = scale)) },
+                    onBack = { fontOpen = false },
+                )
+            } else if (controllerOpen) {
                 ControllerScreen(
                     title = stringResource(R.string.controller_title_game, state.gameTitle),
                     mapping = state.game.mapping ?: state.global.mapping,
@@ -363,6 +408,7 @@ private fun InGameSettings(state: GameOverlayState, actions: GameOverlayActions)
                         state.settingsOpen = false
                         state.pictureOpen = true
                     },
+                    onOpenFont = { fontOpen = true },
                     onCustomizeLayout = { layout ->
                         state.settingsOpen = false
                         actions.onCustomizeLayout(layout)
@@ -372,6 +418,35 @@ private fun InGameSettings(state: GameOverlayState, actions: GameOverlayActions)
             }
         }
     }
+}
+
+/** MV stopped on an error: continue anyway, quit, or close and keep MV's error screen. */
+@Composable
+private fun GameErrorDialog(message: String, actions: GameOverlayActions, onClose: () -> Unit) {
+    var always by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(stringResource(R.string.error_title)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(message, style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace))
+                Text(
+                    stringResource(R.string.error_stopped),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 8.dp).clickable { always = !always },
+                ) {
+                    Checkbox(checked = always, onCheckedChange = { always = it })
+                    Text(stringResource(R.string.error_always), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { actions.onErrorContinue(always) }) { Text(stringResource(R.string.error_continue)) } },
+        dismissButton = { TextButton(onClick = actions::onQuit) { Text(stringResource(R.string.error_quit)) } },
+    )
 }
 
 @Composable

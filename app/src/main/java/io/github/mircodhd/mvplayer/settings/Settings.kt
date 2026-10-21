@@ -118,6 +118,21 @@ data class PictureOverrides(
     }
 }
 
+/** Font for the game's text; [id] is a FontLibrary id ("game" keeps the game's own). */
+data class FontSettings(
+    val id: String = GAME_FONT,
+    /** Multiplies the text size; for fonts that run wider or smaller than the game's. */
+    val scale: Float = 1f,
+) {
+    val isGameFont: Boolean get() = id == GAME_FONT
+
+    companion object {
+        const val GAME_FONT = "game"
+        const val SYSTEM_FONT = "system"
+        val SCALE_RANGE = 0.7f..1.3f
+    }
+}
+
 enum class HudCorner { TOP_START, TOP_END, BOTTOM_START, BOTTOM_END }
 
 enum class HudSize(val scale: Float) { SMALL(0.85f), MEDIUM(1f), LARGE(1.25f) }
@@ -183,6 +198,11 @@ data class GlobalSettings(
     val renderer: Renderer = Renderer.WEBGL,
     val hud: HudSettings = HudSettings(),
     val picture: PictureSettings = PictureSettings(),
+    /** Errors are logged and skipped instead of stopping the game (`mv/errors.js`). */
+    val continueAfterErrors: Boolean = false,
+    val font: FontSettings = FontSettings(),
+    /** Font of the app's own screens; [FontSettings.SYSTEM_FONT] keeps Android's. */
+    val appFont: String = FontSettings.SYSTEM_FONT,
     /** Unlocked by tapping the version ten times; allows [libraryTitle]. */
     val titleEditUnlocked: Boolean = false,
     /** Own name shown at the top of the library instead of the app name; null = app name. */
@@ -208,6 +228,9 @@ data class GameSettings(
     val overlayMirror: Boolean? = null,
     val overlayLayoutId: String? = null,
     val picture: PictureOverrides = PictureOverrides(),
+    val continueAfterErrors: Boolean? = null,
+    val fontId: String? = null,
+    val fontScale: Float? = null,
 ) {
     val isEmpty: Boolean get() = this == GameSettings()
 }
@@ -220,6 +243,8 @@ data class EffectiveSettings(
     val mapping: ControllerMapping,
     val overlay: OverlaySettings,
     val picture: PictureSettings,
+    val continueAfterErrors: Boolean,
+    val font: FontSettings,
 )
 
 object SettingsResolver {
@@ -237,6 +262,8 @@ object SettingsResolver {
             layoutId = game.overlayLayoutId ?: global.overlay.layoutId,
         ),
         picture = game.picture.resolve(global.picture),
+        continueAfterErrors = game.continueAfterErrors ?: global.continueAfterErrors,
+        font = FontSettings(game.fontId ?: global.font.id, game.fontScale ?: global.font.scale),
     )
 }
 
@@ -268,6 +295,9 @@ object SettingsJson {
             .put("offsetX", s.hud.offsetX.toDouble())
             .put("offsetY", s.hud.offsetY.toDouble()))
         .put("picture", s.picture.toJson())
+        .put("continueAfterErrors", s.continueAfterErrors)
+        .put("font", JSONObject().put("id", s.font.id).put("scale", PictureSettings.rounded(s.font.scale)))
+        .put("appFont", s.appFont)
         .put("titleEditUnlocked", s.titleEditUnlocked)
         .apply { s.libraryTitle?.let { put("libraryTitle", it) } }
 
@@ -305,6 +335,14 @@ object SettingsJson {
                 offsetY = h.optDouble("offsetY", 0.0).toFloat().takeUnless { it.isNaN() } ?: 0f,
             ),
             picture = json.optJSONObject("picture")?.let { PictureSettings.fromJson(it) } ?: defaults.picture,
+            continueAfterErrors = json.optBoolean("continueAfterErrors", false),
+            font = json.optJSONObject("font")?.let {
+                FontSettings(
+                    id = it.optString("id").ifBlank { FontSettings.GAME_FONT },
+                    scale = it.optDouble("scale", 1.0).toFloat().takeUnless { s -> s.isNaN() }?.coerceIn(FontSettings.SCALE_RANGE) ?: 1f,
+                )
+            } ?: defaults.font,
+            appFont = json.optString("appFont").ifBlank { defaults.appFont },
             titleEditUnlocked = json.optBoolean("titleEditUnlocked", false),
             libraryTitle = json.optString("libraryTitle").trim().take(GlobalSettings.MAX_TITLE_LENGTH).ifBlank { null },
         )
@@ -322,6 +360,9 @@ object SettingsJson {
         s.overlayMirror?.let { put("overlayMirror", it) }
         s.overlayLayoutId?.let { put("overlayLayoutId", it) }
         if (!s.picture.isEmpty) put("picture", pictureToJson(s.picture))
+        s.continueAfterErrors?.let { put("continueAfterErrors", it) }
+        s.fontId?.let { put("fontId", it) }
+        s.fontScale?.let { put("fontScale", PictureSettings.rounded(it)) }
     }
 
     fun gameFromJson(json: JSONObject) = GameSettings(
@@ -335,6 +376,9 @@ object SettingsJson {
         overlayMirror = if (json.has("overlayMirror")) json.optBoolean("overlayMirror") else null,
         overlayLayoutId = json.optString("overlayLayoutId").ifBlank { null },
         picture = json.optJSONObject("picture")?.let(::pictureFromJson) ?: PictureOverrides(),
+        continueAfterErrors = if (json.has("continueAfterErrors")) json.optBoolean("continueAfterErrors") else null,
+        fontId = json.optString("fontId").ifBlank { null },
+        fontScale = json.optDoubleOrNull("fontScale")?.toFloat()?.coerceIn(FontSettings.SCALE_RANGE),
     )
 
     private fun pictureToJson(p: PictureOverrides) = JSONObject().apply {

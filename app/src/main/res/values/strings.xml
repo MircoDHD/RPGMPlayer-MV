@@ -392,4 +392,45 @@
     <string name="picture_info_scanlines_pros">Softens large pixels.</string>
     <string name="picture_info_scanlines_cons">Darker picture; looks best with integer scaling.</string>
     <string name="picture_info_footer">Settings apply immediately. In the quick menu you see the game while you change them.</string>
+    <!-- Errors and compatibility -->
+    <string name="set_section_compat">Compatibility</string>
+    <string name="continue_errors_title">Continue after errors</string>
+    <string name="continue_errors_summary">Skips errors and missing files instead of stopping the game. May leave the game in a broken state.</string>
+    <string name="error_title">Error in the game</string>
+    <string name="error_stopped">The game stopped because of this error. Continuing may cause more errors; better save in a new slot afterwards.</string>
+    <string name="error_always">Always continue after errors in this game</string>
+    <string name="error_continue">Continue anyway</string>
+    <string name="error_quit">Quit game</string>
+    <string name="error_skipped">Error skipped: %1$s</string>
+    <string name="alert_title">Message from the game</string>
+    <!-- Fonts -->
+    <string name="font_title">Font in games</string>
+    <string name="font_title_game">Font · %1$s</string>
+    <string name="font_summary">Font of the game\'s text and its size</string>
+    <string name="font_intro">Replaces the game\'s standard font in messages, menus and windows. Fonts that plugins choose themselves stay as they are.</string>
+    <string name="font_game">Game font</string>
+    <string name="font_game_description">The font the game comes with.</string>
+    <string name="font_pixel_description">Pixel font</string>
+    <string name="font_readable_description">Very readable, made for low vision</string>
+    <string name="font_custom_description">Your font</string>
+    <string name="font_sample">Hero 123 ÄÖÜ äöü ß</string>
+    <string name="font_add">Add your own font…</string>
+    <string name="font_add_failed">That file is no TrueType, OpenType or WOFF font.</string>
+    <string name="font_delete">Remove font</string>
+    <string name="font_size">Text size</string>
+    <string name="font_size_summary">Smaller for wide fonts, if text no longer fits.</string>
+    <string name="font_preview_text">The hero enters the village. ÄÖÜ äöü ß 0123</string>
+    <!-- Language -->
+    <string name="set_section_app">App</string>
+    <string name="language_title">Language</string>
+    <string name="language_summary">Language of the app; games keep their own.</string>
+    <string name="language_system">System language</string>
+    <string name="language_note">On Android 13 and newer this is also under Settings → Apps → RPGM Player → Language.</string>
+    <string name="app_font_title">App font</string>
+    <string name="app_font_summary">Font of this app\'s screens and menus</string>
+    <string name="app_font_intro">Font of the player\'s own screens, menus and dialogs, independent of the font in games.</string>
+    <string name="app_font_system">System font</string>
+    <string name="app_font_system_description">Android\'s font, at Android\'s text size.</string>
+    <string name="info_user_patches">Game patches</string>
+    <string name="info_user_patches_note">Scripts from the game\'s mvplayer-patches folder. They run like plugins, with full access to the game.</string>
 </resources>

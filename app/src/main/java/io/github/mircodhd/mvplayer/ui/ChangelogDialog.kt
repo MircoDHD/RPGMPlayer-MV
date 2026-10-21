@@ -30,11 +30,10 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.github.mircodhd.mvplayer.R
 import io.github.mircodhd.mvplayer.debug.DebugLog
-import java.util.Locale
 
 /** Loads the changelog in the device language (German or English). */
 fun loadChangelog(context: Context): List<ChangelogEntry> {
-    val language = if (Locale.getDefault().language == "de") "de" else "en"
+    val language = if (context.resources.configuration.locales[0].language == "de") "de" else "en"
     return runCatching {
         context.assets.open("changelog/$language.md").use { Changelog.parse(it.reader().readText()) }
     }.onFailure { DebugLog.w("Changelog", "Cannot read the $language changelog", it) }.getOrDefault(emptyList())

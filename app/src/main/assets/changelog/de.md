@@ -3,6 +3,28 @@
 Deutsche Fassung von CHANGELOG.md für die "Was ist neu"-Box der App. Bei jeder Version
 zusammen mit CHANGELOG.md aktualisieren.
 
+## 0.5.0 – 21.10.2026 (Phase C: Kompatibilität)
+### Neu
+- **Schriften** für die Spieltexte, global und pro Spiel: Pixelify Sans, VT323, Press Start 2P,
+  Atkinson Hyperlegible oder eine eigene Schriftdatei, mit einstellbarer Textgröße.
+- **Schrift der App**, getrennt von der Schrift in Spielen wählbar.
+- **App-Sprache** (System, Deutsch, Englisch); ab Android 13 auch in den Systemeinstellungen.
+- Hält ein Spiel wegen eines Fehlers an, bietet ein Dialog an, trotzdem weiterzuspielen
+  oder zu beenden.
+- Option "Bei Fehlern weiterspielen" (global und pro Spiel): Fehler und fehlende Dateien
+  werden übersprungen, statt das Spiel anzuhalten.
+- **Eigene Patches**: Skripte im Ordner `mvplayer-patches` eines Spiels laufen vor oder nach
+  den Plugins; die eingebauten Patches wählt ein datengesteuertes Profilsystem.
+- Plugins für die PC-Version, die NW.js- oder Node.js-Funktionen aufrufen, brechen nicht
+  mehr ab.
+### Behoben
+- Fehlte eine Spieldatei, lud das Spiel endlos; jetzt erscheint MVs Ladefehler wie am PC.
+- Dateien mit verstümmelten oder anders kodierten Namen (falsche Zip-Codepage,
+  macOS-Archive) werden gefunden.
+- Datendateien mit Kommentaren, überzähligen Kommas oder Byte-Order-Mark laden.
+- Unverschlüsselte Bilder und Töne, die Mods zu verschlüsselten Spielen hinzufügen, laden.
+- Meldungen des Spiels (`alert`) erscheinen als Dialog der App.
+
 ## 0.4.4 – 21.10.2026 (Phase B, Teil 3: Bild)
 ### Neu
 - **Bild und Filter**, global und pro Spiel: Skalierung (einpassen, ganzzahlig, strecken),

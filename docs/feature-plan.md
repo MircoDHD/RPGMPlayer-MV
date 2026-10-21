@@ -1,6 +1,6 @@
 # Feature plan: input, display, compatibility, saves (0.3 – 0.6)
 
-Status: approved 2026-10-18. **Phase A implemented in 0.3.0**; **Phase B done in 0.4.4**, released in parts: B1 renderer + B4 HUD **in 0.4.0**, B2 frame rates **in 0.4.1**, fixes from device tests in 0.4.2–0.4.3, B3 core set (scaling and filters) **in 0.4.4**, B5 evaluated and deferred; C–D pending.
+Status: approved 2026-10-18. **Phase A implemented in 0.3.0**; **Phase B done in 0.4.4**, released in parts: B1 renderer + B4 HUD **in 0.4.0**, B2 frame rates **in 0.4.1**, fixes from device tests in 0.4.2–0.4.3, B3 core set (scaling and filters) **in 0.4.4**, B5 evaluated and deferred; Phase C done in 0.5.0 (see there); D pending.
 Base: version 0.2.0. Architecture: `docs/analysis.md`, part 2.
 
 Size estimates are rough lines of new/changed code (Kotlin + JS + GLSL), excluding tests.
@@ -323,9 +323,30 @@ The instrumentation ships early (with 0.3.0) so data is ready for Phase B.
 
 ---
 
-## Phase C — Compatibility (0.5.0)
+## Phase C — Compatibility (0.5.x)
 
-### C1. Patch profile system v2
+Split into steps (requested 2026-10-21), each with numbered test builds (0.5.0-1,
+0.5.0-2, …); everything is released together as 0.5.0 (decided 2026-10-21).
+**Status: all steps implemented in 0.5.0-3.**
+
+| Release | Content | Steps |
+|---|---|---|
+| 0.5.0-1 | Robustness: file lookup, JSON, errors, mixed encrypted/plain assets | C2, C3, C4, C7 |
+| 0.5.0-2 | Game and app fonts, app language | C5, C6 |
+| 0.5.0-3 | Patch profiles, game patches, NW.js stand-ins | C1, C8 |
+
+### Research: how Fear & Hunger mods integrate (2026-10-21)
+Most mods replace files in the game's `www` folder (plugins, `plugins.js`, data, images);
+that works in the player once the files are in the game folder, and 0.5.0 handles plain
+images or audio added to encrypted games (C7). **Decided (2026-10-21): no support for
+specific mod loaders** (MattieFM's mod loader, Toby Yasha's modpack); Phase C stays with
+general RPG Maker behaviour.
+
+### C1. Patch profile system v2 (0.5.0)
+**Status (0.5.0-3): implemented** (`assets/patches/profiles.json`, `patch/PatchProfiles.kt`,
+`patch/UserPatches.kt`, `mv/afterplugins.js`). Game patches live in `mvplayer-patches/`
+next to index.html (inside the web root, so they are served like game files);
+documented in `docs/patches.md`.
 **Hooks:** `patch/PatchProfiles.kt` → data-driven: `assets/patches/profiles.json`
 describing profiles with match rules: game title (System.json), plugin name, plugin
 version/hash (SHA-256 of the plugin file), engine version. "Well-known plugin fixes" =
@@ -343,42 +364,54 @@ alternative app-documents location is possible).
 **Risk:** user patches run with full game privileges (same as plugins); clearly labelled.
 **Size:** ~500.
 
-### C2. Robust path and file lookup
+### C2. Robust path and file lookup (0.5.0)
 **Hooks:** `GameRequestHandler.normalize`, `FileIndex`.
-- Always: backslashes → `/`, collapse `//`, percent-decoding (already by `Uri.getPath`),
-  Unicode NFC normalisation on both index keys and request paths.
-- *Per game, default off:* mojibake fallback map: for each indexed name, add variants as
-  if UTF-8 bytes had been decoded as CP437/Windows-1252, and Shift-JIS/GBK bytes as
-  CP437/1252 (the typical zip-extraction mistakes), plus the reverse; lookup only after
-  exact and lowercase misses; every hit logged.
-**Size:** ~400 (+ unit tests with real-world mojibake samples).
+- Backslashes → `/`, collapse `//` (done), Unicode NFC on index keys and request paths
+  (macOS zips store NFD, so "ä" can arrive as "a" + combining mark).
+- Mojibake fallback, always on because it only runs where the request would be a 404:
+  for each indexed name, the variants as if UTF-8 bytes had been decoded as CP437 or
+  Windows-1252 (typical zip-extraction mistake), and Shift-JIS bytes as CP437/1252, plus
+  the reverse; lookup only after exact and lowercase misses; every hit logged.
+**Size:** ~300 (+ unit tests with real-world samples).
 
-### C3. Lenient JSON loading
-**Hooks:** `GameRequestHandler` for `data/*.json` (native, logged).
+### C3. Lenient JSON loading (0.5.0)
+**Hooks:** `GameRequestHandler` for `data/*.json`.
 - Always strip a UTF-8 BOM (MV's `JSON.parse` fails on it).
-- *Per game, default off:* tolerant repair (strip `//` and `/* */` comments outside
-  strings, trailing commas), validated with `org.json`; every repair logged with file
-  name and a summary.
-**Size:** ~200.
+- Repair only files that do not parse: comments outside strings and trailing commas are
+  removed, the result is validated with `org.json`, and the repair is logged with the
+  file name. Valid files are served untouched, so no option is needed.
+**Size:** ~150.
 
-### C4. Error handling
-**Hooks:** new `mv/errors.js`.
-- "Continue after errors" (default off): wrap `SceneManager.catchException`/`onError`:
-  log full stack, show a native snackbar via `host.notifyError(...)`, skip
-  `printError`/`stop` when the scene is still usable; repeated identical errors are
-  throttled. Clearly labelled: may leave the game in a broken state.
-- "Suppress alert dialogs" (default off): `window.alert` → log + snackbar.
-- `debug.js` keeps logging the full error regardless of the options.
-**Size:** ~200.
+### C4. Error handling (0.5.0)
+**Hooks:** new `mv/errors.js`, `PlayerBridge.onGameError`, a dialog in the overlay.
+- When MV stops on an error, a native dialog shows the message with **Continue anyway**
+  (hides the error screen and restarts the game loop; labelled as risky), **Quit game**
+  and **Close**. The full stack still goes to the log.
+- Option "Continue after errors" (global and per game, default off): errors are logged and
+  shown briefly instead of stopping; missing images and audio are skipped (logged once)
+  instead of stopping with "Failed to load". The same error repeating many times per
+  second falls back to stopping, so a broken loop cannot run on silently.
+- `window.alert` from games: native dialog instead of the WebView default.
+**Size:** ~300.
 
-### C5. Font override
-**Hooks:** SAF `OpenDocument` (font types), copied to `filesDir/fonts/<gameId>/`;
-`GameRequestHandler` serves it under `/__mvplayer/font/...`; a small patch adds an
-`@font-face` for `GameFont` (MV's family name from `fonts/gamefont.css`) pointing to the
-override and calls `Graphics.loadFont`. Per-game setting with preview text.
-**Size:** ~250.
+### C5. Fonts (0.5.0)
+**Status (0.5.0-2): implemented** (`mv/fonts.js`, `fonts/FontLibrary.kt`): Pixelify Sans,
+VT323, Press Start 2P, Atkinson Hyperlegible and own font files; text size 70–130 %.
+The app's own screens can use one of them too, chosen separately (`appFont`).
+**Hooks:** `assets/fonts/` (bundled, OFL or public domain, licence files shipped and
+listed in `THIRD_PARTY.md`), SAF `OpenDocument` for own `.ttf/.otf/.woff` files copied
+to `filesDir/fonts/`; `GameRequestHandler` serves them under `/__mvplayer/font/...`; a
+small patch points MV's `GameFont` (`fonts/gamefont.css`) at the choice and reloads it.
+- Global and per game, with a preview line; at least one **pixel font** with German
+  umlauts; candidates to check: Pixelify Sans, VT323, DotGothic16 (also Japanese),
+  plus a very readable font (e.g. Atkinson Hyperlegible). All OFL.
+- Optional size adjustment for games whose text then no longer fits.
+**Size:** ~400.
 
-### C6. App language (decide at this step)
+### C6. App language (0.5.0)
+**Decided (2026-10-21): option in the player** (System / Deutsch / English) via
+`LocaleManager` on Android 13+ (also listed in the system page) and a stored choice applied
+in `attachBaseContext` below; minSdk stays 30. Implemented in 0.5.0 (`AppLanguage.kt`).
 Let the user choose the app's language (English, German) independently of the system.
 Two ways, to be decided when this step starts:
 - **Android's per-app language page** (Settings → Apps → RPGM Player → Language): needs a
@@ -390,7 +423,26 @@ Two ways, to be decided when this step starts:
   stays) and also fills the system page on Android 13+.
 **Size:** ~100.
 
-**Phase C total:** ~1650.
+### C7. Mixed encrypted and plain assets (0.5.0)
+**Hooks:** `GameRequestHandler.serveFile`, `MvDecrypter`.
+- Request for `x.rpgmvp/.rpgmvo/.rpgmvm` that does not exist, but `x.png/.ogg/.m4a` does
+  (mod added plain files to an encrypted game): encrypt on the fly (header + XOR of the
+  first 16 bytes with the game key) so MV's decrypter reads it.
+- The reverse already exists (decrypted twin). Every fallback is logged once per file.
+**Size:** ~80.
+
+### C8. NW.js stubs (0.5.0)
+**Status (0.5.0-3): implemented** (`mv/nwjs.js`): fs reads the game's files through
+synchronous requests to the player (stat/list endpoints), writes are refused silently.
+**Hooks:** `mv/nwjs.js`.
+- Plugins written for the PC version call NW.js and Node APIs (`require('nw.gui')` for
+  window size or fullscreen, `process.platform`, `require('path')`). Harmless stubs keep
+  them from throwing: `nw.gui` window methods do nothing, `path` works on strings,
+  `require('fs')` stays undefined except what saves already provide. Every stubbed call
+  is logged once, so the log shows which plugin needed what.
+**Size:** ~150.
+
+**Phase C total:** ~1900.
 
 ---
 
@@ -452,7 +504,7 @@ Fast-forward, debug panel, mod overlay folder, haptics on screen shake.
 |---|---|
 | 0.3.0 | Phase A: settings model, overlay host, input refactor, A1–A4, decryption timing instrumentation |
 | 0.4.0 | Phase B: renderer, frame rates, post-processing + benchmark, HUD, B5 decision |
-| 0.5.0 | Phase C: profiles v2 + user patches, path/JSON robustness, error options, font override, app language |
+| 0.5.0 | Phase C: robustness, error handling, mixed encrypted/plain assets, fonts, app language, patch profiles, game patches, NW.js stand-ins |
 | 0.6.0 | Phase D: save manager with resume points and backups (app storage), continue button |
 | 0.x.y | Bug-fix deliveries in between (patch digit) |
 

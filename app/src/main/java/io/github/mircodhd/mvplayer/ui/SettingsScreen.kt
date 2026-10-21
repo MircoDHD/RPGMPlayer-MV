@@ -22,11 +22,13 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -46,20 +48,26 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.mircodhd.mvplayer.R
+import io.github.mircodhd.mvplayer.settings.AppLanguage
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
 import io.github.mircodhd.mvplayer.settings.Renderer
 import io.github.mircodhd.mvplayer.ui.settings.FrameRateDialog
 import io.github.mircodhd.mvplayer.ui.settings.OptionBadge
 import io.github.mircodhd.mvplayer.ui.settings.RendererDialog
+import io.github.mircodhd.mvplayer.ui.settings.ChoiceDialog
+import io.github.mircodhd.mvplayer.ui.settings.Choice
 import io.github.mircodhd.mvplayer.ui.settings.SectionHeader
 import io.github.mircodhd.mvplayer.ui.settings.SwitchRow
 import io.github.mircodhd.mvplayer.ui.settings.ValueRow
 import io.github.mircodhd.mvplayer.ui.settings.frameRateLabel
 import io.github.mircodhd.mvplayer.ui.settings.overlayModeLabel
+import io.github.mircodhd.mvplayer.ui.settings.appFontLabel
+import io.github.mircodhd.mvplayer.ui.settings.fontLabel
 import io.github.mircodhd.mvplayer.ui.settings.pictureSummary
 import io.github.mircodhd.mvplayer.ui.settings.rendererLabel
 
@@ -81,6 +89,10 @@ fun SettingsScreen(
     onRendererChange: (Renderer) -> Unit,
     onOpenHud: () -> Unit,
     onOpenPicture: () -> Unit,
+    onOpenFont: () -> Unit,
+    onOpenAppFont: () -> Unit,
+    onLanguageChange: (String?) -> Unit,
+    onGlobalChange: (GlobalSettings) -> Unit,
     onLogToFileChange: (Boolean) -> Unit,
     onShareLogs: () -> Unit,
     onOpenUrl: (String) -> Unit,
@@ -91,10 +103,13 @@ fun SettingsScreen(
     onLibraryTitleChange: (String) -> Unit,
 ) {
     val resources = LocalResources.current
+    val context = LocalContext.current
     var versionTaps by remember { mutableIntStateOf(0) }
     var thanks by remember { mutableStateOf(false) }
     var editTitle by remember { mutableStateOf(false) }
     var chooseRenderer by remember { mutableStateOf(false) }
+    var chooseLanguage by remember { mutableStateOf(false) }
+    val language = remember { AppLanguage.current(context) }
     var chooseFrameRate by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
@@ -162,6 +177,15 @@ fun SettingsScreen(
             }
             item {
                 ValueRow(
+                    icon = Icons.Filled.Edit,
+                    title = stringResource(R.string.font_title),
+                    value = fontLabel(context, global.font),
+                    summary = stringResource(R.string.font_summary),
+                    onClick = onOpenFont,
+                )
+            }
+            item {
+                ValueRow(
                     icon = Icons.AutoMirrored.Filled.List,
                     title = stringResource(R.string.hud_title),
                     value = resources.getString(if (global.hud.enabled) R.string.value_on else R.string.value_off),
@@ -169,7 +193,35 @@ fun SettingsScreen(
                     onClick = onOpenHud,
                 )
             }
+            item {
+                SwitchRow(
+                    icon = Icons.Filled.Warning,
+                    title = stringResource(R.string.continue_errors_title),
+                    summary = stringResource(R.string.continue_errors_summary),
+                    checked = global.continueAfterErrors,
+                    onCheckedChange = { onGlobalChange(global.copy(continueAfterErrors = it)) },
+                )
+            }
 
+            item { SectionHeader(stringResource(R.string.set_section_app)) }
+            item {
+                ValueRow(
+                    icon = Icons.Filled.Place,
+                    title = stringResource(R.string.language_title),
+                    value = languageLabel(resources, language),
+                    summary = stringResource(R.string.language_summary),
+                    onClick = { chooseLanguage = true },
+                )
+            }
+            item {
+                ValueRow(
+                    icon = Icons.Filled.Edit,
+                    title = stringResource(R.string.app_font_title),
+                    value = appFontLabel(context, global.appFont),
+                    summary = stringResource(R.string.app_font_summary),
+                    onClick = onOpenAppFont,
+                )
+            }
             item { SectionHeader(stringResource(R.string.set_section_privacy)) }
             item {
                 SwitchRow(
@@ -314,6 +366,17 @@ fun SettingsScreen(
         )
     }
 
+    if (chooseLanguage) {
+        ChoiceDialog(
+            title = stringResource(R.string.language_title),
+            choices = (listOf<String?>(null) + AppLanguage.SUPPORTED).map { Choice(it, languageLabel(resources, it)) },
+            selected = language,
+            onSelect = onLanguageChange,
+            onDismiss = { chooseLanguage = false },
+            note = stringResource(R.string.language_note),
+        )
+    }
+
     if (chooseRenderer) {
         RendererDialog(
             selected = global.renderer,
@@ -359,4 +422,12 @@ private fun TitleDialog(current: String, placeholder: String, onConfirm: (String
         confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text(stringResource(R.string.dialog_ok)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
     )
+}
+
+/** Languages by their own name, so everyone finds theirs. */
+private fun languageLabel(resources: android.content.res.Resources, tag: String?): String = when (tag) {
+    null -> resources.getString(R.string.language_system)
+    "de" -> "Deutsch"
+    "en" -> "English"
+    else -> tag
 }

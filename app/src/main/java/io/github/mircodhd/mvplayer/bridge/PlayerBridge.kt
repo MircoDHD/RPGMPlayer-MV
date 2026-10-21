@@ -29,6 +29,7 @@ class PlayerBridge(
         fun exitGame()
         fun requestTextInput(current: String, maxLength: Int)
         fun onStats(json: String)
+        fun onGameError(json: String)
     }
 
     companion object {
@@ -143,6 +144,12 @@ class PlayerBridge(
     @JavascriptInterface
     fun reportStats(json: String?) {
         if (json != null) host.onStats(json)
+    }
+
+    /** An error MV stopped on, or skipped with "continue after errors" (mv/errors.js). */
+    @JavascriptInterface
+    fun onGameError(json: String?) {
+        if (json != null) host.onGameError(json)
     }
 
     @JavascriptInterface

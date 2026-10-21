@@ -7,12 +7,14 @@ import android.app.Application
 import android.content.ComponentCallbacks2
 import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.debug.DeviceInfo
+import io.github.mircodhd.mvplayer.patch.PatchProfiles
 
 class PlayerApp : Application() {
     override fun onCreate() {
         super.onCreate()
         DebugLog.init(this)
         DeviceInfo.log(this)
+        PatchProfiles.load(assets)
 
         // Get the stack trace of a crash into the session log before the process dies.
         val previous = Thread.getDefaultUncaughtExceptionHandler()

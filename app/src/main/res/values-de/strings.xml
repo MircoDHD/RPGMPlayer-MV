@@ -386,4 +386,45 @@
     <string name="picture_info_scanlines_pros">Mildert große Pixel.</string>
     <string name="picture_info_scanlines_cons">Dunkleres Bild; am schönsten mit ganzzahliger Skalierung.</string>
     <string name="picture_info_footer">Änderungen gelten sofort. Im Schnellmenü siehst du das Spiel, während du sie änderst.</string>
+    <!-- Fehler und Kompatibilität -->
+    <string name="set_section_compat">Kompatibilität</string>
+    <string name="continue_errors_title">Bei Fehlern weiterspielen</string>
+    <string name="continue_errors_summary">Überspringt Fehler und fehlende Dateien, statt das Spiel anzuhalten. Kann das Spiel in einen fehlerhaften Zustand bringen.</string>
+    <string name="error_title">Fehler im Spiel</string>
+    <string name="error_stopped">Das Spiel wurde wegen dieses Fehlers angehalten. Weiterspielen kann weitere Fehler auslösen; speichere danach am besten in einem neuen Slot.</string>
+    <string name="error_always">In diesem Spiel bei Fehlern immer weiterspielen</string>
+    <string name="error_continue">Trotzdem weiterspielen</string>
+    <string name="error_quit">Spiel beenden</string>
+    <string name="error_skipped">Fehler übersprungen: %1$s</string>
+    <string name="alert_title">Nachricht vom Spiel</string>
+    <!-- Schriften -->
+    <string name="font_title">Schrift im Spiel</string>
+    <string name="font_title_game">Schrift · %1$s</string>
+    <string name="font_summary">Schrift der Spieltexte und ihre Größe</string>
+    <string name="font_intro">Ersetzt die Standardschrift des Spiels in Nachrichten, Menüs und Fenstern. Schriften, die Plugins selbst wählen, bleiben unverändert.</string>
+    <string name="font_game">Spielschrift</string>
+    <string name="font_game_description">Die Schrift, die das Spiel mitbringt.</string>
+    <string name="font_pixel_description">Pixelschrift</string>
+    <string name="font_readable_description">Besonders gut lesbar, für Sehschwäche entwickelt</string>
+    <string name="font_custom_description">Deine Schrift</string>
+    <string name="font_sample">Held 123 ÄÖÜ äöü ß</string>
+    <string name="font_add">Eigene Schrift hinzufügen…</string>
+    <string name="font_add_failed">Diese Datei ist keine TrueType-, OpenType- oder WOFF-Schrift.</string>
+    <string name="font_delete">Schrift entfernen</string>
+    <string name="font_size">Textgröße</string>
+    <string name="font_size_summary">Kleiner für breite Schriften, wenn Text nicht mehr passt.</string>
+    <string name="font_preview_text">Der Held betritt das Dorf. ÄÖÜ äöü ß 0123</string>
+    <!-- Sprache -->
+    <string name="set_section_app">App</string>
+    <string name="language_title">Sprache</string>
+    <string name="language_summary">Sprache der App; Spiele behalten ihre eigene.</string>
+    <string name="language_system">Systemsprache</string>
+    <string name="language_note">Ab Android 13 auch unter Einstellungen → Apps → RPGM Player → Sprache.</string>
+    <string name="app_font_title">Schrift der App</string>
+    <string name="app_font_summary">Schrift der Bildschirme und Menüs dieser App</string>
+    <string name="app_font_intro">Schrift der eigenen Bildschirme, Menüs und Dialoge des Players, unabhängig von der Schrift in Spielen.</string>
+    <string name="app_font_system">Systemschrift</string>
+    <string name="app_font_system_description">Die Schrift von Android, in Androids Textgröße.</string>
+    <string name="info_user_patches">Eigene Patches</string>
+    <string name="info_user_patches_note">Skripte aus dem Ordner mvplayer-patches des Spiels. Sie laufen wie Plugins, mit vollem Zugriff auf das Spiel.</string>
 </resources>

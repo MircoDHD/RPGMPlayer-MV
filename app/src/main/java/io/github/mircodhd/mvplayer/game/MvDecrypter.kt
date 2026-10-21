@@ -14,10 +14,22 @@ object MvDecrypter {
     /** Encrypted counterparts of plain asset extensions. */
     val ENCRYPTED_EXTENSIONS = mapOf("png" to "rpgmvp", "ogg" to "rpgmvo", "m4a" to "rpgmvm")
 
+    /** Plain counterparts of encrypted asset extensions. */
+    val PLAIN_EXTENSIONS = ENCRYPTED_EXTENSIONS.entries.associate { (plain, encrypted) -> encrypted to plain }
+
     /** Parses System.json's encryptionKey (32 hex digits). */
     fun parseKey(hex: String?): ByteArray? {
         if (hex == null || hex.length != 32) return null
         return runCatching { ByteArray(16) { hex.substring(it * 2, it * 2 + 2).toInt(16).toByte() } }.getOrNull()
+    }
+
+    /** The reverse of [decrypt], for plain files that mods add to an encrypted game. */
+    fun encrypt(data: ByteArray, key: ByteArray): ByteArray {
+        val out = HEADER + data
+        for (i in 0 until minOf(HEADER_LENGTH, data.size, key.size)) {
+            out[HEADER_LENGTH + i] = (data[i].toInt() xor key[i].toInt()).toByte()
+        }
+        return out
     }
 
     fun decrypt(data: ByteArray, key: ByteArray): ByteArray? {

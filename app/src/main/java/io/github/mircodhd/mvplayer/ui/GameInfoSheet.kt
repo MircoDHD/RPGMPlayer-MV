@@ -141,6 +141,15 @@ fun GameInfoSheet(
                 InfoRow(stringResource(R.string.info_encrypted), if (details.encrypted) yes else no)
                 InfoRow(stringResource(R.string.info_steam_stub), if (details.usesGreenworks) yes else no)
                 InfoRow(stringResource(R.string.info_profiles), details.profiles.joinToString())
+                if (details.userPatches.isNotEmpty()) {
+                    InfoRow(stringResource(R.string.info_user_patches), details.userPatches.joinToString("\n"))
+                    Text(
+                        stringResource(R.string.info_user_patches_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                }
             }
             InfoRow(stringResource(R.string.info_folder), game.location)
         }
