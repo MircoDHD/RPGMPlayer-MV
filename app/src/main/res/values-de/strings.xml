@@ -21,7 +21,7 @@
     <!-- Game info -->
     <string name="info_remove">Entfernen</string>
     <string name="info_remove_title">„%1$s“ entfernen?</string>
-    <string name="info_remove_text">Das Spiel wird aus der Bibliothek entfernt. Ordner, Spieldateien und Spielstände bleiben unverändert.</string>
+    <string name="info_remove_text">Das Spiel wird samt seinen Auto-Ständen aus der Bibliothek entfernt. Ordner, Spieldateien und Spielstände bleiben unverändert.</string>
     <string name="info_section_play">Spielen</string>
     <string name="info_playtime">Spielzeit</string>
     <string name="info_last_played">Zuletzt gespielt</string>
@@ -427,4 +427,63 @@
     <string name="app_font_system_description">Die Schrift von Android, in Androids Textgröße.</string>
     <string name="info_user_patches">Eigene Patches</string>
     <string name="info_user_patches_note">Skripte aus dem Ordner mvplayer-patches des Spiels. Sie laufen wie Plugins, mit vollem Zugriff auf das Spiel.</string>
+    <!-- App-Stände -->
+    <string name="app_saves_title">Auto-Stände</string>
+    <string name="app_saves_title_game">Auto-Stände · %1$s</string>
+    <string name="app_saves_setting">Auto-Stände</string>
+    <string name="app_saves_setting_summary">Alle 15 Minuten Spielzeit sichert die App das Spiel selbst, damit plötzliches Aufhören wenig Fortschritt kostet. Die Spielstände des Spiels bleiben unberührt.</string>
+    <string name="app_saves_intro">Auto-Stände legt die App selbst an, alle %1$d Minuten Spielzeit in einem ruhigen Moment auf der Karte. Die %2$d neuesten bleiben; ein neuer ersetzt den ältesten. Bis zu %3$d kannst du dauerhaft behalten. Sie sind getrennt von den Spielständen, die du im Speichermenü des Spiels anlegst, und bleiben in der App.</string>
+    <string name="app_saves_empty">Noch keine Auto-Stände. Der erste entsteht nach %1$d Minuten Spielzeit.</string>
+    <string name="app_saves_auto">Automatisch</string>
+    <string name="app_saves_kept">Behalten</string>
+    <string name="app_saves_playtime">Spielzeit %1$s</string>
+    <string name="app_saves_load">Laden</string>
+    <string name="app_saves_keep">Behalten</string>
+    <string name="app_saves_release">Nicht mehr behalten</string>
+    <string name="app_saves_delete">Löschen</string>
+    <string name="app_saves_delete_title">Diesen Auto-Stand löschen?</string>
+    <string name="app_saves_load_title">Diesen Auto-Stand laden?</string>
+    <string name="app_saves_load_text">Ungespeicherter Fortschritt geht verloren.</string>
+    <string name="app_saves_created">Auto-Stand gesichert</string>
+    <string name="app_saves_just_now">Gerade eben</string>
+    <!-- Anleitung eigene Patches -->
+    <string name="patch_guide_title">Eigene Patches: Anleitung</string>
+    <string name="patch_guide_row">Eigene Patches</string>
+    <string name="patch_guide_row_summary">So fügst du einem Spiel eigene Skripte hinzu, Schritt für Schritt</string>
+    <string name="patch_guide_1_title">Was sind eigene Patches?</string>
+    <string name="patch_guide_1_text">Kleine JavaScript-Dateien, die ein Spiel verändern, wie ein Plugin: Text sofort anzeigen, einen Fehler beheben, eine Regel ändern. Der Player führt sie zusammen mit dem Spiel aus. An den Dateien des Spiels ändert sich nichts.</string>
+    <string name="patch_guide_1_warning">Patches können alles im Spiel verändern und seine Daten lesen. Verwende nur Patches, denen du vertraust.</string>
+    <string name="patch_guide_2_title">Der Patch-Ordner</string>
+    <string name="patch_guide_2_text">Patches liegen in einem Ordner namens mvplayer-patches neben der index.html des Spiels; bei Spielen für Windows also im Ordner www. Der Ordner bleibt beim Kopieren beim Spiel.</string>
+    <string name="patch_guide_2_per_game">Öffne diese Anleitung aus den Einstellungen eines Spiels, um den Ordner dort mit einem Tipp anzulegen.</string>
+    <string name="patch_guide_folder_missing">Dieses Spiel hat noch keinen Patch-Ordner.</string>
+    <string name="patch_guide_folder_found">Der Ordner ist vorhanden und enthält %1$d Dateien.</string>
+    <string name="patch_guide_create">Ordner anlegen</string>
+    <string name="patch_guide_created">Ordner angelegt, mit einer kurzen Erklärung (README) darin.</string>
+    <string name="patch_guide_failed">Das hat nicht geklappt. Ist der Spielordner noch für die App freigegeben?</string>
+    <string name="patch_guide_3_title">Skript hinzufügen</string>
+    <string name="patch_guide_3_text">Lege eine .js-Datei in den Ordner. Jede .js-Datei dort läuft nach den Plugins des Spiels, alphabetisch sortiert. Beispiel:</string>
+    <string name="patch_guide_add">Datei auswählen und hinzufügen</string>
+    <string name="patch_guide_added">Hinzugefügt: %1$s</string>
+    <string name="patch_guide_files">Im Ordner: %1$s</string>
+    <string name="patch_guide_4_title">Reihenfolge (optional)</string>
+    <string name="patch_guide_4_text">Eine Datei namens patches.json legt fest, welche Skripte wann laufen. Dann laufen nur die aufgeführten:</string>
+    <string name="patch_guide_4_positions">Positionen: beforeEngine (vor allem anderen), beforePlugins (vor dem ersten Plugin), afterPlugins (nach dem letzten Plugin, Standard).</string>
+    <string name="patch_guide_5_title">Prüfen</string>
+    <string name="patch_guide_5_text">Starte das Spiel. Die Infokarte des Spiels listet unter "Eigene Patches" die gefundenen Patches. Hat ein Patch einen Fehler, zeigt das Spiel den Fehlerdialog; das Diagnose-Log nennt das Skript. Zum Abschalten benenne einen Patch um, z. B. in .js.off.</string>
+    <string name="patch_guide_previous">Zurück</string>
+    <string name="patch_guide_next">Weiter</string>
+    <!-- Spielstand-Manager -->
+    <string name="game_saves_title">Spielstände</string>
+    <string name="game_saves_title_game">Spielstände · %1$s</string>
+    <string name="game_saves_intro">Die Spielstände, die du im Speichermenü des Spiels anlegst, so wie sein Lademenü sie zeigt. Sie liegen im Spielordner (www/save), wie am PC. Die Auto-Stände der App stehen separat.</string>
+    <string name="game_saves_loading">Spielstände werden gelesen…</string>
+    <string name="game_saves_empty">Dieses Spiel hat noch keine Spielstände.</string>
+    <string name="game_saves_slot">Slot %1$d</string>
+    <string name="app_saves_export">Exportieren (Zip)</string>
+    <string name="app_saves_import">Importieren (Zip)</string>
+    <string name="app_saves_exported">%1$d Auto-Stände exportiert.</string>
+    <string name="app_saves_imported">%1$d Auto-Stände importiert.</string>
+    <string name="app_saves_transfer_failed">Das hat nicht geklappt. Ist es ein Zip mit Auto-Ständen?</string>
+    <string name="app_saves_wrong_game">Diese Auto-Stände gehören zu einem anderen Spiel.</string>
 </resources>

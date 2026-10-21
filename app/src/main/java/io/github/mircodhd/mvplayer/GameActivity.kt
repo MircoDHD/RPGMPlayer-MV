@@ -70,6 +70,7 @@ import io.github.mircodhd.mvplayer.settings.AppLanguage
 import io.github.mircodhd.mvplayer.settings.GameSettings
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
 import io.github.mircodhd.mvplayer.fonts.FontLibrary
+import io.github.mircodhd.mvplayer.saves.ResumePoints
 import io.github.mircodhd.mvplayer.settings.FontSettings
 import io.github.mircodhd.mvplayer.settings.HudSettings
 import io.github.mircodhd.mvplayer.settings.PictureSettings
@@ -88,6 +89,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.util.concurrent.Executors
 
 /** Fullscreen WebView that runs one game, with a Compose overlay for controls and menus. */
@@ -98,6 +100,8 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
 
     companion object {
         const val EXTRA_GAME_ID = "game_id"
+        /** App save to load instead of showing the title screen. */
+        const val EXTRA_LOAD_APP_SAVE = "load_app_save"
         private const val TAG = "Game"
         private const val LIFECYCLE = "Lifecycle"
     }
@@ -121,6 +125,8 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
     private var appliedPicture: PictureSettings? = null
     private var appliedContinueAfterErrors = false
     private var appliedFont: FontSettings? = null
+    private var appliedAppSaves = false
+    private val appSaves by lazy { gameId?.let { ResumePoints(filesDir, it) } }
     private val deviceSamplerDelegate = lazy { DeviceSampler(this, displayHz = { display?.refreshRate }) }
     private val deviceSampler by deviceSamplerDelegate
     private val hudHub by lazy { HudDataHub(deviceSampler, sessionMs = ::sessionPlayTime) }
@@ -226,6 +232,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         DebugLog.i("Thermal", "Thermal status ${thermalName(powerManager.currentThermalStatus)}")
 
         loadSettings()
+        overlayState.appSaves = appSaves?.list().orEmpty()
         observeModalState()
 
         if (entry == null) {
@@ -277,6 +284,10 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         if (effective.continueAfterErrors != appliedContinueAfterErrors) {
             appliedContinueAfterErrors = effective.continueAfterErrors
             webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.errors&&MvPlayer.errors.setContinue(${effective.continueAfterErrors})", null)
+        }
+        if (effective.appSaves != appliedAppSaves) {
+            appliedAppSaves = effective.appSaves
+            webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.appSaves&&MvPlayer.appSaves.setEnabled(${effective.appSaves})", null)
         }
         if (effective.font != appliedFont) {
             appliedFont = effective.font
@@ -365,6 +376,10 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         appliedPicture = effective.picture
         appliedContinueAfterErrors = effective.continueAfterErrors
         appliedFont = effective.font
+        appliedAppSaves = effective.appSaves
+        // Load the chosen app save only once; a restart for a renderer change shows the title.
+        val loadOnStart = intent.getStringExtra(EXTRA_LOAD_APP_SAVE)?.also { intent.removeExtra(EXTRA_LOAD_APP_SAVE) }
+        if (loadOnStart != null) DebugLog.i(TAG, "Loading app save $loadOnStart instead of the title")
         appliedHudInterval = if (effective.hud.enabled) effective.hud.intervalMs else 0
         val config = JSONObject()
             .put("title", info.title)
@@ -378,13 +393,17 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
             .put("picture", effective.picture.toJson())
             .put("continueAfterErrors", effective.continueAfterErrors)
             .put("font", fontConfig(effective.font) ?: JSONObject.NULL)
+            .put("appSaves", JSONObject()
+                .put("enabled", effective.appSaves && appSaves != null)
+                .put("intervalMinutes", ResumePoints.INTERVAL_MINUTES)
+                .put("loadOnStart", loadOnStart ?: JSONObject.NULL))
             .put("hud", JSONObject().put("intervalMs", appliedHudInterval))
             .put("debug", JSONObject()
                 .put("verbose", debugSettings.verbose)
                 .put("statsIntervalSeconds", debugSettings.statsIntervalSeconds))
         val handler = GameRequestHandler(assets, info, patches, config.toString()) { FontLibrary.open(this, it) }
         requestHandler = handler
-        val bridge = PlayerBridge(info.webRoot, this)
+        val bridge = PlayerBridge(info.webRoot, this, appSaves)
 
         WebView.setWebContentsDebuggingEnabled(debugSettings.remoteDebugging)
         val view = WebView(this).apply {
@@ -561,6 +580,37 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
                 Toast.makeText(this, getString(R.string.error_skipped, message.take(120)), Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    override fun onAppSaveCreated() {
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            overlayState.appSaves = appSaves?.list().orEmpty()
+            Toast.makeText(this, R.string.app_saves_created, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onOpenAppSaves() {
+        overlayState.appSaves = appSaves?.list().orEmpty()
+        overlayState.appSavesOpen = true
+    }
+
+    override fun appSaveThumbnail(id: String): File = appSaves?.thumbnail(id) ?: File(filesDir, "none")
+
+    override fun onAppSaveLoad(id: String) {
+        DebugLog.i(TAG, "Loading app save $id")
+        overlayState.appSavesOpen = false
+        webView?.evaluateJavascript("window.MvPlayer&&MvPlayer.appSaves&&MvPlayer.appSaves.load(${JSONObject.quote(id)})", null)
+    }
+
+    override fun onAppSaveKeep(id: String, kept: Boolean) {
+        appSaves?.setKept(id, kept)
+        overlayState.appSaves = appSaves?.list().orEmpty()
+    }
+
+    override fun onAppSaveDelete(id: String) {
+        appSaves?.delete(id)
+        overlayState.appSaves = appSaves?.list().orEmpty()
     }
 
     override fun onErrorContinue(always: Boolean) {

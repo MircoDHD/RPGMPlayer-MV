@@ -27,7 +27,7 @@
     <!-- Game info -->
     <string name="info_remove">Remove</string>
     <string name="info_remove_title">Remove “%1$s”?</string>
-    <string name="info_remove_text">The game is removed from the library. Its folder, game files and save files stay untouched.</string>
+    <string name="info_remove_text">The game is removed from the library together with its auto saves. Its folder, game files and save files stay untouched.</string>
     <string name="info_section_play">Play</string>
     <string name="info_playtime">Play time</string>
     <string name="info_last_played">Last played</string>
@@ -433,4 +433,63 @@
     <string name="app_font_system_description">Android\'s font, at Android\'s text size.</string>
     <string name="info_user_patches">Game patches</string>
     <string name="info_user_patches_note">Scripts from the game\'s mvplayer-patches folder. They run like plugins, with full access to the game.</string>
+    <!-- App saves -->
+    <string name="app_saves_title">Auto saves</string>
+    <string name="app_saves_title_game">Auto saves · %1$s</string>
+    <string name="app_saves_setting">Auto saves</string>
+    <string name="app_saves_setting_summary">Every 15 minutes of play the app saves the game by itself, so stopping suddenly loses little. The game\'s own saves stay untouched.</string>
+    <string name="app_saves_intro">Auto saves are made by the app itself, every %1$d minutes of play, at a calm moment on the map. The %2$d newest stay; a new one replaces the oldest. Keep up to %3$d for good. They are separate from the saves you make in the game\'s save menu and stay in the app.</string>
+    <string name="app_saves_empty">No auto saves yet. The first one is made after %1$d minutes of play.</string>
+    <string name="app_saves_auto">Automatic</string>
+    <string name="app_saves_kept">Kept</string>
+    <string name="app_saves_playtime">Play time %1$s</string>
+    <string name="app_saves_load">Load</string>
+    <string name="app_saves_keep">Keep</string>
+    <string name="app_saves_release">Don\'t keep</string>
+    <string name="app_saves_delete">Delete</string>
+    <string name="app_saves_delete_title">Delete this auto save?</string>
+    <string name="app_saves_load_title">Load this auto save?</string>
+    <string name="app_saves_load_text">Unsaved progress is lost.</string>
+    <string name="app_saves_created">Auto save made</string>
+    <string name="app_saves_just_now">Just now</string>
+    <!-- Patch guide -->
+    <string name="patch_guide_title">Game patches: guide</string>
+    <string name="patch_guide_row">Game patches</string>
+    <string name="patch_guide_row_summary">How to add your own scripts to a game, step by step</string>
+    <string name="patch_guide_1_title">What are game patches?</string>
+    <string name="patch_guide_1_text">Small JavaScript files that change a game, like a plugin does: show text at once, fix a bug, change a rule. The player runs them together with the game. Nothing in the game\'s own files is changed.</string>
+    <string name="patch_guide_1_warning">Patches can change anything in the game and read its data. Only use patches you trust.</string>
+    <string name="patch_guide_2_title">The patch folder</string>
+    <string name="patch_guide_2_text">Patches live in a folder called mvplayer-patches next to the game\'s index.html; in games made for Windows that is inside the www folder. The folder stays with the game when you copy it.</string>
+    <string name="patch_guide_2_per_game">Open this guide from a game\'s settings to create the folder there with one tap.</string>
+    <string name="patch_guide_folder_missing">This game has no patch folder yet.</string>
+    <string name="patch_guide_folder_found">The folder exists and holds %1$d files.</string>
+    <string name="patch_guide_create">Create folder</string>
+    <string name="patch_guide_created">Folder created, with a short README inside.</string>
+    <string name="patch_guide_failed">That did not work. Is the game folder still shared with the app?</string>
+    <string name="patch_guide_3_title">Add a script</string>
+    <string name="patch_guide_3_text">Put a .js file into the folder. Every .js file there runs after the game\'s plugins, in alphabetical order. Example:</string>
+    <string name="patch_guide_add">Pick a file and add it</string>
+    <string name="patch_guide_added">Added: %1$s</string>
+    <string name="patch_guide_files">In the folder: %1$s</string>
+    <string name="patch_guide_4_title">Order (optional)</string>
+    <string name="patch_guide_4_text">A file called patches.json chooses which scripts run and when. Then only the listed ones run:</string>
+    <string name="patch_guide_4_positions">Positions: beforeEngine (before everything), beforePlugins (before the first plugin), afterPlugins (after the last plugin, the default).</string>
+    <string name="patch_guide_5_title">Check it</string>
+    <string name="patch_guide_5_text">Start the game. The game\'s info card lists the patches it found under "Game patches". If a patch has an error, the game shows the error dialog; the diagnostic log names the script. To switch a patch off, rename it, e.g. to .js.off.</string>
+    <string name="patch_guide_previous">Back</string>
+    <string name="patch_guide_next">Next</string>
+    <!-- Game save manager -->
+    <string name="game_saves_title">Game saves</string>
+    <string name="game_saves_title_game">Game saves · %1$s</string>
+    <string name="game_saves_intro">The saves you make in the game\'s own save menu, as its load menu shows them. They live in the game folder (www/save), like on PC. The app\'s auto saves are listed separately.</string>
+    <string name="game_saves_loading">Reading the saves…</string>
+    <string name="game_saves_empty">This game has no saves yet.</string>
+    <string name="game_saves_slot">Slot %1$d</string>
+    <string name="app_saves_export">Export (zip)</string>
+    <string name="app_saves_import">Import (zip)</string>
+    <string name="app_saves_exported">Exported %1$d auto saves.</string>
+    <string name="app_saves_imported">Imported %1$d auto saves.</string>
+    <string name="app_saves_transfer_failed">That did not work. Is it a zip of auto saves?</string>
+    <string name="app_saves_wrong_game">These auto saves belong to another game.</string>
 </resources>

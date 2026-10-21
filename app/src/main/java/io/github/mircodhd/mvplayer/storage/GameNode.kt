@@ -67,7 +67,7 @@ class FileNode(val file: File) : GameNode {
 
     override fun open(offset: Long): InputStream = FileInputStream(file).apply { if (offset > 0) channel.position(offset) }
 
-    override fun openOutput(): OutputStream = file.outputStream()
+    override fun openOutput(): OutputStream = SyncedOutputStream(java.io.FileOutputStream(file))
 
     override fun createDirectory(name: String): GameNode? =
         File(file, name).takeIf { it.mkdirs() || it.isDirectory }?.let(::FileNode)
@@ -84,4 +84,29 @@ class FileNode(val file: File) : GameNode {
         val target = File(file.parentFile, name)
         return if (file.renameTo(target)) FileNode(target) else null
     }
+}
+
+/**
+ * Forces the written data onto the storage when closed. Without it a crash or power loss
+ * soon after saving can leave an empty file, because Android writes it out later; with
+ * the temp-file-then-rename pattern that would replace a good save with an empty one.
+ */
+class SyncedOutputStream(private val out: java.io.FileOutputStream, private val onClose: () -> Unit = {}) :
+    java.io.FilterOutputStream(out) {
+    override fun write(b: ByteArray, off: Int, len: Int) = out.write(b, off, len)
+
+    override fun close() {
+        try {
+            out.flush()
+            runCatching { out.fd.sync() } // some providers' descriptors cannot sync
+        } finally {
+            out.close()
+            onClose()
+        }
+    }
+}
+
+/** Writes [bytes] and forces them onto the storage (see [SyncedOutputStream]). */
+fun java.io.File.writeSynced(bytes: ByteArray) {
+    SyncedOutputStream(java.io.FileOutputStream(this)).use { it.write(bytes) }
 }

@@ -449,10 +449,24 @@ synchronous requests to the player (stat/list endpoints), writes are refused sil
 ## Phase D — Saves and convenience (0.6.0)
 
 ### D1. Save manager and resume points (revised 2026-10-18)
-Decision (Mirco): everything the save manager creates lives in **app storage**, not in
+Decision (maintainer): everything the save manager creates lives in **app storage**, not in
 the game folder, so it survives deleting and re-installing the game files.
 
 **a) Resume points (own save system, independent of the game)**
+**Revised and implemented (0.6.0-1, decided 2026-10-21): "app saves".** Created
+automatically every 15 minutes of active play at a calm moment on the map (no transfer,
+event, message or movement); the 3 newest automatic ones are kept, a new one replaces the
+oldest; up to 3 can be kept for good, but only by keeping an automatic one (no saving
+anywhere, so games built on limited saving keep their challenge). On by default (global
+and per game). Stored in `filesDir/resume/<gameId>/` (`saves/ResumePoints.kt`,
+`mv/resume.js`): MV's save contents (JsonEx JSON, gzip-compressed natively: about half
+the size of MV's LZString format and no stall from compressing in JavaScript) plus a
+192 px WebP screenshot; F&H ~17 KB, Termina 30–130 KB per point (parallel common events
+are part of the state). Tested in F&H and Termina.
+Loaded from the quick menu or from the auto saves list in the library (starts the game
+and skips the title); "Play" always starts normally (decided 2026-10-21). The
+original notes below are kept for reference; manual creation and saving on background
+were dropped.
 - Purpose: when playing on the go, the player can stop at any moment without losing much
   progress, instead of walking to a save point. It is offered as a help next to the
   game's own saves; it does not replace or alter the in-game save system.
@@ -470,6 +484,12 @@ the game folder, so it survives deleting and re-installing the game files.
   limited saving (e.g. Fear & Hunger) are easier with them. Off unless the player uses it.
 
 **b) Backups of the game's own saves**
+**Decided 2026-10-21: no copies of the game's own saves.** Instead: export and import of
+the auto saves as a zip (tagged with the game title, refused for another game), and a
+read-only list of the game's save slots in the library (`saves/GameSaves.kt`, slot infos
+decoded with `saves/LzString.kt`, an own implementation byte-identical to MV's lz-string,
+tested with 309 vectors from MV's library). All save writes are fsynced before the
+rename (`storage/SyncedOutputStream`).
 - Before each overwrite through `PlayerBridge.saveWrite`, the old file is copied to
   `filesDir/save-backups/<gameId>/<file>.<timestamp>` (rolling, configurable count,
   default 5).
@@ -482,6 +502,8 @@ the game folder, so it survives deleting and re-installing the game files.
 **Size:** ~1100.
 
 ### D2. Continue button
+**Dropped (2026-10-21):** "Play" starts the game normally; continuing happens only through
+menus: the auto saves list or the game's own load menu.
 **Hooks:** `GameEntry`/library card ("Continue" secondary pill next to play),
 `GameActivity` extra `EXTRA_CONTINUE`, new `mv/continue.js`: after `Scene_Boot` is ready,
 `DataManager.loadGame(DataManager.latestSavefileId())`, `reloadMapIfUpdated()`,

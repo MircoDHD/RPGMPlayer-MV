@@ -4,6 +4,19 @@ All notable changes to RobustPlainGameMaker Player - MyVersion ("RPGM Player - M
 Versions follow `major.minor.patch`: the minor digit for new features, the patch digit for
 fixes. Dates are build dates.
 
+## 0.6.0 – 2026-10-21 (Phase D: saves)
+### Added
+- **Auto saves**: every 15 minutes of play the app saves the game at a calm moment, so
+  stopping suddenly loses little. The 3 newest are kept, up to 3 more can be kept for good.
+  Separate from the game's own saves; load them from the quick menu or from the list in
+  the library, export and import them as a zip. "Play" always starts the game normally.
+- **Game saves** in the library: the slots of the game's own save menu at a glance.
+- **Game patch guide**: step by step, in the settings; per game it creates the patch
+  folder and adds a picked script.
+### Fixed
+- Saves are written through to the storage before they replace the old file, so a crash
+  or power loss right after saving can no longer leave an empty save.
+
 ## 0.5.0 – 2026-10-21 (Phase C: compatibility)
 ### Added
 - **Fonts** for the game's text, globally and per game: Pixelify Sans, VT323, Press Start 2P,

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -69,6 +70,7 @@ import io.github.mircodhd.mvplayer.overlay.GamepadLayout
 import io.github.mircodhd.mvplayer.overlay.LayoutEditor
 import io.github.mircodhd.mvplayer.overlay.LayoutNames
 import io.github.mircodhd.mvplayer.overlay.VirtualGamepad
+import io.github.mircodhd.mvplayer.saves.ResumePoint
 import io.github.mircodhd.mvplayer.settings.GameSettings
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
 import io.github.mircodhd.mvplayer.settings.OverlayMode
@@ -76,6 +78,7 @@ import io.github.mircodhd.mvplayer.settings.OverlaySettings
 import io.github.mircodhd.mvplayer.settings.PictureOverrides
 import io.github.mircodhd.mvplayer.settings.Renderer
 import io.github.mircodhd.mvplayer.settings.SettingsResolver
+import io.github.mircodhd.mvplayer.ui.saves.AppSavesScreen
 import io.github.mircodhd.mvplayer.ui.settings.ChoiceDialog
 import io.github.mircodhd.mvplayer.ui.settings.ControllerScreen
 import io.github.mircodhd.mvplayer.ui.settings.FrameRateDialog
@@ -107,6 +110,8 @@ class GameOverlayState(val gameTitle: String) {
 
     var quickMenu by mutableStateOf(false)
     var settingsOpen by mutableStateOf(false)
+    var appSavesOpen by mutableStateOf(false)
+    var appSaves by mutableStateOf<List<ResumePoint>>(emptyList())
     /** Picture panel beside the game, which keeps showing behind it. */
     var pictureOpen by mutableStateOf(false)
     var editor by mutableStateOf<EditorRequest?>(null)
@@ -132,7 +137,7 @@ class GameOverlayState(val gameTitle: String) {
     val showHud: Boolean get() = gameReady && global.hud.enabled && editor == null && !hideControls
 
     /** True while something covers the game and it should be paused. */
-    val isModal: Boolean get() = quickMenu || settingsOpen || pictureOpen || editor != null || confirmQuit || restartPrompt ||
+    val isModal: Boolean get() = quickMenu || settingsOpen || pictureOpen || appSavesOpen || editor != null || confirmQuit || restartPrompt ||
         gameError != null || alert != null
 }
 
@@ -143,6 +148,11 @@ interface GameOverlayActions {
     fun onGlobalSettingsChange(settings: GlobalSettings)
     fun onRestartGame()
     fun onErrorContinue(always: Boolean)
+    fun onOpenAppSaves()
+    fun appSaveThumbnail(id: String): java.io.File
+    fun onAppSaveLoad(id: String)
+    fun onAppSaveKeep(id: String, kept: Boolean)
+    fun onAppSaveDelete(id: String)
     fun onHudDrawn(nanos: Long)
     fun onCustomizeLayout(layout: GamepadLayout)
     fun onEditorSave(layout: GamepadLayout, forGame: Boolean, asCopy: Boolean)
@@ -170,6 +180,26 @@ fun GameOverlay(state: GameOverlayState, actions: GameOverlayActions) {
     if (state.quickMenu) QuickMenu(state, actions)
 
     if (state.settingsOpen) InGameSettings(state, actions)
+
+    if (state.appSavesOpen) {
+        Dialog(
+            onDismissRequest = { state.appSavesOpen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            Surface(Modifier.fillMaxSize()) {
+                AppSavesScreen(
+                    title = stringResource(R.string.app_saves_title),
+                    points = state.appSaves,
+                    thumbnail = actions::appSaveThumbnail,
+                    loadWarning = true,
+                    onLoad = actions::onAppSaveLoad,
+                    onKeep = actions::onAppSaveKeep,
+                    onDelete = actions::onAppSaveDelete,
+                    onBack = { state.appSavesOpen = false },
+                )
+            }
+        }
+    }
 
     if (state.pictureOpen) {
         val effective = SettingsResolver.resolve(state.global, state.game)
@@ -303,6 +333,14 @@ private fun QuickMenu(state: GameOverlayState, actions: GameOverlayActions) {
             ) {
                 state.quickMenu = false
                 state.pictureOpen = true
+            }
+            MenuItem(
+                Icons.Filled.Refresh,
+                stringResource(R.string.app_saves_title),
+                supporting = state.appSaves.size.takeIf { it > 0 }?.toString(),
+            ) {
+                state.quickMenu = false
+                actions.onOpenAppSaves()
             }
             MenuItem(Icons.Filled.Settings, stringResource(R.string.quick_game_settings)) {
                 state.quickMenu = false

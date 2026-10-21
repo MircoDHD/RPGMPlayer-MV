@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
@@ -91,6 +92,7 @@ fun SettingsScreen(
     onOpenPicture: () -> Unit,
     onOpenFont: () -> Unit,
     onOpenAppFont: () -> Unit,
+    onOpenPatchGuide: () -> Unit,
     onLanguageChange: (String?) -> Unit,
     onGlobalChange: (GlobalSettings) -> Unit,
     onLogToFileChange: (Boolean) -> Unit,
@@ -191,6 +193,24 @@ fun SettingsScreen(
                     value = resources.getString(if (global.hud.enabled) R.string.value_on else R.string.value_off),
                     summary = stringResource(R.string.hud_summary),
                     onClick = onOpenHud,
+                )
+            }
+            item {
+                SwitchRow(
+                    icon = Icons.Filled.Refresh,
+                    title = stringResource(R.string.app_saves_setting),
+                    summary = stringResource(R.string.app_saves_setting_summary),
+                    checked = global.appSaves,
+                    onCheckedChange = { onGlobalChange(global.copy(appSaves = it)) },
+                )
+            }
+            item {
+                ValueRow(
+                    icon = Icons.Filled.Build,
+                    title = stringResource(R.string.patch_guide_row),
+                    value = null,
+                    summary = stringResource(R.string.patch_guide_row_summary),
+                    onClick = onOpenPatchGuide,
                 )
             }
             item {

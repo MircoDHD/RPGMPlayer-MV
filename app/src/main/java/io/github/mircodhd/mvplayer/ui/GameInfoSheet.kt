@@ -50,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.mircodhd.mvplayer.R
+import io.github.mircodhd.mvplayer.saves.ResumePoint
 import io.github.mircodhd.mvplayer.library.GameEntry
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -62,6 +63,9 @@ fun GameInfoSheet(
     onPlay: () -> Unit,
     onRemove: () -> Unit,
     onOpenSettings: () -> Unit,
+    appSaves: List<ResumePoint> = emptyList(),
+    onOpenAppSaves: () -> Unit = {},
+    onOpenGameSaves: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var confirmRemove by remember { mutableStateOf(false) }
@@ -101,6 +105,12 @@ fun GameInfoSheet(
                     Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text(stringResource(R.string.info_game_settings))
+                }
+                OutlinedButton(onClick = onOpenGameSaves, enabled = !folderMissing, contentPadding = ButtonDefaults.ButtonWithIconContentPadding) {
+                    Text(stringResource(R.string.game_saves_title))
+                }
+                OutlinedButton(onClick = onOpenAppSaves, contentPadding = ButtonDefaults.ButtonWithIconContentPadding) {
+                    Text(stringResource(R.string.app_saves_title) + if (appSaves.isEmpty()) "" else " (${appSaves.size})")
                 }
                 OutlinedButton(onClick = { confirmRemove = true }, contentPadding = ButtonDefaults.ButtonWithIconContentPadding) {
                     Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))

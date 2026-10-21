@@ -64,7 +64,12 @@ class DocumentNode private constructor(
         }
     }
 
-    override fun openOutput(): OutputStream = resolver.openOutputStream(uri, "wt") ?: throw FileNotFoundException(name)
+    /** A real file descriptor where the provider gives one, so the data can be synced on close. */
+    override fun openOutput(): OutputStream {
+        val pfd = runCatching { resolver.openFileDescriptor(uri, "wt") }.getOrNull()
+            ?: return resolver.openOutputStream(uri, "wt") ?: throw FileNotFoundException(name)
+        return SyncedOutputStream(java.io.FileOutputStream(pfd.fileDescriptor)) { pfd.close() }
+    }
 
     override fun createDirectory(name: String): GameNode? = create(Document.MIME_TYPE_DIR, name)
 

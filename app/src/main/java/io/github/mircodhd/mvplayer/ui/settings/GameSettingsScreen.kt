@@ -41,7 +41,7 @@ import io.github.mircodhd.mvplayer.settings.OverlaySettings
 import io.github.mircodhd.mvplayer.settings.Renderer
 import io.github.mircodhd.mvplayer.settings.SettingsResolver
 
-private enum class GameDialog { OVERLAY_MODE, LAYOUT, OPACITY, SIZE, HAPTICS, MIRROR, FRAME_RATE, RENDERER, CONTINUE_ERRORS }
+private enum class GameDialog { OVERLAY_MODE, LAYOUT, OPACITY, SIZE, HAPTICS, MIRROR, FRAME_RATE, RENDERER, CONTINUE_ERRORS, APP_SAVES }
 
 /** Per-game overrides of the global settings (reachable from the info sheet and in game). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,6 +57,8 @@ fun GameSettingsScreen(
     onOpenFont: () -> Unit,
     onCustomizeLayout: (GamepadLayout) -> Unit,
     onBack: () -> Unit,
+    /** Opens the patch guide for this game; null hides the row (in game). */
+    onOpenPatchGuide: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -193,7 +195,27 @@ fun GameSettingsScreen(
                     onClick = onOpenFont,
                 )
             }
+            item { SectionHeader(stringResource(R.string.app_saves_title)) }
+            item {
+                ValueRow(
+                    title = stringResource(R.string.app_saves_setting),
+                    value = onOff(effective.appSaves),
+                    summary = stringResource(R.string.app_saves_setting_summary),
+                    badges = defaultBadge(game.appSaves),
+                    onClick = { dialog = GameDialog.APP_SAVES },
+                )
+            }
             item { SectionHeader(stringResource(R.string.set_section_compat)) }
+            if (onOpenPatchGuide != null) {
+                item {
+                    ValueRow(
+                        title = stringResource(R.string.patch_guide_row),
+                        value = null,
+                        summary = stringResource(R.string.patch_guide_row_summary),
+                        onClick = onOpenPatchGuide,
+                    )
+                }
+            }
             item {
                 ValueRow(
                     title = stringResource(R.string.continue_errors_title),
@@ -257,6 +279,13 @@ fun GameSettingsScreen(
             onSelect = { onChange(game.copy(continueAfterErrors = overrideOf(it, global.continueAfterErrors))) },
             onDismiss = { dialog = null },
             note = stringResource(R.string.continue_errors_summary),
+        )
+        GameDialog.APP_SAVES -> ChoiceDialog(
+            title = stringResource(R.string.app_saves_setting),
+            choices = overrideChoices(listOf(true to onOff(true), false to onOff(false)), global.appSaves),
+            selected = effective.appSaves,
+            onSelect = { onChange(game.copy(appSaves = overrideOf(it, global.appSaves))) },
+            onDismiss = { dialog = null },
         )
         GameDialog.MIRROR -> ChoiceDialog(
             title = stringResource(R.string.overlay_mirror),

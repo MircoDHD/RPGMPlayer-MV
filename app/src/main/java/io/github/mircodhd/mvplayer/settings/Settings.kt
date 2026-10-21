@@ -201,6 +201,8 @@ data class GlobalSettings(
     /** Errors are logged and skipped instead of stopping the game (`mv/errors.js`). */
     val continueAfterErrors: Boolean = false,
     val font: FontSettings = FontSettings(),
+    /** Automatic app saves every 15 minutes of play (ResumePoints, `mv/resume.js`). */
+    val appSaves: Boolean = true,
     /** Font of the app's own screens; [FontSettings.SYSTEM_FONT] keeps Android's. */
     val appFont: String = FontSettings.SYSTEM_FONT,
     /** Unlocked by tapping the version ten times; allows [libraryTitle]. */
@@ -231,6 +233,7 @@ data class GameSettings(
     val continueAfterErrors: Boolean? = null,
     val fontId: String? = null,
     val fontScale: Float? = null,
+    val appSaves: Boolean? = null,
 ) {
     val isEmpty: Boolean get() = this == GameSettings()
 }
@@ -245,6 +248,7 @@ data class EffectiveSettings(
     val picture: PictureSettings,
     val continueAfterErrors: Boolean,
     val font: FontSettings,
+    val appSaves: Boolean,
 )
 
 object SettingsResolver {
@@ -264,6 +268,7 @@ object SettingsResolver {
         picture = game.picture.resolve(global.picture),
         continueAfterErrors = game.continueAfterErrors ?: global.continueAfterErrors,
         font = FontSettings(game.fontId ?: global.font.id, game.fontScale ?: global.font.scale),
+        appSaves = game.appSaves ?: global.appSaves,
     )
 }
 
@@ -298,6 +303,7 @@ object SettingsJson {
         .put("continueAfterErrors", s.continueAfterErrors)
         .put("font", JSONObject().put("id", s.font.id).put("scale", PictureSettings.rounded(s.font.scale)))
         .put("appFont", s.appFont)
+        .put("appSaves", s.appSaves)
         .put("titleEditUnlocked", s.titleEditUnlocked)
         .apply { s.libraryTitle?.let { put("libraryTitle", it) } }
 
@@ -343,6 +349,7 @@ object SettingsJson {
                 )
             } ?: defaults.font,
             appFont = json.optString("appFont").ifBlank { defaults.appFont },
+            appSaves = json.optBoolean("appSaves", defaults.appSaves),
             titleEditUnlocked = json.optBoolean("titleEditUnlocked", false),
             libraryTitle = json.optString("libraryTitle").trim().take(GlobalSettings.MAX_TITLE_LENGTH).ifBlank { null },
         )
@@ -363,6 +370,7 @@ object SettingsJson {
         s.continueAfterErrors?.let { put("continueAfterErrors", it) }
         s.fontId?.let { put("fontId", it) }
         s.fontScale?.let { put("fontScale", PictureSettings.rounded(it)) }
+        s.appSaves?.let { put("appSaves", it) }
     }
 
     fun gameFromJson(json: JSONObject) = GameSettings(
@@ -379,6 +387,7 @@ object SettingsJson {
         continueAfterErrors = if (json.has("continueAfterErrors")) json.optBoolean("continueAfterErrors") else null,
         fontId = json.optString("fontId").ifBlank { null },
         fontScale = json.optDoubleOrNull("fontScale")?.toFloat()?.coerceIn(FontSettings.SCALE_RANGE),
+        appSaves = if (json.has("appSaves")) json.optBoolean("appSaves") else null,
     )
 
     private fun pictureToJson(p: PictureOverrides) = JSONObject().apply {

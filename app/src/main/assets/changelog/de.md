@@ -3,6 +3,21 @@
 Deutsche Fassung von CHANGELOG.md für die "Was ist neu"-Box der App. Bei jeder Version
 zusammen mit CHANGELOG.md aktualisieren.
 
+## 0.6.0 – 21.10.2026 (Phase D: Spielstände)
+### Neu
+- **Auto-Stände**: Alle 15 Minuten Spielzeit sichert die App das Spiel in einem ruhigen
+  Moment, damit plötzliches Aufhören wenig Fortschritt kostet. Die 3 neuesten bleiben, bis
+  zu 3 weitere lassen sich dauerhaft behalten. Getrennt von den Spielständen des Spiels;
+  laden über das Schnellmenü oder die Liste in der Bibliothek, als Zip exportieren und
+  importieren. "Spielen" startet das Spiel immer ganz normal.
+- **Spielstände** in der Bibliothek: die Slots aus dem Speichermenü des Spiels im Überblick.
+- **Anleitung für eigene Patches**: Schritt für Schritt in den Einstellungen; pro Spiel legt
+  sie den Patch-Ordner an und fügt ein ausgewähltes Skript hinzu.
+### Behoben
+- Spielstände werden fest auf den Speicher geschrieben, bevor sie die alte Datei ersetzen;
+  ein Absturz oder leerer Akku direkt nach dem Speichern hinterlässt keinen leeren
+  Spielstand mehr.
+
 ## 0.5.0 – 21.10.2026 (Phase C: Kompatibilität)
 ### Neu
 - **Schriften** für die Spieltexte, global und pro Spiel: Pixelify Sans, VT323, Press Start 2P,

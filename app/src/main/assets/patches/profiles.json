@@ -7,7 +7,7 @@
       "beforePlugins": [
         "mv/perf.js", "mv/renderer.js", "mv/debug.js", "mv/engine.js", "mv/framerate.js",
         "mv/picture.js", "mv/errors.js", "mv/fonts.js", "mv/storage.js", "mv/input.js",
-        "mv/lifecycle.js", "mv/textinput.js", "mv/nwjs.js", "mv/afterplugins.js"
+        "mv/lifecycle.js", "mv/textinput.js", "mv/nwjs.js", "mv/resume.js", "mv/afterplugins.js"
       ]
     },
     {

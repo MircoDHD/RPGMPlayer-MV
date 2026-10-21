@@ -28,6 +28,7 @@ import io.github.mircodhd.mvplayer.library.GameLibrary
 import io.github.mircodhd.mvplayer.library.GameScanner
 import io.github.mircodhd.mvplayer.overlay.GamepadLayout
 import io.github.mircodhd.mvplayer.overlay.LayoutRepository
+import io.github.mircodhd.mvplayer.saves.ResumePoints
 import io.github.mircodhd.mvplayer.settings.GameSettings
 import io.github.mircodhd.mvplayer.settings.GlobalSettings
 import io.github.mircodhd.mvplayer.settings.OverlaySettings
@@ -216,6 +217,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         library.remove(id)
         settingsStore.removeGame(id)
         gameSettings.remove(id)
+        ResumePoints(getApplication<Application>().filesDir, id).clear()
         covers.remove(id)
         games = library.all()
     }

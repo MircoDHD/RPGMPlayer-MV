@@ -5,7 +5,9 @@ package io.github.mircodhd.mvplayer.bridge
 
 import android.os.SystemClock
 import android.webkit.JavascriptInterface
+import android.util.Base64
 import io.github.mircodhd.mvplayer.debug.DebugLog
+import io.github.mircodhd.mvplayer.saves.ResumePoints
 import io.github.mircodhd.mvplayer.storage.GameNode
 import java.io.IOException
 
@@ -23,6 +25,8 @@ import java.io.IOException
 class PlayerBridge(
     private val webRoot: GameNode,
     private val host: Host,
+    /** App saves of this game (mv/resume.js); null without a library id. */
+    private val appSaves: ResumePoints?,
 ) {
     /** Calls into the activity; invoked on the JavaBridge thread. */
     interface Host {
@@ -30,6 +34,7 @@ class PlayerBridge(
         fun requestTextInput(current: String, maxLength: Int)
         fun onStats(json: String)
         fun onGameError(json: String)
+        fun onAppSaveCreated()
     }
 
     companion object {
@@ -151,6 +156,20 @@ class PlayerBridge(
     fun onGameError(json: String?) {
         if (json != null) host.onGameError(json)
     }
+
+    /** Stores an automatic app save: MV's save JSON, a base64 WebP screenshot or empty. */
+    @JavascriptInterface
+    fun appSaveWrite(json: String?, thumbnail: String?, playtime: String?, location: String?): Boolean {
+        val saves = appSaves ?: return false
+        if (json.isNullOrEmpty()) return false
+        val image = thumbnail?.takeIf { it.isNotEmpty() }?.let { runCatching { Base64.decode(it, Base64.DEFAULT) }.getOrNull() }
+        val point = saves.add(json, image, playtime.orEmpty(), location.orEmpty()) ?: return false
+        host.onAppSaveCreated()
+        return point.id.isNotEmpty()
+    }
+
+    @JavascriptInterface
+    fun appSaveRead(id: String?): String? = id?.let { appSaves?.read(it) }
 
     @JavascriptInterface
     fun exitGame() {
