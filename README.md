@@ -57,12 +57,12 @@ No games are included. You need your own copy of a game.
 
 ## Status
 
-Early development. Tested on a OnePlus 15 (Android 16) with a Razer Kishi V3 Pro.
+Early development. Tested on a OnePlus 15 (Android 16), OnePlus Pad Lite and Xiaomi Redmi 14C with a Razer Kishi V3 Pro.
 
 | Game | Status |
 |---|---|
 | Fear & Hunger | ✅ Playable |
-| Fear & Hunger 2: Termina | Starts (not tested further yet) |
+| Fear & Hunger 2: Termina | ✅ Playable |
 | Other RPG Maker MV games | Should work, not tested |
 | RPG Maker MZ | Not supported yet |
 | RPG Maker XP / VX / VX Ace / 2000 / 2003 | Not supported (use mkxp-z or EasyRPG Player) |
