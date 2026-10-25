@@ -31,7 +31,13 @@ data class ResumePoint(
     /** Map name, or empty. */
     val location: String,
     val sizeBytes: Long,
-)
+    /** Ids of the mods that were on when the point was made, top first; empty for none or older points. */
+    val mods: List<String> = emptyList(),
+) {
+    /** True when [active] is the same mods in the same order, i.e. the point fits the game as it runs now. */
+    fun sameMods(active: List<String>): Boolean =
+        mods.size == active.size && mods.zip(active).all { (a, b) -> a.equals(b, ignoreCase = true) }
+}
 
 /**
  * App saves of one game in `filesDir/resume/<gameId>/`, outside the game folder: the game
@@ -51,7 +57,7 @@ class ResumePoints(filesDir: File, gameId: String) {
 
     /** Stores a new automatic point and drops the oldest automatic ones beyond [MAX_AUTO]. */
     @Synchronized
-    fun add(json: String, thumbnail: ByteArray?, playtime: String, location: String): ResumePoint? = try {
+    fun add(json: String, thumbnail: ByteArray?, playtime: String, location: String, mods: List<String> = emptyList()): ResumePoint? = try {
         dir.mkdirs()
         val id = UUID.randomUUID().toString()
         val data = File(dir, "$id.json.gz")
@@ -59,7 +65,7 @@ class ResumePoints(filesDir: File, gameId: String) {
         GZIPOutputStream(SyncedOutputStream(FileOutputStream(data)).buffered()).use { it.write(json.toByteArray()) }
         thumbnail?.let { File(dir, "$id.webp").writeSynced(it) }
         val point = ResumePoint(id, kept = false, createdAt = System.currentTimeMillis(), playtime = playtime, location = location,
-            sizeBytes = data.length() + (thumbnail?.size ?: 0))
+            sizeBytes = data.length() + (thumbnail?.size ?: 0), mods = mods)
         val points = load() + point
         val autos = points.filter { !it.kept }.sortedByDescending { it.createdAt }
         val dropped = autos.drop(MAX_AUTO)
@@ -194,13 +200,15 @@ class ResumePoints(filesDir: File, gameId: String) {
             playtime = o.optString("playtime"),
             location = o.optString("location"),
             sizeBytes = o.optLong("sizeBytes"),
+            mods = o.optJSONArray("mods")?.let { m -> (0 until m.length()).map { m.optString(it) }.filter { it.isNotEmpty() } }.orEmpty(),
         )
     }
 
     private fun toJson(points: List<ResumePoint>) = JSONArray().apply {
         points.forEach {
             put(JSONObject().put("id", it.id).put("kept", it.kept).put("createdAt", it.createdAt)
-                .put("playtime", it.playtime).put("location", it.location).put("sizeBytes", it.sizeBytes))
+                .put("playtime", it.playtime).put("location", it.location).put("sizeBytes", it.sizeBytes)
+                .apply { if (it.mods.isNotEmpty()) put("mods", JSONArray(it.mods)) })
         }
     }
 
@@ -217,6 +225,11 @@ class ResumePoints(filesDir: File, gameId: String) {
     }
 
     companion object {
+        /** Mod ids from the JSON array text the game script sends; empty when missing or broken. */
+        fun parseMods(json: String?): List<String> = runCatching {
+            JSONArray(json).let { a -> (0 until a.length()).map { a.getString(it) }.filter { it.isNotEmpty() } }
+        }.getOrDefault(emptyList())
+
         const val MAX_AUTO = 3
         const val MAX_KEPT = 3
         const val INTERVAL_MINUTES = 15

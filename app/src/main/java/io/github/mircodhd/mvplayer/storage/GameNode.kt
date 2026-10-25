@@ -38,6 +38,23 @@ interface GameNode {
 
     fun delete(): Boolean
 
+    /**
+     * Deletes a folder with everything in it, children first: not every documents provider
+     * deletes a folder that still has content. Returns the number of deleted entries, or -1
+     * if something could not be deleted (what was deleted until then stays deleted).
+     */
+    fun deleteRecursively(): Int {
+        var count = 0
+        if (isDirectory) {
+            for (child in children()) {
+                val deleted = child.deleteRecursively()
+                if (deleted < 0) return -1
+                count += deleted
+            }
+        }
+        return if (delete()) count + 1 else -1
+    }
+
     /** Returns the renamed node, or null if renaming failed. */
     fun renameTo(name: String): GameNode?
 

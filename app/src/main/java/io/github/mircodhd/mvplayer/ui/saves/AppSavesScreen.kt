@@ -54,7 +54,8 @@ import java.io.File
 
 /**
  * The app saves of one game, newest first: load, keep (up to [ResumePoints.MAX_KEPT]) or
- * delete. [loadWarning] asks before loading over a running game.
+ * delete. [loadWarning] asks before loading over a running game; a point made with other
+ * mods than [activeMods] (ids, top first) always asks first.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +64,7 @@ fun AppSavesScreen(
     points: List<ResumePoint>,
     thumbnail: (String) -> File,
     loadWarning: Boolean,
+    activeMods: List<String>,
     onLoad: (String) -> Unit,
     onKeep: (String, Boolean) -> Unit,
     onDelete: (String) -> Unit,
@@ -114,7 +116,7 @@ fun AppSavesScreen(
                     point = point,
                     thumbnail = thumbnail(point.id),
                     canKeep = point.kept || !keptFull,
-                    onLoad = { if (loadWarning) confirmLoad = point.id else onLoad(point.id) },
+                    onLoad = { if (loadWarning || !point.sameMods(activeMods)) confirmLoad = point.id else onLoad(point.id) },
                     onKeep = { onKeep(point.id, !point.kept) },
                     onDelete = { confirmDelete = point.id },
                 )
@@ -123,15 +125,26 @@ fun AppSavesScreen(
     }
 
     confirmLoad?.let { id ->
+        val other = points.firstOrNull { it.id == id }?.takeIf { !it.sameMods(activeMods) }
+        val none = stringResource(R.string.app_saves_no_mods)
         AlertDialog(
             onDismissRequest = { confirmLoad = null },
-            title = { Text(stringResource(R.string.app_saves_load_title)) },
-            text = { Text(stringResource(R.string.app_saves_load_text)) },
+            title = { Text(stringResource(if (other != null) R.string.app_saves_mods_title else R.string.app_saves_load_title)) },
+            text = {
+                Text(
+                    if (other == null) {
+                        stringResource(R.string.app_saves_load_text)
+                    } else {
+                        stringResource(R.string.app_saves_mods_text, other.mods.joinToString().ifEmpty { none }, activeMods.joinToString().ifEmpty { none }) +
+                            if (loadWarning) "\n\n" + stringResource(R.string.app_saves_load_text) else ""
+                    },
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     confirmLoad = null
                     onLoad(id)
-                }) { Text(stringResource(R.string.app_saves_load)) }
+                }) { Text(stringResource(if (other != null) R.string.app_saves_load_anyway else R.string.app_saves_load)) }
             },
             dismissButton = { TextButton(onClick = { confirmLoad = null }) { Text(stringResource(R.string.dialog_cancel)) } },
         )
@@ -190,6 +203,13 @@ private fun PointCard(
                         stringResource(R.string.app_saves_playtime, point.playtime),
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    if (point.mods.isNotEmpty()) {
+                        Text(
+                            stringResource(R.string.app_saves_with_mods, point.mods.joinToString()),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Text(
                         if (System.currentTimeMillis() - point.createdAt < DateUtils.MINUTE_IN_MILLIS) {
                             stringResource(R.string.app_saves_just_now)

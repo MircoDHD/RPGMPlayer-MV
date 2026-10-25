@@ -5,6 +5,7 @@ package io.github.mircodhd.mvplayer.game
 
 import android.os.SystemClock
 import io.github.mircodhd.mvplayer.debug.DebugLog
+import io.github.mircodhd.mvplayer.patch.UserPatch
 import io.github.mircodhd.mvplayer.storage.GameNode
 import org.json.JSONArray
 import org.json.JSONObject
@@ -33,6 +34,10 @@ data class GameInfo(
     /** Asset key from System.json, null if the game is not encrypted. */
     val encryptionKey: ByteArray?,
     val index: FileIndex,
+    /** Scripts of the active mods (`mod.json`), run after the game's own patches. */
+    val modScripts: List<UserPatch> = emptyList(),
+    /** Ids of the active mods, top first. */
+    val mods: List<String> = emptyList(),
 )
 
 object GameInspector {
@@ -69,10 +74,17 @@ object GameInspector {
     }
 
     /** Full inspection of an MV game. Reads plugin files, so call it off the main thread. */
-    fun inspectMv(webRoot: GameNode, folderName: String): GameInfo {
+    fun inspectMv(webRoot: GameNode, folderName: String, mods: List<Mod> = emptyList()): GameInfo {
         val start = SystemClock.elapsedRealtime()
-        val index = FileIndex.build(webRoot)
-        DebugLog.i(TAG, "Indexed ${index.size} files under $folderName in ${SystemClock.elapsedRealtime() - start} ms")
+        val gameIndex = FileIndex.build(webRoot)
+        DebugLog.i(TAG, "Indexed ${gameIndex.size} files under $folderName in ${SystemClock.elapsedRealtime() - start} ms")
+        // Active mods lie over the game, the first one on top.
+        val index = if (mods.isEmpty()) gameIndex else FileIndex.layered(mods.map { mod ->
+            val modStart = SystemClock.elapsedRealtime()
+            FileIndex.build(mod.content).also {
+                DebugLog.i(TAG, "Mod ${mod.id}: ${it.size} files in ${SystemClock.elapsedRealtime() - modStart} ms")
+            }
+        } + gameIndex)
         val (plugins, totalPlugins) = readPlugins(index)
         val usesGreenworks = plugins.any { name ->
             val file = index.resolve("js/plugins/$name.js") ?: return@any false
@@ -95,6 +107,8 @@ object GameInspector {
             videoExt = pickVideoExt(index),
             encryptionKey = MvDecrypter.parseKey(system?.optString("encryptionKey")),
             index = index,
+            modScripts = Mods.existingScripts(mods, index),
+            mods = mods.map { it.id },
         ).also {
             DebugLog.i(TAG, "${it.title}: MV ${it.engineVersion}, PIXI ${it.pixiVersion}, " +
                 "${plugins.size}/$totalPlugins plugins, " +

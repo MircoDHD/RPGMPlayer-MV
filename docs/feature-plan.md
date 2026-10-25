@@ -513,10 +513,127 @@ Per-game setting (on/off), shown only when saves exist.
 HIME_PreTitleEvents) → tested per game; profile can disable it.
 **Size:** ~250.
 
-### D3. Optional extras (not planned now; ask first)
-Fast-forward, debug panel, mod overlay folder, haptics on screen shake.
+### D3. Mod overlay folder (plan, 2026-10-22)
+Fast-forward, the debug panel and haptics on screen shake are dropped. Mods today replace
+files in the game folder: hard to undo, impossible to switch off, and two mods overwrite
+each other unnoticed. An overlay keeps the game untouched: mod files are served **instead
+of** the game's files while the mod is on.
 
-**Phase D total:** ~1050.
+**Step 1 done (0.6.1-1), adjusted to real mods:** mods are shipped as
+"<Mod name>/www/…" (a whole copy of www, or a few files such as `js/rpg_objects.js`), so
+any folder next to the game's `www` that holds game folders (data, js, img, audio, …),
+directly or in its own `www`, counts as a mod, as does `mvplayer-mods/<mod>/`. Found mods
+are off until switched on. Active mods are layered over the game's file index
+(`FileIndex.layered`), so they also apply to plugins.js, core scripts and System.json;
+saves stay in the game's own `www/save`. Order with up/down buttons (not dragging).
+
+**Step 2 done (0.6.1-2):** conflicts (`Mods.conflicts`, per-mod "replaces N game files",
+grouped, collapsed above 20, core files marked; mod indexes built once per visit of the
+list), info dialog, remove (`GameNode.deleteRecursively`, children first), mod scripts
+(`Mod.scripts` from mod.json, checked against the layered index at start, run after the
+game's own patches of the same position; logged at start, not in the info card because the
+library scans without mods). Also from device logs: an app save when the app goes to
+the background (`MvPlayer.appSaves.onLeave`, after 2 min of play, calm moment) and repeated
+stack traces in the console log shortened (`ConsoleLines`).
+
+**Step 3 done (0.6.1-3):** auto saves store the active mod ids (`ResumePoint.mods`, in
+points.json and the zip manifest; `config.appSaves.mods` from `GameInfo.mods`, sent by
+`resume.js` as a fifth argument of `appSaveWrite`, the four-argument call still works).
+Loading a point with other mods (library list: stored settings; quick menu: mods the game
+started with) asks first in `AppSavesScreen`. `ModsGuideScreen` (six pages, shared
+navigation with the patch guide) opens from a "Guide" action in the mod list.
+
+**Step 2 (0.6.1-2), implementation plan:**
+- *Conflicts* — new `Mods.conflicts(active: List<Mod>, gameIndex: FileIndex):
+  Map<String, List<String>>` (lowercase path → ids of the active mods that contain it,
+  top first, only paths in two or more mods). Built from each mod's `FileIndex` (same
+  builds as at game start; cache them per mod folder + file count in a small in-memory map
+  so the list does not rebuild 2800-file indexes twice). `ModsScreen` loads it on IO after
+  the mod list and shows per active mod: "replaces N game files", and below the list a
+  "Conflicts" section: path, winner (bold), losers. Paths grouped by folder (data/, js/,
+  img/…) and collapsed when more than 20. Core files (`js/rpg_*.js`, `js/plugins.js`,
+  `index.html`) are marked, because they decide whether mods fit together.
+- *No zip install (decided 2026-10-22):* players unpack mods themselves. The mod list has
+  an info (ⓘ) dialog showing which folder goes where, as a small folder tree: the
+  unpacked mod folder (the one that holds the mod's `www`, e.g. "BugFix Mod") goes next
+  to the game's `www` or into `mvplayer-mods/`; never copy the mod's `www` over the game's.
+- *Remove* — per mod a "Remove" action with confirmation: deletes the mod folder
+  recursively (new `GameNode.deleteRecursively()`; DocumentsContract.deleteDocument on a
+  directory deletes it with its contents) and drops its id from the game's `mods`.
+- *Mod scripts* — `mod.json` `"scripts": [{ "file", "position" }]` (same format as
+  `patches.json`). `Mods` parses them into `UserPatch`-like entries with paths relative to
+  the layered index; because mod content is layered over the web root, a script at
+  `<mod>/www/js/mymod.js` is served as `js/mymod.js`. Keep them in `Mod.scripts`; at game
+  start `PatchProfiles.select` gets the active mods' scripts appended after the game
+  patches of the same position (new parameter `extra: List<UserPatch>`), info card lists
+  them under "Game patches" with the mod name.
+- After any change (install, remove, toggle): `GameInfoCache.remove(uri)`.
+
+**Research for step 2 (2026-10-22):**
+- *Archive formats:* F&H mods on itch.io come as **RAR** (BugFix Mod, Comedy Edition, each
+  ~626 MB) or **ZIP** (grammar patch, 428 MB). RAR cannot be unpacked in the app: the
+  RAR decompression code (unRAR licence, also behind Java ports) is not GPL-compatible.
+  Decided: no unpacking in the app at all (see step 2); players unpack mods themselves.
+- *Zip entry names:* the JDK reads names as UTF-8 and throws IllegalArgumentException
+  ("MALFORMED") for archives made by Windows tools, which often store CP437. Open the zip
+  with UTF-8 first; on that exception restart with `ZipInputStream(input, Charset("IBM437"))`
+  (a fresh stream from the content resolver). Remaining garbled names are covered by the
+  mojibake fallback of the file index (C2).
+- *Deleting folders:* the documentation does not promise that
+  `DocumentsContract.deleteDocument` removes non-empty folders on every provider. Delete
+  children first (depth-first) through `GameNode.delete()`, then the folder; verify on the
+  emulator, log the count.
+
+**Step 3 (0.6.1-3), implementation plan:**
+- Auto saves remember the active mods: `ResumePoint.mods: List<String>` (stored in
+  points.json, exported in the zip manifest). `mv/resume.js` gets `config.appSaves.mods`
+  (the ids passed from GameActivity) and sends them with `appSaveWrite`.
+- Loading a point whose mods differ from the current ones (list or quick menu) shows a
+  dialog: "This auto save was made with: …; now active: …" with Load anyway / Cancel.
+- Mod guide page like `PatchGuideScreen` (where to put mods, order, conflicts, saves).
+- README features + roadmap row 0.6 to "Done" after the release.
+
+**Tests to add:** conflicts (two mods sharing data/CommonEvents.json, case-insensitive),
+zip content-root detection (www/ at top, Mod/www/, Mod/data/, junk only → rejected,
+`..` entries skipped), mod.json scripts parsing, ResumePoint mods round trip.
+**Test data:** "BugFix Mod" and "FnH-QoL-Patch" next to www in the emulator copy
+(/sdcard/Games/Fear & Hunger/); they conflict on data/CommonEvents.json (QoL was made for
+the unmodded game).
+
+**Layout (original plan):** `mvplayer-mods/` next to index.html (like `mvplayer-patches`, so it travels
+with the game). Each subfolder is one mod and mirrors the game's `www` structure
+(`img/…`, `audio/…`, `data/…`, `js/plugins/…`, `js/plugins.js`). An optional `mod.json`
+gives name, version, author, description and scripts:
+```json
+{ "name": "Better Icons", "version": "1.2", "author": "…", "description": "…",
+  "scripts": [ { "file": "fix.js", "position": "afterPlugins" } ] }
+```
+
+**Serving:** `GameRequestHandler` looks up each path in the enabled mods first, in their
+order (top wins), then in the game. The existing fallbacks apply inside mods too: plain
+images or audio for an encrypted game are encrypted on the fly (C7), names are matched
+case-insensitively, data JSON is repaired (C3). Whole files are replaced; merging data
+files is a later idea.
+
+**Mod manager** (per game, library: info card → "Mods"; not in game, a change restarts
+the game): list with name, version, file count; switch on/off; drag to order; shows which
+files several mods replace (conflicts) and which mod wins. "Add mod (zip)" unpacks a zip
+into `mvplayer-mods/<name>/` (only into that folder, no paths outside). Remove deletes the
+mod folder after a confirmation. Settings stored per game in the app.
+
+**Saves:** mods can change data, so saves made with mods may not load without them. Auto
+saves record the active mods; loading one with different mods shows a warning first.
+
+**Steps (test builds 0.6.1-n, released as 0.6.1):**
+1. Overlay serving + mod manager (list, on/off, order) + `mod.json` info.
+2. Zip install and removal, conflict view, mod scripts through the patch system.
+3. Active mods in auto saves with the warning; guide page like the patch guide.
+
+**Risks:** a mod replacing `js/plugins.js` or core files can break the game (it can be
+switched off again); large mods need a rescan of the index (done when mods change).
+**Size:** ~1000.
+
+**Phase D total:** ~2050 (with the mod overlay).
 
 ---
 

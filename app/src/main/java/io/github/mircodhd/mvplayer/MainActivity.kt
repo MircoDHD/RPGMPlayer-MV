@@ -51,6 +51,8 @@ import io.github.mircodhd.mvplayer.ui.saves.AppSavesScreen
 import io.github.mircodhd.mvplayer.saves.ResumePoints
 import io.github.mircodhd.mvplayer.saves.GameSaves
 import io.github.mircodhd.mvplayer.ui.saves.GameSavesScreen
+import io.github.mircodhd.mvplayer.ui.mods.ModsGuideScreen
+import io.github.mircodhd.mvplayer.ui.mods.ModsScreen
 import io.github.mircodhd.mvplayer.ui.settings.FontSettingsScreen
 import io.github.mircodhd.mvplayer.settings.AppLanguage
 import io.github.mircodhd.mvplayer.settings.FontSettings
@@ -134,13 +136,16 @@ private object Routes {
     const val GAME_SAVES = "game-saves/"
     const val PATCH_GUIDE = "patch-guide"
     const val GAME_FILES = "game-files/"
+    const val GAME_MODS = "game-mods/"
+    const val GAME_MODS_GUIDE = "game-mods-guide/"
     const val GAME_PATCH_GUIDE = "game-patch-guide/"
 
     fun parent(route: String): String = when {
         route.startsWith(GAME_CONTROLLER) -> GAME + route.removePrefix(GAME_CONTROLLER)
         route.startsWith(GAME_PICTURE) -> GAME + route.removePrefix(GAME_PICTURE)
         route.startsWith(GAME_FONT) -> GAME + route.removePrefix(GAME_FONT)
-        route.startsWith(GAME_SAVES) || route.startsWith(GAME_FILES) -> LIBRARY
+        route.startsWith(GAME_SAVES) || route.startsWith(GAME_FILES) || route.startsWith(GAME_MODS) -> LIBRARY
+        route.startsWith(GAME_MODS_GUIDE) -> GAME_MODS + route.removePrefix(GAME_MODS_GUIDE)
         route.startsWith(GAME_PATCH_GUIDE) -> GAME + route.removePrefix(GAME_PATCH_GUIDE)
         route == PATCH_GUIDE -> SETTINGS
         route == CONTROLLER || route == OVERLAY || route == HUD || route == PICTURE || route == FONT || route == APP_FONT -> SETTINGS
@@ -248,6 +253,23 @@ private fun PlayerHome(
             onBack = back,
         )
         route == Routes.PATCH_GUIDE -> PatchGuideScreen(game = null, onBack = back)
+        route.startsWith(Routes.GAME_MODS) -> {
+            val id = route.removePrefix(Routes.GAME_MODS)
+            val game = viewModel.games.firstOrNull { it.id == id }
+            if (game == null) {
+                LaunchedEffect(id) { route = Routes.LIBRARY }
+            } else {
+                ModsScreen(
+                    title = stringResource(R.string.mods_title_game, game.title),
+                    treeUri = game.treeUri,
+                    enabled = viewModel.gameSettings(id).mods,
+                    onChange = { viewModel.setGameSettings(id, viewModel.gameSettings(id).copy(mods = it)) },
+                    onOpenGuide = { route = Routes.GAME_MODS_GUIDE + id },
+                    onBack = back,
+                )
+            }
+        }
+        route.startsWith(Routes.GAME_MODS_GUIDE) -> ModsGuideScreen(onBack = back)
         route.startsWith(Routes.GAME_FILES) -> {
             val id = route.removePrefix(Routes.GAME_FILES)
             val game = viewModel.games.firstOrNull { it.id == id }
@@ -299,6 +321,7 @@ private fun PlayerHome(
                 points = points,
                 thumbnail = store::thumbnail,
                 loadWarning = false,
+                activeMods = viewModel.gameSettings(id).mods,
                 onLoad = { point -> game?.let { onPlay(it, point) } },
                 onKeep = { point, kept ->
                     store.setKept(point, kept)
@@ -436,6 +459,11 @@ private fun PlayerHome(
             onOpenGameSaves = {
                 infoGameId = null
                 route = Routes.GAME_FILES + infoGame.id
+            },
+            activeMods = viewModel.gameSettings(infoGame.id).mods.size,
+            onOpenMods = {
+                infoGameId = null
+                route = Routes.GAME_MODS + infoGame.id
             },
             onRemove = {
                 infoGameId = null

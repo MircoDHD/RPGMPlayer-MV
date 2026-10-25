@@ -3,6 +3,23 @@
 Deutsche Fassung von CHANGELOG.md für die "Was ist neu"-Box der App. Bei jeder Version
 zusammen mit CHANGELOG.md aktualisieren.
 
+## 0.6.1 – 25.10.2026 (Phase D: Mods)
+### Neu
+- **Mods, ohne das Spiel zu verändern**: Lege den Ordner einer Mod neben den www-Ordner des
+  Spiels; in der neuen Mod-Liste schaltest du sie pro Spiel ein und legst die Reihenfolge
+  mehrerer Mods fest. Die Spieldateien bleiben unberührt.
+- Die Mod-Liste zeigt, wie viele Spieldateien jede aktive Mod ersetzt und welche Dateien
+  mehrere Mods ersetzen (die obere gewinnt; Kerndateien sind markiert). Mods lassen sich
+  dort entfernen, und eine Mod kann eigene Skripte mitbringen (`scripts` in mod.json).
+- Beim Verlassen der App wird das Spiel in einem ruhigen Moment gesichert (nach mindestens
+  2 Minuten Spielzeit), damit Handys, die Apps im Hintergrund beenden, wenig verlieren.
+- Auto-Stände merken sich, welche Mods an waren. Wer einen mit anderen Mods als den
+  aktiven laden will, wird vorher gefragt.
+- **Mod-Anleitung**: Schritt für Schritt, aus der Mod-Liste geöffnet (wohin mit Mods,
+  Reihenfolge, Konflikte, mod.json, Spielstände).
+### Geändert
+- Eine Warnung mit Fehlerspur, die sich wiederholt, steht nur beim ersten Mal ganz im Log.
+
 ## 0.6.0 – 21.10.2026 (Phase D: Spielstände)
 ### Neu
 - **Auto-Stände**: Alle 15 Minuten Spielzeit sichert die App das Spiel in einem ruhigen

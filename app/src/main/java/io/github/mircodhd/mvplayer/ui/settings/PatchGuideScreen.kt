@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -153,37 +154,44 @@ fun PatchGuideScreen(game: PatchGuideGame?, onBack: () -> Unit) {
                     status?.let { Paragraph(it) }
                 }
             }
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } }, enabled = pager.currentPage > 0) {
-                    Text(stringResource(R.string.patch_guide_previous))
-                }
-                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center) {
-                    repeat(STEPS) { i ->
-                        Box(
-                            Modifier.padding(3.dp).size(8.dp),
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = if (i == pager.currentPage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                modifier = Modifier.fillMaxSize(),
-                            ) {}
-                        }
-                    }
-                }
-                if (pager.currentPage < STEPS - 1) {
-                    Button(onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } }) {
-                        Text(stringResource(R.string.patch_guide_next))
-                    }
-                } else {
-                    Button(onClick = onBack) { Text(stringResource(R.string.dialog_done)) }
+            GuideNavigation(pager, STEPS, onBack)
+        }
+    }
+}
+
+/** Back / dots / Next (Done on the last page) under a guide's pager. */
+@Composable
+internal fun GuideNavigation(pager: PagerState, steps: Int, onBack: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } }, enabled = pager.currentPage > 0) {
+            Text(stringResource(R.string.patch_guide_previous))
+        }
+        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center) {
+            repeat(steps) { i ->
+                Box(
+                    Modifier.padding(3.dp).size(8.dp),
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = if (i == pager.currentPage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {}
                 }
             }
+        }
+        if (pager.currentPage < steps - 1) {
+            Button(onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } }) {
+                Text(stringResource(R.string.patch_guide_next))
+            }
+        } else {
+            Button(onClick = onBack) { Text(stringResource(R.string.dialog_done)) }
         }
     }
 }
 
 @Composable
-private fun StepHeader(number: Int, title: String) {
+internal fun StepHeader(number: Int, title: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(32.dp)) {
             Box(contentAlignment = Alignment.Center) {
@@ -196,7 +204,7 @@ private fun StepHeader(number: Int, title: String) {
 }
 
 @Composable
-private fun Paragraph(text: String, warning: Boolean = false) {
+internal fun Paragraph(text: String, warning: Boolean = false) {
     Text(
         text,
         style = MaterialTheme.typography.bodyLarge,
@@ -206,7 +214,7 @@ private fun Paragraph(text: String, warning: Boolean = false) {
 }
 
 @Composable
-private fun Code(text: String) {
+internal fun Code(text: String) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Text(
             text,

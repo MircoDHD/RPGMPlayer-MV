@@ -52,9 +52,11 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import io.github.mircodhd.mvplayer.bridge.PlayerBridge
+import io.github.mircodhd.mvplayer.debug.ConsoleLines
 import io.github.mircodhd.mvplayer.debug.DebugLog
 import io.github.mircodhd.mvplayer.game.GameInfo
 import io.github.mircodhd.mvplayer.game.GameInfoCache
+import io.github.mircodhd.mvplayer.game.Mods
 import io.github.mircodhd.mvplayer.game.GameInspector
 import io.github.mircodhd.mvplayer.input.GamepadInput
 import io.github.mircodhd.mvplayer.input.InputAction
@@ -109,6 +111,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
     private lateinit var container: FrameLayout
     private lateinit var loading: TextView
     private var webView: WebView? = null
+    private val consoleLines = ConsoleLines()
     private var requestHandler: GameRequestHandler? = null
     private val executor = Executors.newSingleThreadExecutor()
     private val createdAt = SystemClock.elapsedRealtime()
@@ -243,13 +246,19 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         DebugLog.i(TAG, "Opening game in ${entry.location} (library id $gameId)")
         executor.execute {
             val result = runCatching {
-                GameInfoCache.get(entry.uri)?.let { (info, age) ->
-                    DebugLog.i(TAG, "Using the library's scan of the game (${age / 1000} s old)")
-                    return@runCatching info
+                val enabledMods = gameId?.let { settingsStore.game(it).mods }.orEmpty()
+                // The library scans without mods; with mods the game is indexed here.
+                if (enabledMods.isEmpty()) {
+                    GameInfoCache.get(entry.uri)?.let { (info, age) ->
+                        DebugLog.i(TAG, "Using the library's scan of the game (${age / 1000} s old)")
+                        return@runCatching info
+                    }
                 }
                 val dir = DocumentNode.root(this, entry.treeUri) ?: error("No access to ${entry.location}")
                 val webRoot = GameInspector.detect(dir).webRoot ?: error("No MV game in ${entry.location}")
-                GameInspector.inspectMv(webRoot, dir.name).also { GameInfoCache.put(entry.uri, it) }
+                val mods = if (enabledMods.isEmpty()) emptyList() else Mods.select(Mods.find(dir, webRoot), enabledMods)
+                if (mods.isNotEmpty()) DebugLog.i(TAG, "Mods on, top first: ${mods.joinToString { it.id }}")
+                GameInspector.inspectMv(webRoot, dir.name, mods).also { if (mods.isEmpty()) GameInfoCache.put(entry.uri, it) }
             }
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
@@ -368,9 +377,11 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
         val selection = PatchProfiles.select(info)
         val patches = selection.patches
         DebugLog.i(TAG, "Patch profiles: ${selection.profileIds}" +
-            if (selection.userPatches.isEmpty()) "" else ", game patches: ${selection.userPatches.joinToString { "${it.file} (${it.position.id})" }}")
+            (if (selection.userPatches.isEmpty()) "" else ", game patches: ${selection.userPatches.joinToString { "${it.file} (${it.position.id})" }}") +
+            if (selection.modScripts.isEmpty()) "" else ", mod scripts: ${selection.modScripts.joinToString { "${it.path} (${it.position.id})" }}")
         val debugSettings = DebugLog.settings
         val effective = settingsStore.effective(gameId)
+        overlayState.activeMods = info.mods
         runningRenderer = effective.renderer
         promptedRenderer = effective.renderer
         appliedPicture = effective.picture
@@ -396,6 +407,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
             .put("appSaves", JSONObject()
                 .put("enabled", effective.appSaves && appSaves != null)
                 .put("intervalMinutes", ResumePoints.INTERVAL_MINUTES)
+                .put("mods", JSONArray(info.mods))
                 .put("loadOnStart", loadOnStart ?: JSONObject.NULL))
             .put("hud", JSONObject().put("intervalMs", appliedHudInterval))
             .put("debug", JSONObject()
@@ -472,7 +484,7 @@ class GameActivity : ComponentActivity(), GameOverlayActions, PlayerBridge.Host 
                         else -> DebugLog.Level.INFO
                     }
                     val source = message.sourceId().substringAfter(GameRequestHandler.HOST)
-                    DebugLog.log(level, "Console", "${message.message()} ($source:${message.lineNumber()})")
+                    DebugLog.log(level, "Console", "${consoleLines.shorten(message.message())} ($source:${message.lineNumber()})")
                     return true
                 }
 

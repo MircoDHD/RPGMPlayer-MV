@@ -57,6 +57,9 @@ class FileIndex private constructor(
         }
     }
 
+    /** All indexed paths (case-preserved, relative to the web root). */
+    val paths: Collection<String> get() = exact.keys
+
     /** Sum of all indexed file sizes. */
     val totalBytes: Long get() = exact.values.sumOf { it.length }
 
@@ -121,6 +124,24 @@ class FileIndex private constructor(
                 }
             } finally {
                 pool.shutdown()
+            }
+            return FileIndex(exact, lower)
+        }
+
+        /**
+         * Mods over the game: a path resolves to the first layer that has it (case-insensitive
+         * like [resolve]). The game's own index is the last layer.
+         */
+        fun layered(layers: List<FileIndex>): FileIndex {
+            if (layers.size == 1) return layers.single()
+            val exact = HashMap<String, GameNode>(8192)
+            val lower = HashMap<String, GameNode>(8192)
+            for (layer in layers) {
+                for ((path, node) in layer.exact) {
+                    if (path.lowercase() in lower) continue
+                    exact[path] = node
+                    lower[path.lowercase()] = node
+                }
             }
             return FileIndex(exact, lower)
         }

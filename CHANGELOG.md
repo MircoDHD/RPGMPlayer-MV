@@ -4,6 +4,23 @@ All notable changes to RobustPlainGameMaker Player - MyVersion ("RPGM Player - M
 Versions follow `major.minor.patch`: the minor digit for new features, the patch digit for
 fixes. Dates are build dates.
 
+## 0.6.1 – 2026-10-25 (Phase D: mods)
+### Added
+- **Mods without changing the game**: put a mod's folder next to the game's www folder;
+  switch it on per game in the new mod list and order several mods. The game files stay
+  untouched.
+- The mod list shows how many game files each active mod replaces and which files
+  several mods replace (the upper one wins; core files are marked). Mods can be removed
+  there, and a mod can bring its own scripts (`scripts` in mod.json).
+- Leaving the app saves the game at a calm moment (after at least 2 minutes of play), so
+  phones that end apps in the background lose little.
+- Auto saves remember which mods were on. Loading one made with other mods than the
+  active ones asks first.
+- **Mod guide**: step by step, opened from the mod list (where to put mods, order,
+  conflicts, mod.json, saves).
+### Changed
+- A warning with a stack trace that repeats is logged in full only the first time.
+
 ## 0.6.0 – 2026-10-21 (Phase D: saves)
 ### Added
 - **Auto saves**: every 15 minutes of play the app saves the game at a calm moment, so

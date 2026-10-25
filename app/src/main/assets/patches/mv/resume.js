@@ -3,7 +3,7 @@
 
 /*
  * RPGM Player: app saves ("Stände"). Runs after rpg_*.js, before plugins.
- * Patch version: 1
+ * Patch version: 3
  *
  * Every config.appSaves.intervalMinutes of active play (the game running in the
  * foreground, not paused) the current state is saved through the host. It waits for a
@@ -12,6 +12,10 @@
  * their own data to saves are covered. The host compresses it: LZString here would stall
  * the game for up to a second on slow devices. Nothing changes in the game: the
  * in-game save count stays as it was, and the game's own save files are not touched.
+ * When the app goes to the background after at least LEAVE_MIN_MS of play, a point is
+ * saved right away if the moment is calm: phones with little memory end the process in
+ * the background, which would lose up to a whole interval of play.
+ * The ids of the active mods (config.appSaves.mods) are stored with each point.
  *
  * MvPlayer.appSaves.load(id) loads a point like MV's load screen does. With
  * config.appSaves.loadOnStart the game skips its title and loads that point once the boot
@@ -24,7 +28,9 @@
     var host = MvPlayer.host;
     var CHECK_MS = 2000;
     var THUMB_WIDTH = 192;
+    var LEAVE_MIN_MS = 2 * 60000;
 
+    var mods = JSON.stringify(options.mods || []);
     var enabled = !!options.enabled;
     var intervalMs = (options.intervalMinutes || 15) * 60000;
     var played = 0;        // active play since the last point, ms
@@ -78,7 +84,7 @@
             $gameSystem.onBeforeSave();
             $gameSystem._saveCount = saveCount;
             var json = JsonEx.stringify(DataManager.makeSaveContents());
-            var ok = host.appSaveWrite(json, thumbnail(), $gameSystem.playtimeText(), locationName());
+            var ok = host.appSaveWrite(json, thumbnail(), $gameSystem.playtimeText(), locationName(), mods);
             MvPlayer.log('i', 'AppSaves', 'App save ' + (ok ? 'written' : 'FAILED') + ': ' + json.length + ' chars of JSON in ' +
                 Math.round(performance.now() - start) + ' ms');
             return ok;
@@ -126,6 +132,15 @@
         if (isCalm() && create()) played = 0;
     }
 
+    /** The app goes to the background: save now unless the last point is recent. */
+    function onLeave() {
+        if (!enabled || played < LEAVE_MIN_MS || !isPlaying() || !isCalm()) return false;
+        MvPlayer.log('i', 'AppSaves', 'Leaving the app: saving now');
+        if (!create()) return false;
+        played = 0;
+        return true;
+    }
+
     function install() {
         var update = SceneManager.update;
         SceneManager.update = function () {
@@ -146,6 +161,7 @@
     MvPlayer.appSaves = {
         create: create,
         load: load,
+        onLeave: onLeave,
         setEnabled: function (on) {
             enabled = !!on;
             MvPlayer.log('i', 'AppSaves', 'Automatic app saves ' + (enabled ? 'on' : 'off'));

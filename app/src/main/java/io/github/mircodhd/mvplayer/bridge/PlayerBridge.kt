@@ -159,11 +159,16 @@ class PlayerBridge(
 
     /** Stores an automatic app save: MV's save JSON, a base64 WebP screenshot or empty. */
     @JavascriptInterface
-    fun appSaveWrite(json: String?, thumbnail: String?, playtime: String?, location: String?): Boolean {
+    fun appSaveWrite(json: String?, thumbnail: String?, playtime: String?, location: String?): Boolean =
+        appSaveWrite(json, thumbnail, playtime, location, null)
+
+    /** As above, plus the active mod ids as a JSON array (the WebView picks the overload by argument count). */
+    @JavascriptInterface
+    fun appSaveWrite(json: String?, thumbnail: String?, playtime: String?, location: String?, mods: String?): Boolean {
         val saves = appSaves ?: return false
         if (json.isNullOrEmpty()) return false
         val image = thumbnail?.takeIf { it.isNotEmpty() }?.let { runCatching { Base64.decode(it, Base64.DEFAULT) }.getOrNull() }
-        val point = saves.add(json, image, playtime.orEmpty(), location.orEmpty()) ?: return false
+        val point = saves.add(json, image, playtime.orEmpty(), location.orEmpty(), ResumePoints.parseMods(mods)) ?: return false
         host.onAppSaveCreated()
         return point.id.isNotEmpty()
     }

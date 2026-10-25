@@ -3,7 +3,7 @@
 
 /*
  * RPGM Player: pause and resume with the Android activity. Runs after rpg_*.js, before plugins.
- * Patch version: 4
+ * Patch version: 5
  *
  * The host calls MvPlayer.onPause()/onResume() for the activity and
  * MvPlayer.pause('menu')/resume('menu') while a menu covers the game. The game runs only
@@ -149,6 +149,8 @@
     };
 
     MvPlayer.onPause = function () {
+        // A last app save first: Android may end the process while the app is in the background.
+        if (MvPlayer.appSaves && MvPlayer.appSaves.onLeave) MvPlayer.appSaves.onLeave();
         MvPlayer.pause('activity');
     };
 

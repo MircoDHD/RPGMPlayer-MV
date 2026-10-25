@@ -112,6 +112,8 @@ class GameOverlayState(val gameTitle: String) {
     var settingsOpen by mutableStateOf(false)
     var appSavesOpen by mutableStateOf(false)
     var appSaves by mutableStateOf<List<ResumePoint>>(emptyList())
+    /** Mods the running game was started with, top first. */
+    var activeMods by mutableStateOf<List<String>>(emptyList())
     /** Picture panel beside the game, which keeps showing behind it. */
     var pictureOpen by mutableStateOf(false)
     var editor by mutableStateOf<EditorRequest?>(null)
@@ -192,6 +194,7 @@ fun GameOverlay(state: GameOverlayState, actions: GameOverlayActions) {
                     points = state.appSaves,
                     thumbnail = actions::appSaveThumbnail,
                     loadWarning = true,
+                    activeMods = state.activeMods,
                     onLoad = actions::onAppSaveLoad,
                     onKeep = actions::onAppSaveKeep,
                     onDelete = actions::onAppSaveDelete,

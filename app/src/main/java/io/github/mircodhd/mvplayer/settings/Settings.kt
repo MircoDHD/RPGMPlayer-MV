@@ -234,6 +234,8 @@ data class GameSettings(
     val fontId: String? = null,
     val fontScale: Float? = null,
     val appSaves: Boolean? = null,
+    /** Switched-on mods (folder names), the first one on top; per game only. */
+    val mods: List<String> = emptyList(),
 ) {
     val isEmpty: Boolean get() = this == GameSettings()
 }
@@ -371,6 +373,7 @@ object SettingsJson {
         s.fontId?.let { put("fontId", it) }
         s.fontScale?.let { put("fontScale", PictureSettings.rounded(it)) }
         s.appSaves?.let { put("appSaves", it) }
+        if (s.mods.isNotEmpty()) put("mods", JSONArray(s.mods))
     }
 
     fun gameFromJson(json: JSONObject) = GameSettings(
@@ -388,6 +391,7 @@ object SettingsJson {
         fontId = json.optString("fontId").ifBlank { null },
         fontScale = json.optDoubleOrNull("fontScale")?.toFloat()?.coerceIn(FontSettings.SCALE_RANGE),
         appSaves = if (json.has("appSaves")) json.optBoolean("appSaves") else null,
+        mods = json.optJSONArray("mods")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() }.distinct() }.orEmpty(),
     )
 
     private fun pictureToJson(p: PictureOverrides) = JSONObject().apply {

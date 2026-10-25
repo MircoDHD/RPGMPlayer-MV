@@ -66,6 +66,8 @@ fun GameInfoSheet(
     appSaves: List<ResumePoint> = emptyList(),
     onOpenAppSaves: () -> Unit = {},
     onOpenGameSaves: () -> Unit = {},
+    activeMods: Int = 0,
+    onOpenMods: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var confirmRemove by remember { mutableStateOf(false) }
@@ -108,6 +110,9 @@ fun GameInfoSheet(
                 }
                 OutlinedButton(onClick = onOpenGameSaves, enabled = !folderMissing, contentPadding = ButtonDefaults.ButtonWithIconContentPadding) {
                     Text(stringResource(R.string.game_saves_title))
+                }
+                OutlinedButton(onClick = onOpenMods, enabled = !folderMissing, contentPadding = ButtonDefaults.ButtonWithIconContentPadding) {
+                    Text(if (activeMods > 0) stringResource(R.string.mods_button_on, activeMods) else stringResource(R.string.mods_button))
                 }
                 OutlinedButton(onClick = onOpenAppSaves, contentPadding = ButtonDefaults.ButtonWithIconContentPadding) {
                     Text(stringResource(R.string.app_saves_title) + if (appSaves.isEmpty()) "" else " (${appSaves.size})")

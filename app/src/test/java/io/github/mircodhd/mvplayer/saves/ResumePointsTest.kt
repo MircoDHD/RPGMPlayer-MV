@@ -80,4 +80,48 @@ class ResumePointsTest {
         // Importing again adds nothing.
         assertEquals(0, target.import(zip.toByteArray().inputStream(), "Termina"))
     }
+
+    @Test
+    fun modsAreStoredAndSurviveExportAndImport() {
+        val source = ResumePoints(temp.root, "source")
+        val withMods = source.add("data", null, "00:01:00", "Map", listOf("BugFix Mod", "QoL"))!!
+        source.add("data", null, "00:02:00", "Map")
+        assertEquals(listOf("BugFix Mod", "QoL"), ResumePoints(temp.root, "source").list().first { it.id == withMods.id }.mods)
+        assertEquals(1, source.list().count { it.mods.isEmpty() })
+
+        val zip = java.io.ByteArrayOutputStream()
+        source.export(zip, "Game")
+        val target = ResumePoints(temp.newFolder("other"), "target")
+        assertEquals(2, target.import(zip.toByteArray().inputStream(), "Game"))
+        assertEquals(listOf("BugFix Mod", "QoL"), target.list().first { it.id == withMods.id }.mods)
+    }
+
+    @Test
+    fun pointsWithoutModsFieldLoadAsEmpty() {
+        val points = ResumePoints(temp.root, "game-1")
+        val point = points.addNamed("1")
+        val index = temp.root.resolve("resume/game-1/points.json")
+        // An index written before mods were stored has no "mods" key.
+        index.writeText(index.readText().replace(Regex("\"mods\":\\s*\\[[^]]*],?"), ""))
+        assertFalse(index.readText().contains("mods"))
+        assertEquals(emptyList<String>(), points.list().single { it.id == point.id }.mods)
+    }
+
+    @Test
+    fun sameModsComparesIdsAndOrder() {
+        val point = ResumePoint("id", false, 0, "", "", 0, mods = listOf("A", "B"))
+        assertTrue(point.sameMods(listOf("a", "B")))
+        assertFalse(point.sameMods(listOf("B", "A")))
+        assertFalse(point.sameMods(listOf("A")))
+        assertFalse(point.sameMods(emptyList()))
+        assertTrue(point.copy(mods = emptyList()).sameMods(emptyList()))
+    }
+
+    @Test
+    fun parsesTheModListFromTheGame() {
+        assertEquals(listOf("A", "B C"), ResumePoints.parseMods("[\"A\",\"B C\"]"))
+        assertEquals(emptyList<String>(), ResumePoints.parseMods("[]"))
+        assertEquals(emptyList<String>(), ResumePoints.parseMods(null))
+        assertEquals(emptyList<String>(), ResumePoints.parseMods("not json"))
+    }
 }

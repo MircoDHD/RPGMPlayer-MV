@@ -35,7 +35,12 @@ data class UserPatch(val path: String, val position: PatchPosition) {
 }
 
 /** The result of [PatchProfiles.select]. */
-data class PatchSelection(val profileIds: List<String>, val userPatches: List<UserPatch>, val patches: PatchSet)
+data class PatchSelection(
+    val profileIds: List<String>,
+    val userPatches: List<UserPatch>,
+    val patches: PatchSet,
+    val modScripts: List<UserPatch> = emptyList(),
+)
 
 /** A group of built-in patches applied when all of its [Match] rules hold. */
 data class PatchProfile(
@@ -57,7 +62,7 @@ data class PatchProfile(
  * Built-in patches are described in `assets/patches/profiles.json`, so a fix for a known
  * plugin is a small file plus a profile matching that plugin's name or exact file hash.
  * [load] reads them once at app start; [select] picks the profiles for a game and adds the
- * game's own patches ([UserPatches]).
+ * game's own patches ([UserPatches]) and the scripts of its active mods.
  */
 object PatchProfiles {
     private const val TAG = "Patches"
@@ -96,13 +101,16 @@ object PatchProfiles {
         val hashes = HashMap<String, String?>()
         val active = from.filter { matches(it.match, info) { name -> hashes.getOrPut(name) { sha256(info, name) } } }
         val user = UserPatches.find(info.index)
+        // Per position: built-in patches, then the game's own, then the active mods' scripts.
         fun urls(position: PatchPosition) =
             active.flatMap { p -> p.scripts[position].orEmpty().map { BUILT_IN_PREFIX + it } } +
-                user.filter { it.position == position }.map { it.url }
+                user.filter { it.position == position }.map { it.url } +
+                info.modScripts.filter { it.position == position }.map { it.url }
         return PatchSelection(
             profileIds = active.map { it.id },
             userPatches = user,
             patches = PatchSet(urls(PatchPosition.BEFORE_ENGINE), urls(PatchPosition.BEFORE_PLUGINS), urls(PatchPosition.AFTER_PLUGINS)),
+            modScripts = info.modScripts,
         )
     }
 
